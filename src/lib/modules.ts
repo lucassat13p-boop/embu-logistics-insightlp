@@ -10,6 +10,8 @@ export type FieldKey =
   | "lh"
   | "reason"
   | "classification"
+  | "month"
+  | "location"
   | "quantity";
 
 export type ModuleKey =
@@ -33,6 +35,8 @@ export const FIELD_LABELS: Record<FieldKey, string> = {
   lh: "LH",
   reason: "Motivo",
   classification: "Classificação",
+  month: "Mês",
+  location: "Localização",
   quantity: "Quantidade",
 };
 
@@ -48,6 +52,8 @@ export const FIELD_ALIASES: Record<FieldKey, string[]> = {
   lh: ["lh", "linehaul", "line haul", "lh trip", "trip", "viagem"],
   reason: ["motivo", "reason", "causa", "justificativa", "ocorrencia"],
   classification: ["classificacao", "tipo", "categoria", "classification"],
+  month: ["mes"],
+  location: ["localizacao", "local", "location"],
   quantity: ["quantidade", "qtd", "qty", "volume", "volumes"],
 };
 
@@ -72,9 +78,9 @@ export const MODULES: ModuleDef[] = [
   { key: "full", slug: "full", label: "FULL", short: "FULL", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios FULL do HUB" },
   {
     key: "avaria", slug: "avaria", label: "AVARIA", short: "AVARIA",
-    fields: ["record_date", "order_id", "status", "collaborator", "product", "classification", "shift"],
+    fields: ["record_date", "month", "order_id", "status", "location", "product", "classification", "collaborator", "shift"],
     required: ["order_id"], dedupe: ["order_id", "record_date"], firstSheetOnly: true,
-    defaultMapping: { DATA: "record_date", AVARIA: "order_id", STATUS: "status", LOG: "collaborator", PRODUTO: "product" },
+    defaultMapping: { DATA: "record_date", "MÊS": "month", BR: "order_id", AVARIA: "order_id", STATUS: "status", "LOCALIZAÇÃO": "location", PRODUTO: "product", "CLASSIFICAÇÃO": "classification", "EMAIL / OPS": "collaborator", LOG: "collaborator", TURNO: "shift" },
     classifications: ["Líquido", "Vidro", "Sólido", "Item vazio", "SOC"],
     shifts: ["AM1", "AM2", "PM1"],
     description: "Fonte: Dados Diário Avaria HUB-LSP-36 (somente 1ª planilha)",

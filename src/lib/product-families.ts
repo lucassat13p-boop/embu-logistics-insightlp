@@ -28,7 +28,8 @@ export function productFamily(product: string | null | undefined): string | null
   const purpose = name.search(/\bPARA\b/);
   const matches = families.flatMap(([family, pattern]) => {
     const match = pattern.exec(name);
-    return match && (purpose < 0 || match.index < purpose) ? [{ family, index: match.index }] : [];
+    const accessory = /\b(?:REMOVEDOR|DILUENTE|SUPORTE|CAPA|TAMPA|REFIL|ACESSORIO)\b/.test(name.slice(0, match?.index ?? 0));
+    return match && !accessory && (purpose < 0 || match.index < purpose) ? [{ family, index: match.index }] : [];
   }).sort((a, b) => a.index - b.index);
   // Mixed bundles retain their full identity; do not assign one component's family.
   if (matches.length > 1 && /\+|\bE\b/.test(name.slice(matches[0]?.index ?? 0, matches[matches.length - 1]?.index))) return name;

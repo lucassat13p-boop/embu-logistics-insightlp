@@ -75,7 +75,7 @@ function ModulePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title={isAvaria ? "Evolução das avarias" : "Evolução"} subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
         {isAvaria ? (
-          <Panel title="Avarias por classificação"><BarBlock data={classCounts} /></Panel>
+          <Panel title="Avarias por tipo" subtitle="Tipos oficiais: Líquido, Sólido, Vidro, Item vazio, SOC"><BarBlock data={classCounts} /></Panel>
         ) : (
           <Panel title="Status"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>
         )}

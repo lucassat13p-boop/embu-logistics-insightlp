@@ -25,18 +25,15 @@ function ComparisonTable({ title, label, metrics, months, total = false }: { tit
           <th className="min-w-44 px-3 py-3 text-left">{label}</th>
           {months.map((month) => <th key={month} className="min-w-36 px-3 py-3 text-right">{monthLabel(month)}</th>)}
           {total && <th className="px-3 py-3 text-right">Total</th>}
-          {pairs.map((pair) => <th key={pair.current} colSpan={2} className="min-w-72 border-l px-3 py-3 text-left">{months.length > 2 ? `${monthLabel(pair.previous ?? "")} → ${monthLabel(pair.current)}` : "Variação e análise"}</th>)}
-        </tr><tr>
-          <th className="px-3 py-1" /><th colSpan={months.length + (total ? 1 : 0)} />
-          {pairs.map((pair) => <th key={pair.current} colSpan={2} className="border-l px-3 pb-2 text-left font-normal text-muted-foreground">Variação · Análise</th>)}
+          {pairs.flatMap((pair) => [<th key={`${pair.current}-variation`} className="min-w-32 border-l px-3 py-3 text-right">Variação{months.length > 2 && <span className="mt-1 block text-xs font-normal">{monthLabel(pair.previous ?? "")} → {monthLabel(pair.current)}</span>}</th>, <th key={`${pair.current}-analysis`} className="min-w-52 px-3 py-3 text-left">Análise</th>])}
         </tr></thead>
         <tbody>{metrics.map((metric) => <tr key={metric.name} className="border-t">
           <th className="min-w-44 max-w-80 break-words px-3 py-3 text-left font-medium">{metric.name}</th>
           {metric.values.map((value, index) => <td key={months[index]} className="px-3 py-3 text-right tabular-nums">{value === null ? "Sem informação" : value.toLocaleString("pt-BR")}</td>)}
           {total && <td className="px-3 py-3 text-right font-semibold tabular-nums">{metric.values.some((value) => value !== null) ? metric.values.reduce<number>((sum, value) => sum + (value ?? 0), 0).toLocaleString("pt-BR") : "Sem informação"}</td>}
-          {pairs.map((pair) => {
+          {pairs.flatMap((pair) => {
             const change = variation(metric.values[pair.previousIndex] ?? null, metric.values[pair.currentIndex] ?? null);
-            return <td key={pair.current} colSpan={2} className="border-l px-3 py-3"><div className="flex flex-wrap items-center gap-x-5 gap-y-1"><span className="min-w-24 tabular-nums"><ChangeText change={change} /></span><span className="text-xs"><ChangeText change={change} analysis /></span></div></td>;
+            return [<td key={`${pair.current}-variation`} className="border-l px-3 py-3 text-right tabular-nums"><ChangeText change={change} /></td>, <td key={`${pair.current}-analysis`} className="px-3 py-3 text-xs"><ChangeText change={change} analysis /></td>];
           })}
         </tr>)}</tbody>
       </table>

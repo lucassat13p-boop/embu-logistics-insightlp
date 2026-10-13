@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { title: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { title: "Pedidos", to: "/pedidos", icon: Package },
-  { title: "LHs / Rotas", to: "/m/rotas", icon: RouteIcon },
+  { title: "LHs / Rotas", to: "/m/$slug", icon: RouteIcon, slug: "rotas" },
   { title: "Pendências", to: "/pendencias", icon: TriangleAlert },
   { title: "Relatórios", to: "/relatorios", icon: FileSpreadsheet },
   { title: "Histórico", to: "/historico", icon: History },
@@ -43,9 +43,9 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
               <SidebarGroupContent>
                 <SidebarMenu>
                   {NAV.map((n) => (
-                    <SidebarMenuItem key={n.to}>
-                      <SidebarMenuButton asChild isActive={path === n.to || path.startsWith(n.to + "/")} tooltip={n.title}>
-                        <Link to={n.to}><n.icon className="h-4 w-4" /><span>{n.title}</span></Link>
+                    <SidebarMenuItem key={n.title}>
+                      <SidebarMenuButton asChild isActive={"slug" in n ? path === "/m/rotas" : path === n.to || path.startsWith(n.to + "/")} tooltip={n.title}>
+                        <Link to={n.to} params={"slug" in n ? { slug: n.slug } : {}}><n.icon className="h-4 w-4" /><span>{n.title}</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}

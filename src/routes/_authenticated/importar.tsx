@@ -58,7 +58,7 @@ function ImportPage() {
   }
 
   async function onFile(f: File) {
-    if (!mod) return toast.error("Selecione o módulo antes do arquivo.");
+    if (!mod) { toast.error("Selecione o módulo antes do arquivo."); return; }
     setFile(f); setResult(null); setDone(null); setExisting(null); setBusy("Lendo arquivo...");
     try {
       const p = await parseFile(f);
@@ -106,7 +106,7 @@ function ImportPage() {
     if (!mod || !table || !file || !parsed) return;
     const r = await runValidation(); // re-validate before saving
     if (!r) return;
-    if (!r.valid.length) return toast.error("Nenhum registro válido para salvar.");
+    if (!r.valid.length) { toast.error("Nenhum registro válido para salvar."); return; }
     setBusy("Salvando registros...");
     try {
       const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: sheet!.name, headers: table.headers, mapping, result: r, strategy });

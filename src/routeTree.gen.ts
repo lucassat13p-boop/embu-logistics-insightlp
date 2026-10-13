@@ -12,8 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedBuscaRouteImport } from './routes/_authenticated/busca'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
+import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
+import { Route as AuthenticatedPendenciasRouteImport } from './routes/_authenticated/pendencias'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedHistoricoIdRouteImport } from './routes/_authenticated/historico.$id'
 import { Route as AuthenticatedMSlugRouteImport } from './routes/_authenticated/m.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -30,9 +37,25 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedBuscaRoute = AuthenticatedBuscaRouteImport.update({
+  id: '/busca',
+  path: '/busca',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
@@ -40,6 +63,27 @@ const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
   path: '/importar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPedidosRoute = AuthenticatedPedidosRouteImport.update({
+  id: '/pedidos',
+  path: '/pedidos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPendenciasRoute = AuthenticatedPendenciasRouteImport.update({
+  id: '/pendencias',
+  path: '/pendencias',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHistoricoIdRoute =
+  AuthenticatedHistoricoIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedHistoricoRoute,
+  } as any)
 const AuthenticatedMSlugRoute = AuthenticatedMSlugRouteImport.update({
   id: '/m/$slug',
   path: '/m/$slug',
@@ -49,15 +93,29 @@ const AuthenticatedMSlugRoute = AuthenticatedMSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/busca': typeof AuthenticatedBuscaRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/historico': typeof AuthenticatedHistoricoRouteWithChildren
   '/importar': typeof AuthenticatedImportarRoute
+  '/pedidos': typeof AuthenticatedPedidosRoute
+  '/pendencias': typeof AuthenticatedPendenciasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/historico/$id': typeof AuthenticatedHistoricoIdRoute
   '/m/$slug': typeof AuthenticatedMSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/busca': typeof AuthenticatedBuscaRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/historico': typeof AuthenticatedHistoricoRouteWithChildren
   '/importar': typeof AuthenticatedImportarRoute
+  '/pedidos': typeof AuthenticatedPedidosRoute
+  '/pendencias': typeof AuthenticatedPendenciasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/historico/$id': typeof AuthenticatedHistoricoIdRoute
   '/m/$slug': typeof AuthenticatedMSlugRoute
 }
 export interface FileRoutesById {
@@ -65,22 +123,60 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/busca': typeof AuthenticatedBuscaRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRouteWithChildren
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
+  '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
+  '/_authenticated/pendencias': typeof AuthenticatedPendenciasRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/historico/$id': typeof AuthenticatedHistoricoIdRoute
   '/_authenticated/m/$slug': typeof AuthenticatedMSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/importar' | '/m/$slug'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/busca'
+    | '/configuracoes'
+    | '/dashboard'
+    | '/historico'
+    | '/importar'
+    | '/pedidos'
+    | '/pendencias'
+    | '/relatorios'
+    | '/historico/$id'
+    | '/m/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/importar' | '/m/$slug'
+  to:
+    | '/'
+    | '/auth'
+    | '/busca'
+    | '/configuracoes'
+    | '/dashboard'
+    | '/historico'
+    | '/importar'
+    | '/pedidos'
+    | '/pendencias'
+    | '/relatorios'
+    | '/historico/$id'
+    | '/m/$slug'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/busca'
+    | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
+    | '/_authenticated/historico'
     | '/_authenticated/importar'
+    | '/_authenticated/pedidos'
+    | '/_authenticated/pendencias'
+    | '/_authenticated/relatorios'
+    | '/_authenticated/historico/$id'
     | '/_authenticated/m/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -113,11 +209,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/busca': {
+      id: '/_authenticated/busca'
+      path: '/busca'
+      fullPath: '/busca'
+      preLoaderRoute: typeof AuthenticatedBuscaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/importar': {
@@ -126,6 +243,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/importar'
       preLoaderRoute: typeof AuthenticatedImportarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pedidos': {
+      id: '/_authenticated/pedidos'
+      path: '/pedidos'
+      fullPath: '/pedidos'
+      preLoaderRoute: typeof AuthenticatedPedidosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pendencias': {
+      id: '/_authenticated/pendencias'
+      path: '/pendencias'
+      fullPath: '/pendencias'
+      preLoaderRoute: typeof AuthenticatedPendenciasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/historico/$id': {
+      id: '/_authenticated/historico/$id'
+      path: '/$id'
+      fullPath: '/historico/$id'
+      preLoaderRoute: typeof AuthenticatedHistoricoIdRouteImport
+      parentRoute: typeof AuthenticatedHistoricoRoute
     }
     '/_authenticated/m/$slug': {
       id: '/_authenticated/m/$slug'
@@ -137,15 +282,41 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedHistoricoRouteChildren {
+  AuthenticatedHistoricoIdRoute: typeof AuthenticatedHistoricoIdRoute
+}
+
+const AuthenticatedHistoricoRouteChildren: AuthenticatedHistoricoRouteChildren =
+  {
+    AuthenticatedHistoricoIdRoute: AuthenticatedHistoricoIdRoute,
+  }
+
+const AuthenticatedHistoricoRouteWithChildren =
+  AuthenticatedHistoricoRoute._addFileChildren(
+    AuthenticatedHistoricoRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBuscaRoute: typeof AuthenticatedBuscaRoute
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRouteWithChildren
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
+  AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
+  AuthenticatedPendenciasRoute: typeof AuthenticatedPendenciasRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedMSlugRoute: typeof AuthenticatedMSlugRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBuscaRoute: AuthenticatedBuscaRoute,
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRouteWithChildren,
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
+  AuthenticatedPedidosRoute: AuthenticatedPedidosRoute,
+  AuthenticatedPendenciasRoute: AuthenticatedPendenciasRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedMSlugRoute: AuthenticatedMSlugRoute,
 }
 

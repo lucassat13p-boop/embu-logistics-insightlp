@@ -86,6 +86,17 @@
   --chart-3: oklch(0.75 0.14 60);
   --chart-4: oklch(0.6 0.02 60);
   --chart-5: oklch(0.5 0.17 30);
+  --pie-1: oklch(0.66 0.2 38);
+  --pie-2: oklch(0.63 0.15 245);
+  --pie-3: oklch(0.64 0.16 155);
+  --pie-4: oklch(0.8 0.16 85);
+  --pie-5: oklch(0.57 0.21 345);
+  --pie-6: oklch(0.46 0.13 285);
+  --pie-7: oklch(0.7 0.13 195);
+  --pie-8: oklch(0.38 0.015 60);
+  --pie-9: oklch(0.58 0.18 20);
+  --pie-10: oklch(0.74 0.17 125);
+  --pie-missing: oklch(0.65 0.01 60);
   --sidebar: oklch(0.19 0.008 50);
   --sidebar-foreground: oklch(0.85 0.005 60);
   --sidebar-primary: oklch(0.66 0.2 38);

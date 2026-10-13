@@ -1,6 +1,7 @@
 import { countBy, hasField, type RecordRow } from "@/lib/data";
 import { filterByMonths, monthLabel, PERIOD_EMPTY } from "@/lib/period";
 import type { FieldKey } from "@/lib/modules";
+import { countProductFamilies } from "@/lib/product-families";
 import { Empty } from "./blocks";
 
 export function MonthComparison({ rows, months, classifications }: { rows: RecordRow[]; months: string[]; classifications: string[] }) {
@@ -27,14 +28,16 @@ export function MonthComparison({ rows, months, classifications }: { rows: Recor
         </table>
       </div>
       {dimensions.map(({ field, title }) => {
-        const counts = periods.map((period) => new Map(countBy(period.rows, field).map(({ name, value }) => [name, value])));
-        const names = countBy(filterByMonths(rows, months), field).map(({ name }) => name);
+        const grouped = (data: RecordRow[]) => field === "product" ? countProductFamilies(data) : countBy(data, field);
+        const counts = periods.map((period) => new Map(grouped(period.rows).map(({ name, value }) => [name, value])));
+        const combined = grouped(filterByMonths(rows, months));
+        const names = combined.map(({ name }) => name);
         return <div key={field} className="space-y-2">
           <h3 className="text-sm font-semibold">{title}</h3>
           {!names.length ? <Empty /> : <div className="max-h-80 overflow-auto rounded-md border">
             <table className="w-full text-sm" aria-label={`Comparação de ${title.toLowerCase()}`}>
-              <thead className="sticky top-0 bg-muted">{heading}</thead>
-              <tbody>{names.map((name) => <tr key={name} className="border-t"><th className="min-w-48 max-w-80 break-words px-3 py-2 text-left font-normal">{name}</th>{periods.map((period, index) => <td key={period.month} className={cell}>{hasField(period.rows, field) ? (counts[index]?.get(name) ?? 0).toLocaleString("pt-BR") : "Sem informação"}</td>)}</tr>)}</tbody>
+              <thead className="sticky top-0 bg-muted"><tr><th className="px-3 py-3 text-left">{field === "product" ? "Família de produto" : "Indicador"}</th>{periods.map(({ month }) => <th key={month} className="min-w-40 px-3 py-3 text-right">{monthLabel(month)}</th>)}{field === "product" && <th className="px-3 py-3 text-right">Total</th>}</tr></thead>
+              <tbody>{names.map((name) => <tr key={name} className="border-t"><th className="min-w-48 max-w-80 break-words px-3 py-2 text-left font-normal">{name}</th>{periods.map((period, index) => <td key={period.month} className={cell}>{hasField(period.rows, field) ? (counts[index]?.get(name) ?? 0).toLocaleString("pt-BR") : "Sem informação"}</td>)}{field === "product" && <td className={`${cell} font-semibold`}>{combined.find((item) => item.name === name)?.value.toLocaleString("pt-BR")}</td>}</tr>)}</tbody>
             </table>
           </div>}
         </div>;

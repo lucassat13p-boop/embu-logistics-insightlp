@@ -8,6 +8,8 @@ import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "@/c
 import { RecordsTable } from "@/components/ops/RecordsTable";
 import { PeriodFilter } from "@/components/ops/PeriodFilter";
 import { MonthComparison } from "@/components/ops/MonthComparison";
+import { PieBlock } from "@/components/ops/PieBlock";
+import { countProductFamilies } from "@/lib/product-families";
 import { availableMonths, filterByMonths, PERIOD_EMPTY } from "@/lib/period";
 import { byDate, countBy, hasField, recordsQuery } from "@/lib/data";
 import { HUB_NAME, moduleBySlug, type FieldKey, type ModuleDef } from "@/lib/modules";
@@ -64,6 +66,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
 
   const classCounts = countBy(rows, "classification");
   const shiftData = countBy(rows, "shift");
+  const familyData = isAvaria ? countProductFamilies(rows) : [];
 
   return (
     <div className="space-y-5">
@@ -98,26 +101,34 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
         )}
       </div>
 
+      {isAvaria && <>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Panel title="Avarias por tipo"><PieBlock label="Avarias por tipo" data={classCounts} total={rows.length} categories={mod.classifications ?? []} /></Panel>
+          <Panel title="Avarias por turno"><PieBlock label="Avarias por turno" data={shiftData} total={rows.length} categories={mod.shifts ?? []} /></Panel>
+        </div>
+        <Panel title="Evolução das avarias" subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
+        <Panel title="Colaboradores com mais avarias"><Ranking data={countBy(rows, "collaborator")} /></Panel>
+        <Panel title="Produtos com mais ocorrências" subtitle="Famílias de produtos"><Ranking data={familyData} /></Panel>
+      </>}
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title={isAvaria ? "Evolução das avarias" : "Evolução"} subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
-        {isAvaria ? (
-          <Panel title="Avarias por tipo" subtitle="Tipos oficiais: Líquido, Sólido, Vidro, Item vazio, SOC"><BarBlock data={classCounts} /></Panel>
-        ) : (
+        {!isAvaria && <>
+          <Panel title="Evolução" subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
           <Panel title="Status"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>
-        )}
-        {(isAvaria || has("shift")) && <Panel title={isAvaria ? "Avarias por turno" : "Distribuição por turno"}><BarBlock data={shiftData} /></Panel>}
-        {isAvaria && <Panel title="Status das avarias"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>}
+          {has("shift") && <Panel title="Distribuição por turno"><BarBlock data={shiftData} /></Panel>}
+        </>}
         {!isAvaria && has("route") && <Panel title="Por rota"><BarBlock data={countBy(rows, "route")} horizontal /></Panel>}
         {!isAvaria && has("lh") && <Panel title="Por LH"><BarBlock data={countBy(rows, "lh")} horizontal /></Panel>}
         {!isAvaria && has("reason") && <Panel title={mod.key === "motivos" ? "Distribuição dos motivos" : "Por motivo"}><BarBlock data={countBy(rows, "reason")} horizontal /></Panel>}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {(isAvaria || has("collaborator")) && <Panel title={isAvaria ? "Colaboradores com mais avarias" : "Colaboradores com mais ocorrências"}><Ranking data={countBy(rows, "collaborator")} /></Panel>}
+        {!isAvaria && has("collaborator") && <Panel title="Colaboradores com mais ocorrências"><Ranking data={countBy(rows, "collaborator")} /></Panel>}
+        {isAvaria && <Panel title="Status das avarias"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>}
         {isAvaria && <Panel title="Turnos mais ofensores"><Ranking data={shiftData} /></Panel>}
         {has("reason") && <Panel title="Motivos mais frequentes"><Ranking data={countBy(rows, "reason")} /></Panel>}
         {has("route") && <Panel title="Rotas com mais ocorrências"><Ranking data={countBy(rows, "route")} /></Panel>}
-        {(isAvaria || has("product")) && <Panel title={isAvaria ? "Produtos com mais ocorrências" : "Produtos mais envolvidos"}><Ranking data={countBy(rows, "product")} /></Panel>}
+        {!isAvaria && has("product") && <Panel title="Produtos mais envolvidos"><Ranking data={countBy(rows, "product")} /></Panel>}
       </div>
 
       <Panel title={isAvaria ? "Ocorrências dos pedidos" : "Registros"}>

@@ -14,6 +14,8 @@ export const Route = createFileRoute("/auth")({
       { name: "description", content: "Acesso à plataforma de operações do HUB LSP-36." },
       { property: "og:title", content: "Entrar — Shopee Operations Hub" },
       { property: "og:description", content: "Acesso à plataforma de operações do HUB LSP-36." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AuthPage,

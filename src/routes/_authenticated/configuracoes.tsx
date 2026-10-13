@@ -14,6 +14,8 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
       { name: "description", content: "Mapeamentos, tipos de relatório e regras de validação." },
       { property: "og:title", content: "Configurações — Shopee Operations Hub" },
       { property: "og:description", content: "Mapeamentos, tipos de relatório e regras de validação." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Page,

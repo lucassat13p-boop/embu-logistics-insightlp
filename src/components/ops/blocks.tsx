@@ -7,7 +7,7 @@ export const NO_DATA = "Nenhum dado disponível";
 
 export function Panel({ title, subtitle, action, children, className }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cn("rounded-lg border bg-card shadow-card", className)}>
+    <section className={cn("min-w-0 rounded-lg border bg-card shadow-card", className)}>
       <header className="flex items-start justify-between gap-2 border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold">{title}</h3>

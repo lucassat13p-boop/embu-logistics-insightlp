@@ -14,5 +14,6 @@
 - Module definitions (fields, required, dedupe key, aliases) live in `src/lib/modules.ts`; file parsing runs client-side in `src/lib/parsers.ts`, validation/commit in `src/lib/importer.ts`.
 - Never seed or fabricate data; UI shows "Nenhum dado disponível" when a field has no real values.
 - Monthly analysis uses reusable pure date helpers and a shared period selector; AVARIA filters its fetched module rows before every visualization, and comparison reads the same original rows without writes so imports remain complete and periods never mix years.
+- Monthly variations use shared pure comparison helpers with nullable counts and adjacent period pairs, so missing dimensions are not treated as zero and multiple months never yield a blended percentage.
 - Product-family analytics use one pure, conservative whole-word resolver shared by AVARIA rankings and monthly comparison; unknown or mixed products retain normalized descriptions so original records stay untouched and unrelated objects are not merged by material.
 - AVARIA pie charts use the filtered record count as denominator and show missing values as an informational segment only when real field values exist, so absent attributes are not inferred or silently excluded.

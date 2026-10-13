@@ -11,6 +11,8 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
       { name: "description", content: "Relatórios importados por período, módulo e status." },
       { property: "og:title", content: "Relatórios — Shopee Operations Hub" },
       { property: "og:description", content: "Relatórios importados por período, módulo e status." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Page,

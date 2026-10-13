@@ -12,6 +12,8 @@ export const Route = createFileRoute("/_authenticated/busca")({
       { name: "description", content: "Busca global nos dados reais importados." },
       { property: "og:title", content: "Busca — Shopee Operations Hub" },
       { property: "og:description", content: "Busca global nos dados reais importados." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Page,

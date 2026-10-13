@@ -13,6 +13,8 @@ export const Route = createFileRoute("/_authenticated/historico/$id")({
       { name: "description", content: "Resultado detalhado de uma importação de relatório." },
       { property: "og:title", content: "Detalhes da importação" },
       { property: "og:description", content: "Resultado detalhado de uma importação." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Page,

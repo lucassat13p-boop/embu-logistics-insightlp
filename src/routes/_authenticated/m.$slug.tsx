@@ -1,12 +1,16 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "@/components/ops/blocks";
 import { RecordsTable } from "@/components/ops/RecordsTable";
+import { PeriodFilter } from "@/components/ops/PeriodFilter";
+import { MonthComparison } from "@/components/ops/MonthComparison";
+import { availableMonths, filterByMonths, PERIOD_EMPTY } from "@/lib/period";
 import { byDate, countBy, hasField, recordsQuery } from "@/lib/data";
-import { HUB_NAME, moduleBySlug, type FieldKey } from "@/lib/modules";
+import { HUB_NAME, moduleBySlug, type FieldKey, type ModuleDef } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
@@ -21,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/m/$slug")({
       { name: "description", content: `Indicadores reais do módulo ${loaderData?.label ?? ""} no HUB LSP-36.` },
       { property: "og:title", content: `${loaderData?.label ?? "Módulo"} — Shopee Operations Hub` },
       { property: "og:description", content: `Indicadores reais do módulo ${loaderData?.label ?? ""}.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ModulePage,
@@ -28,9 +34,22 @@ export const Route = createFileRoute("/_authenticated/m/$slug")({
 
 function ModulePage() {
   const { slug } = Route.useParams();
-  const mod = moduleBySlug(slug)!;
-  const { data: rows = [], isLoading } = useQuery(recordsQuery(mod.key));
+  const mod = moduleBySlug(slug);
+  if (!mod) throw notFound();
+  return <ModuleContent key={mod.key} mod={mod} />;
+}
+
+function ModuleContent({ mod }: { mod: ModuleDef }) {
+  const { data: allRows = [], isLoading } = useQuery(recordsQuery(mod.key));
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  const [comparing, setComparing] = useState(false);
   const isAvaria = mod.key === "avaria";
+  const months = useMemo(() => availableMonths(allRows), [allRows]);
+  const rows = useMemo(() => isAvaria ? filterByMonths(allRows, selectedMonths) : allRows, [allRows, selectedMonths, isAvaria]);
+  const changeMonths = (selected: string[]) => {
+    setSelectedMonths(selected);
+    if (selected.length < 2) setComparing(false);
+  };
   const has = (f: FieldKey) => hasField(rows, f);
   const dates = rows.map((r) => r.record_date).filter(Boolean).sort() as string[];
   const columns: FieldKey[] = isAvaria
@@ -48,17 +67,24 @@ function ModulePage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={importBtn} />
+      <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={
+        <div className="flex max-w-full flex-wrap items-start gap-3">
+          {isAvaria && <PeriodFilter months={months} selected={selectedMonths} onChange={changeMonths} comparing={comparing} onCompare={() => setComparing((value) => !value)} />}
+          {importBtn}
+        </div>
+      } />
+
+      {isAvaria && comparing && selectedMonths.length >= 2 && <MonthComparison rows={allRows} months={selectedMonths} classifications={mod.classifications ?? []} />}
 
       {!rows.length && (
-        <div className="rounded-lg border border-dashed bg-card p-6"><Empty hint="Importe um relatório para visualizar os indicadores." /></div>
+        <div className="rounded-lg border border-dashed bg-card p-6"><Empty text={selectedMonths.length ? PERIOD_EMPTY : undefined} hint={allRows.length ? undefined : "Importe um relatório para visualizar os indicadores."} /></div>
       )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi accent label={isAvaria ? "Total de Avarias" : "Total de registros"} value={rows.length || null} />
         {isAvaria ? (
-          mod.classifications!.map((c) => {
-            const n = classCounts.find((x) => x.name.toLowerCase() === c.toLowerCase())?.value;
+          (mod.classifications ?? []).map((c) => {
+            const n = classCounts.find((x) => x.name === c)?.value;
             return <Kpi key={c} label={c} value={has("classification") ? n ?? 0 : null} hint="Sem informação no relatório" />;
           })
         ) : (
@@ -87,15 +113,15 @@ function ModulePage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {(isAvaria || has("collaborator")) && <Panel title={isAvaria ? "Colaboradores com mais avarias" : "Colaboradores com mais ocorrências"} subtitle={isAvaria ? "Baseado no campo LOG" : undefined}><Ranking data={countBy(rows, "collaborator")} /></Panel>}
+        {(isAvaria || has("collaborator")) && <Panel title={isAvaria ? "Colaboradores com mais avarias" : "Colaboradores com mais ocorrências"}><Ranking data={countBy(rows, "collaborator")} /></Panel>}
         {isAvaria && <Panel title="Turnos mais ofensores"><Ranking data={shiftData} /></Panel>}
         {has("reason") && <Panel title="Motivos mais frequentes"><Ranking data={countBy(rows, "reason")} /></Panel>}
         {has("route") && <Panel title="Rotas com mais ocorrências"><Ranking data={countBy(rows, "route")} /></Panel>}
-        {has("product") && <Panel title="Produtos mais envolvidos"><Ranking data={countBy(rows, "product")} /></Panel>}
+        {(isAvaria || has("product")) && <Panel title={isAvaria ? "Produtos com mais ocorrências" : "Produtos mais envolvidos"}><Ranking data={countBy(rows, "product")} /></Panel>}
       </div>
 
       <Panel title={isAvaria ? "Ocorrências dos pedidos" : "Registros"}>
-        <RecordsTable rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
+        <RecordsTable key={selectedMonths.join(",")} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
       </Panel>
     </div>
   );

@@ -11,6 +11,8 @@ export const Route = createFileRoute("/_authenticated/pendencias")({
       { name: "description", content: "Inconsistências identificadas nos dados reais importados." },
       { property: "og:title", content: "Pendências — Shopee Operations Hub" },
       { property: "og:description", content: "Inconsistências identificadas nos dados reais." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Page,

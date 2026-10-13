@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_authenticated/importar")({
       { name: "description", content: "Importe relatórios reais XLSX, XLS, CSV ou PDF para os módulos do HUB." },
       { property: "og:title", content: "Importar Dados — Shopee Operations Hub" },
       { property: "og:description", content: "Importador universal de relatórios reais." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ImportPage,

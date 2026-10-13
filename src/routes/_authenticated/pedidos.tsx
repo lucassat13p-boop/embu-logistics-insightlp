@@ -11,6 +11,8 @@ export const Route = createFileRoute("/_authenticated/pedidos")({
       { name: "description", content: "Todos os pedidos/BR presentes nos relatórios importados." },
       { property: "og:title", content: "Pedidos — Shopee Operations Hub" },
       { property: "og:description", content: "Pedidos/BR dos relatórios importados." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Page,

@@ -9,6 +9,8 @@ export const Route = createFileRoute("/_authenticated/historico")({
       { name: "description", content: "Todas as importações de relatórios realizadas no HUB LSP-36." },
       { property: "og:title", content: "Histórico de Importações" },
       { property: "og:description", content: "Todas as importações de relatórios realizadas." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Page,

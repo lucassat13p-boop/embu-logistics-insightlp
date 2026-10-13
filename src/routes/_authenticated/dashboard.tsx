@@ -14,6 +14,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       { name: "description", content: "Visão consolidada FULL, AUTO ADD e ON HOLD do HUB LSP-36." },
       { property: "og:title", content: "Dashboard — Shopee Operations Hub" },
       { property: "og:description", content: "Visão consolidada FULL, AUTO ADD e ON HOLD do HUB LSP-36." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Dashboard,

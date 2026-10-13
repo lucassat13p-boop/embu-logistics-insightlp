@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Eye, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -122,7 +122,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule }: {
             <div className="space-y-4 text-sm">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <dt className="text-muted-foreground">Módulo</dt><dd>{moduleByKey(detail.module)?.label}</dd>
-                {cols.map((c) => (<><dt key={c + "l"} className="text-muted-foreground">{FIELD_LABELS[c]}</dt><dd key={c}>{fmt(detail, c)}</dd></>))}
+                {cols.map((c) => (<Fragment key={c}><dt className="text-muted-foreground">{FIELD_LABELS[c]}</dt><dd>{fmt(detail, c)}</dd></Fragment>))}
                 <dt className="text-muted-foreground">Data original</dt><dd>{detail.record_date_raw ?? MISSING}</dd>
                 <dt className="text-muted-foreground">Linha no arquivo</dt><dd>{detail.row_number}</dd>
               </dl>

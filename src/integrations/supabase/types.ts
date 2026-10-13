@@ -14,7 +14,264 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      collaborators: {
+        Row: {
+          created_at: string
+          first_seen_batch: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          first_seen_batch?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          first_seen_batch?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaborators_first_seen_batch_fkey"
+            columns: ["first_seen_batch"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      column_mappings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          header_signature: string
+          id: string
+          mapping: Json
+          module: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          header_signature: string
+          id?: string
+          mapping: Json
+          module: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          header_signature?: string
+          id?: string
+          mapping?: Json
+          module?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      import_batches: {
+        Row: {
+          created_at: string
+          duplicate_rows: number
+          duplicate_strategy: string | null
+          duration_ms: number | null
+          error_rows: number
+          file_name: string
+          file_type: string | null
+          finished_at: string | null
+          headers: Json | null
+          id: string
+          ignored_rows: number
+          inserted_rows: number
+          mapping: Json | null
+          module: string
+          sheet_name: string | null
+          status: string
+          total_rows: number
+          updated_rows: number
+          user_email: string | null
+          user_id: string | null
+          valid_rows: number
+        }
+        Insert: {
+          created_at?: string
+          duplicate_rows?: number
+          duplicate_strategy?: string | null
+          duration_ms?: number | null
+          error_rows?: number
+          file_name: string
+          file_type?: string | null
+          finished_at?: string | null
+          headers?: Json | null
+          id?: string
+          ignored_rows?: number
+          inserted_rows?: number
+          mapping?: Json | null
+          module: string
+          sheet_name?: string | null
+          status?: string
+          total_rows?: number
+          updated_rows?: number
+          user_email?: string | null
+          user_id?: string | null
+          valid_rows?: number
+        }
+        Update: {
+          created_at?: string
+          duplicate_rows?: number
+          duplicate_strategy?: string | null
+          duration_ms?: number | null
+          error_rows?: number
+          file_name?: string
+          file_type?: string | null
+          finished_at?: string | null
+          headers?: Json | null
+          id?: string
+          ignored_rows?: number
+          inserted_rows?: number
+          mapping?: Json | null
+          module?: string
+          sheet_name?: string | null
+          status?: string
+          total_rows?: number
+          updated_rows?: number
+          user_email?: string | null
+          user_id?: string | null
+          valid_rows?: number
+        }
+        Relationships: []
+      }
+      import_errors: {
+        Row: {
+          batch_id: string
+          column_name: string | null
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          module: string
+          raw: Json | null
+          row_number: number | null
+        }
+        Insert: {
+          batch_id: string
+          column_name?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message: string
+          module: string
+          raw?: Json | null
+          row_number?: number | null
+        }
+        Update: {
+          batch_id?: string
+          column_name?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          module?: string
+          raw?: Json | null
+          row_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_errors_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      records: {
+        Row: {
+          batch_id: string
+          classification: string | null
+          collaborator: string | null
+          created_at: string
+          created_by: string | null
+          dedupe_key: string
+          extra: Json
+          id: string
+          lh: string | null
+          module: string
+          order_id: string | null
+          product: string | null
+          quantity: number | null
+          raw: Json
+          reason: string | null
+          record_date: string | null
+          record_date_raw: string | null
+          route: string | null
+          row_number: number | null
+          shift: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          classification?: string | null
+          collaborator?: string | null
+          created_at?: string
+          created_by?: string | null
+          dedupe_key: string
+          extra?: Json
+          id?: string
+          lh?: string | null
+          module: string
+          order_id?: string | null
+          product?: string | null
+          quantity?: number | null
+          raw?: Json
+          reason?: string | null
+          record_date?: string | null
+          record_date_raw?: string | null
+          route?: string | null
+          row_number?: number | null
+          shift?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          classification?: string | null
+          collaborator?: string | null
+          created_at?: string
+          created_by?: string | null
+          dedupe_key?: string
+          extra?: Json
+          id?: string
+          lh?: string | null
+          module?: string
+          order_id?: string | null
+          product?: string | null
+          quantity?: number | null
+          raw?: Json
+          reason?: string | null
+          record_date?: string | null
+          record_date_raw?: string | null
+          route?: string | null
+          row_number?: number | null
+          shift?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

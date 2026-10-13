@@ -185,7 +185,7 @@ function ImportPage() {
                         <Select value={f || "__none"} onValueChange={(v) => { setMapping((m) => ({ ...m, [h]: v === "__none" ? "" : (v as FieldKey) })); setResult(null); }}>
                           <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none">Não importar como campo (mantido no original)</SelectItem>
+                            <SelectItem value="__none">IGNORAR — não importar (mantido no arquivo original)</SelectItem>
                             {mod.fields.map((k) => <SelectItem key={k} value={k}>{FIELD_LABELS[k]}{mod.required.includes(k) ? " *" : ""}</SelectItem>)}
                           </SelectContent>
                         </Select>

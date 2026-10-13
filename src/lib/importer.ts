@@ -95,7 +95,7 @@ export async function commitImport(opts: {
 
   const { data: batch, error: bErr } = await supabase.from("import_batches").insert({
     module: mod.key, file_name: opts.fileName, file_type: opts.format, sheet_name: opts.sheetName,
-    user_id: u.user.id, user_email: u.user.email, total_rows: result.total, valid_rows: result.valid.length,
+    user_id: u.user.id, user_email: u.user.email ?? null, total_rows: result.total, valid_rows: result.valid.length,
     error_rows: result.errorCount, ignored_rows: result.ignoredCount, duplicate_rows: result.dupInFile + existing,
     status: "Processando", duplicate_strategy: opts.strategy, mapping: opts.mapping, headers: opts.headers,
   }).select().single();

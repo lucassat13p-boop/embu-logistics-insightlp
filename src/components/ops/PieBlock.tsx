@@ -1,7 +1,7 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Empty } from "./blocks";
 
-const colors = ["var(--pie-1)", "var(--pie-2)", "var(--pie-3)", "var(--pie-4)", "var(--pie-5)"];
+const colors = ["var(--pie-1)", "var(--pie-2)", "var(--pie-3)", "var(--pie-4)", "var(--pie-5)", "var(--pie-6)", "var(--pie-7)", "var(--pie-8)", "var(--pie-9)", "var(--pie-10)"];
 const percent = (value: number, total: number) => `${(value / total * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 
 export function PieBlock({ data, total, categories, label }: {
@@ -13,7 +13,8 @@ export function PieBlock({ data, total, categories, label }: {
   if (!data.length || !total) return <Empty text="Nenhum dado disponível." />;
   const known = data.reduce((sum, item) => sum + item.value, 0);
   const slices = [...data, ...(known < total ? [{ name: "Sem informação", value: total - known }] : [])];
-  const color = (name: string) => name === "Sem informação" ? "var(--pie-missing)" : colors[(categories.indexOf(name) < 0 ? categories.length : categories.indexOf(name)) % colors.length];
+  const extraNames = data.map((item) => item.name).filter((name) => !categories.includes(name)).sort();
+  const color = (name: string) => name === "Sem informação" ? "var(--pie-missing)" : colors[(categories.indexOf(name) < 0 ? categories.length + extraNames.indexOf(name) : categories.indexOf(name)) % colors.length];
   return <div className="min-w-0 space-y-3" role="group" aria-label={label}>
     <div className="h-64 w-full" aria-hidden="true">
       <ResponsiveContainer width="100%" height="100%">

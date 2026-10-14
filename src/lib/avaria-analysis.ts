@@ -14,7 +14,7 @@ export function normalizedShift(value: unknown): string | null {
 
 export function filterAvariaByShift(rows: RecordRow[], shifts: AvariaShift[]) {
   if (!shifts.length || shifts.includes("all")) return rows;
-  const selected = new Set(shifts.filter((shift): shift is Exclude<AvariaShift, "all"> => shift !== "all"));
+  const selected = new Set<string>(shifts.filter((shift): shift is Exclude<AvariaShift, "all"> => shift !== "all"));
   return rows.filter((row) => {
     const shift = normalizedShift(row.shift);
     return shift !== null && selected.has(shift);

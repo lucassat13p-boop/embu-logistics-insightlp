@@ -16,7 +16,7 @@ import { HUB_NAME, moduleBySlug, type FieldKey, type ModuleDef } from "@/lib/mod
 import { formatDateBR } from "@/lib/parsers";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, filterAvariaByShift, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS, type AvariaShift } from "@/lib/avaria-analysis";
 import { OnHoldDashboard } from "@/components/ops/OnHoldDashboard";
 

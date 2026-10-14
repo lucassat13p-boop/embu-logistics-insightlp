@@ -1,4 +1,5 @@
 # Tasks
+- [x] Correct ON HOLD shift detection to recognize standalone AM1/AM2/PM1 markers inside existing original row values without reimporting.
 - [x] Add the ON HOLD Todos/AM1/AM2/PM1 shift filter across the dashboard and period comparison without changing source records.
 - [x] Improve ON HOLD driver and reason chart spacing, labels and full-name tooltip without changing data or calculations.
 - [x] Build the isolated ON HOLD first-sheet import mapping, real-data dashboard, period filtering, comparisons and detailed records table.

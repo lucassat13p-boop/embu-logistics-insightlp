@@ -1,20 +1,23 @@
 import type { RecordRow } from "./data";
-import { normalizeHeader } from "./modules";
 
 export type OnHoldField = "reason" | "neighborhood" | "treatment" | "delivery_attempts" | "driver_name";
 export type OnHoldShift = "all" | "AM1" | "AM2" | "PM1";
 
 export function normalizeOnHoldShift(value: unknown) {
-  const compact = String(value ?? "").trim().toUpperCase().replace(/\s+/g, "");
-  return compact === "AM1" || compact === "AM2" || compact === "PM1" ? compact : null;
+  const text = String(value ?? "").toUpperCase();
+  const found = new Set<Exclude<OnHoldShift, "all">>();
+  if (/(^|[^A-Z0-9])AM\s*1(?=$|[^A-Z0-9])/.test(text)) found.add("AM1");
+  if (/(^|[^A-Z0-9])AM\s*2(?=$|[^A-Z0-9])/.test(text)) found.add("AM2");
+  if (/(^|[^A-Z0-9])PM\s*1(?=$|[^A-Z0-9])/.test(text)) found.add("PM1");
+  return found.size === 1 ? [...found][0] : null;
 }
 
 function sourceShift(row: RecordRow) {
   const direct = normalizeOnHoldShift(row.shift);
   if (direct) return direct;
   if (!row.raw || typeof row.raw !== "object" || Array.isArray(row.raw)) return null;
-  const entry = Object.entries(row.raw).find(([key]) => normalizeHeader(key) === "turno");
-  return normalizeOnHoldShift(entry?.[1]);
+  const found = new Set(Object.values(row.raw).map(normalizeOnHoldShift).filter((value): value is Exclude<OnHoldShift, "all"> => value !== null));
+  return found.size === 1 ? [...found][0] : null;
 }
 
 export function filterOnHoldByShift(rows: RecordRow[], shift: OnHoldShift) {

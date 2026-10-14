@@ -12,8 +12,13 @@ export function normalizedShift(value: unknown): string | null {
   return OFFICIAL_SHIFTS.includes(compact as (typeof OFFICIAL_SHIFTS)[number]) ? compact : null;
 }
 
-export function filterAvariaByShift(rows: RecordRow[], shift: AvariaShift) {
-  return shift === "all" ? rows : rows.filter((row) => normalizedShift(row.shift) === shift);
+export function filterAvariaByShift(rows: RecordRow[], shifts: AvariaShift[]) {
+  if (!shifts.length || shifts.includes("all")) return rows;
+  const selected = new Set(shifts.filter((shift): shift is Exclude<AvariaShift, "all"> => shift !== "all"));
+  return rows.filter((row) => {
+    const shift = normalizedShift(row.shift);
+    return shift !== null && selected.has(shift);
+  });
 }
 
 export function normalizedAvariaType(row: Pick<RecordRow, "classification" | "location">): string | null {

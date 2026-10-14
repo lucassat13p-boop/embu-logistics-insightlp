@@ -142,7 +142,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
       </div>
 
       <Panel title={isAvaria ? "Ocorrências dos pedidos" : "Registros"}>
-        <RecordsTable key={`${JSON.stringify(period)}-${avariaShift}`} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
+        <RecordsTable key={`${JSON.stringify(period)}-${avariaShifts.join(",")}`} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
       </Panel>
     </div>
   );

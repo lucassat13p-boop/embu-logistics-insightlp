@@ -1,0 +1,10 @@
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS month TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS location TEXT;
+ALTER TABLE public.import_batches ADD COLUMN IF NOT EXISTS selected_shifts TEXT[];
+ALTER TABLE public.import_batches ADD COLUMN IF NOT EXISTS include_soc BOOLEAN;
+ALTER TABLE public.import_batches ADD COLUMN IF NOT EXISTS soc_rows INTEGER;
+COMMENT ON COLUMN public.records.month IS 'Optional source month value; period analytics continue to use record_date.';
+COMMENT ON COLUMN public.records.location IS 'Optional source location value used by AVARIA analysis.';
+COMMENT ON COLUMN public.import_batches.selected_shifts IS 'Official AVARIA shifts selected before import.';
+COMMENT ON COLUMN public.import_batches.include_soc IS 'Whether SOC records were included in the AVARIA import.';
+COMMENT ON COLUMN public.import_batches.soc_rows IS 'SOC rows found in the source file before import filtering.';

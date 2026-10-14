@@ -86,10 +86,13 @@ export type Database = {
           headers: Json | null
           id: string
           ignored_rows: number
+          include_soc: boolean | null
           inserted_rows: number
           mapping: Json | null
           module: string
+          selected_shifts: string[] | null
           sheet_name: string | null
+          soc_rows: number | null
           status: string
           total_rows: number
           updated_rows: number
@@ -109,10 +112,13 @@ export type Database = {
           headers?: Json | null
           id?: string
           ignored_rows?: number
+          include_soc?: boolean | null
           inserted_rows?: number
           mapping?: Json | null
           module: string
+          selected_shifts?: string[] | null
           sheet_name?: string | null
+          soc_rows?: number | null
           status?: string
           total_rows?: number
           updated_rows?: number
@@ -132,10 +138,13 @@ export type Database = {
           headers?: Json | null
           id?: string
           ignored_rows?: number
+          include_soc?: boolean | null
           inserted_rows?: number
           mapping?: Json | null
           module?: string
+          selected_shifts?: string[] | null
           sheet_name?: string | null
+          soc_rows?: number | null
           status?: string
           total_rows?: number
           updated_rows?: number
@@ -200,7 +209,9 @@ export type Database = {
           extra: Json
           id: string
           lh: string | null
+          location: string | null
           module: string
+          month: string | null
           order_id: string | null
           product: string | null
           quantity: number | null
@@ -224,7 +235,9 @@ export type Database = {
           extra?: Json
           id?: string
           lh?: string | null
+          location?: string | null
           module: string
+          month?: string | null
           order_id?: string | null
           product?: string | null
           quantity?: number | null
@@ -248,7 +261,9 @@ export type Database = {
           extra?: Json
           id?: string
           lh?: string | null
+          location?: string | null
           module?: string
+          month?: string | null
           order_id?: string | null
           product?: string | null
           quantity?: number | null

@@ -9,10 +9,11 @@ export function PieBlock({ data, total, categories, label }: {
   total: number;
   categories: string[];
   label: string;
+  includeMissing?: boolean;
 }) {
   if (!data.length || !total) return <Empty text="Nenhum dado disponível." />;
   const known = data.reduce((sum, item) => sum + item.value, 0);
-  const slices = [...data, ...(known < total ? [{ name: "Sem informação", value: total - known }] : [])];
+  const slices = [...data, ...(arguments[0].includeMissing !== false && known < total ? [{ name: "Sem informação", value: total - known }] : [])];
   const extraNames = data.map((item) => item.name).filter((name) => !categories.includes(name)).sort();
   const color = (name: string) => name === "Sem informação" ? "var(--pie-missing)" : colors[(categories.indexOf(name) < 0 ? categories.length + extraNames.indexOf(name) : categories.indexOf(name)) % colors.length];
   return <div className="min-w-0 space-y-3" role="group" aria-label={label}>

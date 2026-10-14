@@ -116,8 +116,8 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
           <Panel title="Avarias por tipo"><PieBlock label="Avarias por tipo" data={classCounts} total={rows.length} categories={[...OFFICIAL_AVARIA_TYPES]} /></Panel>
           <Panel title="Avarias por turno" action={<label className="flex items-center gap-2 text-xs"><Switch checked={showMissingShifts} onCheckedChange={setShowMissingShifts} /><Label>Exibir “Sem informação”</Label></label>}><PieBlock label="Avarias por turno" data={shiftPieData} total={showMissingShifts ? rows.length : shiftData.reduce((sum, item) => sum + item.value, 0)} categories={[...OFFICIAL_SHIFTS]} includeMissing={false} /></Panel>
         </div>
-        <Panel title="Evolução das avarias" subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
         <Panel title="Colaboradores com mais avarias"><Ranking data={collaboratorData} /></Panel>
+        <Panel title="Evolução das avarias" subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
         <Panel title="Produtos com mais ocorrências" subtitle="Famílias de produtos"><Ranking data={familyData} /></Panel>
       </>}
 

@@ -2,6 +2,7 @@ import type { RecordRow } from "./data";
 
 export const OFFICIAL_AVARIA_TYPES = ["Líquido", "Sólido", "Vidro", "Item vazio", "SOC"] as const;
 export const OFFICIAL_SHIFTS = ["AM1", "AM2", "PM1"] as const;
+export type AvariaShift = "all" | (typeof OFFICIAL_SHIFTS)[number];
 
 const clean = (value: unknown) => String(value ?? "").trim().replace(/\s+/g, " ");
 const folded = (value: unknown) => clean(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleUpperCase("pt-BR");
@@ -9,6 +10,10 @@ const folded = (value: unknown) => clean(value).normalize("NFD").replace(/[\u030
 export function normalizedShift(value: unknown): string | null {
   const compact = folded(value).replace(/\s+/g, "");
   return OFFICIAL_SHIFTS.includes(compact as (typeof OFFICIAL_SHIFTS)[number]) ? compact : null;
+}
+
+export function filterAvariaByShift(rows: RecordRow[], shift: AvariaShift) {
+  return shift === "all" ? rows : rows.filter((row) => normalizedShift(row.shift) === shift);
 }
 
 export function normalizedAvariaType(row: Pick<RecordRow, "classification" | "location">): string | null {

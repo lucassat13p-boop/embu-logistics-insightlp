@@ -1,0 +1,32 @@
+import { useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel } from "./blocks";
+import { PeriodFilter } from "./PeriodFilter";
+import { RecordsTable } from "./RecordsTable";
+import { OnHoldComparison } from "./OnHoldComparison";
+import { availableMonths, EMPTY_PERIOD, filterByPeriod, PERIOD_EMPTY, type PeriodSelection } from "@/lib/period";
+import { byDate, type RecordRow } from "@/lib/data";
+import { countOnHold, driverRanking, percentage, uniqueDrivers } from "@/lib/on-hold-analysis";
+import { HUB_NAME } from "@/lib/modules";
+
+function Breakdown({ data, total, initial = 10 }: { data: { name: string; value: number }[]; total: number; initial?: number }) {
+  const [all, setAll] = useState(false);
+  if (!data.length) return <Empty />;
+  const shown = all ? data : data.slice(0, initial);
+  return <div className="space-y-4"><BarBlock data={shown} horizontal /><div className="overflow-x-auto rounded-md border"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Categoria</th><th className="px-3 py-2 text-right">Quantidade</th><th className="px-3 py-2 text-right">Percentual</th></tr></thead><tbody>{shown.map((item) => <tr key={item.name} className="border-t"><td className="px-3 py-2">{item.name}</td><td className="px-3 py-2 text-right tabular-nums">{item.value.toLocaleString("pt-BR")}</td><td className="px-3 py-2 text-right tabular-nums">{percentage(item.value, total)}</td></tr>)}</tbody></table></div>{data.length > initial && <Button variant="outline" size="sm" onClick={() => setAll(!all)}>{all ? "Mostrar principais" : "Visualizar todos"}</Button>}</div>;
+}
+
+export function OnHoldDashboard({ allRows }: { allRows: RecordRow[] }) {
+  const [period, setPeriod] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [mode, setMode] = useState<"single" | "compare">("single");
+  const months = useMemo(() => availableMonths(allRows), [allRows]);
+  const rows = useMemo(() => filterByPeriod(allRows, period), [allRows, period]);
+  const comparisonRows = useMemo(() => filterByPeriod(allRows, comparison), [allRows, comparison]);
+  const drivers = driverRanking(rows);
+  const driverCount = uniqueDrivers(rows);
+  const columns = ["order_id", "product_code", "reason", "treatment", "delivery_attempts", "record_date", "aging", "driver_name", "driver_id", "carrier_3pl", "neighborhood"] as const;
+  return <div className="space-y-5"><PageHeader title="ON HOLD" subtitle={`${HUB_NAME} · Relatório operacional ON HOLD`} action={<div className="flex max-w-full flex-wrap items-start gap-3"><PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); }} /><Button asChild><Link to="/importar" search={{ modulo: "on_hold" }}><Upload className="h-4 w-4" />Importar relatório ON HOLD</Link></Button></div>} />{mode === "compare" && <OnHoldComparison firstRows={rows} secondRows={comparisonRows} firstPeriod={period} secondPeriod={comparison} />}{!rows.length && <div className="rounded-md border border-dashed p-6"><Empty text={allRows.length ? PERIOD_EMPTY : "Nenhum dado disponível"} hint={allRows.length ? undefined : "Importe um relatório ON HOLD para visualizar as análises."} /></div>}<div className="grid gap-3 md:grid-cols-3"><Kpi accent label="Total de Insucessos" value={rows.length || null} /><Kpi label="Total de Drivers" value={rows.length && driverCount ? driverCount : null} /><Kpi label="Total de Devoluções" value={null} hint="Nenhum dado disponível" /></div><div className="grid gap-4 xl:grid-cols-2"><Panel title="Maiores motivos de On-Hold" subtitle="Quantidade e percentual do total"><Breakdown data={countOnHold(rows, "reason")} total={rows.length} /></Panel><Panel title="Maiores bairros com insucessos" subtitle="Quantidade e percentual do total"><Breakdown data={countOnHold(rows, "neighborhood")} total={rows.length} /></Panel></div><Panel title="Top 20 Motoristas com mais insucessos"><BarBlock data={drivers.slice(0, 20).map(({ name, value }) => ({ name, value }))} horizontal /><div className="mt-4 overflow-x-auto rounded-md border"><table className="w-full min-w-[640px] text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Posição</th><th className="px-3 py-2 text-left">Motorista</th><th className="px-3 py-2 text-left">Driver ID</th><th className="px-3 py-2 text-right">Insucessos</th><th className="px-3 py-2 text-right">Percentual</th></tr></thead><tbody>{drivers.slice(0, 20).map((item, index) => <tr key={`${item.driverId}-${item.name}`} className="border-t"><td className="px-3 py-2">{index + 1}</td><td className="px-3 py-2">{item.name}</td><td className="px-3 py-2">{item.driverId ?? "Sem informação"}</td><td className="px-3 py-2 text-right">{item.value}</td><td className="px-3 py-2 text-right">{percentage(item.value, rows.length)}</td></tr>)}</tbody></table>{!drivers.length && <Empty />}</div></Panel><div className="grid gap-4 md:grid-cols-3"><Kpi label="Drivers únicos" value={rows.length && driverCount ? driverCount : null} /><Kpi label="Insucessos por Driver" value={rows.length && driverCount ? `${rows.length.toLocaleString("pt-BR")} / ${driverCount.toLocaleString("pt-BR")}` : null} /><Kpi label="Média por Driver" value={rows.length && driverCount ? (rows.length / driverCount).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : null} /></div><div className="grid gap-4 xl:grid-cols-2"><Panel title="Tratativas"><Breakdown data={countOnHold(rows, "treatment")} total={rows.length} /></Panel><Panel title="Tentativas de entrega"><Breakdown data={countOnHold(rows, "delivery_attempts")} total={rows.length} /></Panel></div><Panel title="Evolução dos insucessos" subtitle="Data de saída com o Driver"><LineBlock data={byDate(rows)} /></Panel><Panel title="Registros ON HOLD"><RecordsTable key={JSON.stringify(period)} rows={rows} columns={[...columns]} forceColumns={[...columns]} /></Panel></div>;
+}

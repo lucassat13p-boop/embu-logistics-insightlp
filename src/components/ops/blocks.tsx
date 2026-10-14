@@ -46,19 +46,24 @@ export function Kpi({ label, value, hint, accent }: { label: string; value: numb
 
 const tip = { contentStyle: { borderRadius: 8, border: "1px solid var(--border)", fontSize: 12 } };
 
-export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12 }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number }) {
+export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12, rowHeight = 0, yAxisWidth = 110, tickFormatter, tooltipLabel, valueName = "Registros" }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number; rowHeight?: number; yAxisWidth?: number; tickFormatter?: (name: string) => string; tooltipLabel?: string; valueName?: string }) {
   if (!data.length) return <Empty text={emptyText} />;
   const d = data.slice(0, limit);
+  const chartHeight = horizontal && rowHeight ? Math.max(256, d.length * rowHeight + 56) : 256;
   return (
-    <div className="h-64">
+    <div style={{ height: chartHeight }}>
       <ResponsiveContainer>
         {horizontal ? (
-          <BarChart data={d} layout="vertical" margin={{ left: 10 }}>
+          <BarChart data={d} layout="vertical" margin={{ left: 10, right: 16 }} barCategoryGap="28%">
             <CartesianGrid horizontal={false} stroke="var(--border)" />
             <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-            <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
-            <Tooltip {...tip} />
-            <Bar dataKey="value" name="Registros" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
+            <YAxis type="category" dataKey="name" width={yAxisWidth} tick={{ fontSize: 11 }} tickFormatter={tickFormatter} interval={0} />
+            <Tooltip
+              {...tip}
+              labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${String(label)}` : String(label)}
+              formatter={(value) => [Number(value).toLocaleString("pt-BR"), valueName]}
+            />
+            <Bar dataKey="value" name={valueName} fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
           </BarChart>
         ) : (
           <BarChart data={d}>

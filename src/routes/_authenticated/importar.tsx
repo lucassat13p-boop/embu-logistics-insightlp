@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader, Panel } from "@/components/ops/blocks";
 import { supabase } from "@/integrations/supabase/client";
 import { FIELD_LABELS, MODULES, moduleByKey, suggestMapping, type FieldKey, type ModuleKey } from "@/lib/modules";
 import { buildTable, detectHeaderRow, parseDate, parseFile, type ParsedFile } from "@/lib/parsers";
 import { commitImport, countExisting, headerSignature, validate, type DupStrategy, type Mapping, type ValidationResult } from "@/lib/importer";
 import { cn } from "@/lib/utils";
+import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
 
 export const Route = createFileRoute("/_authenticated/importar")({
   validateSearch: (s: Record<string, unknown>) => ({ modulo: typeof s.modulo === "string" ? (s.modulo as string) : undefined }),
@@ -35,7 +37,7 @@ function ImportPage() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [moduleKey, setModuleKey] = useState<ModuleKey | "">((moduleByKey(modulo ?? "")?.key as ModuleKey) ?? "");
-  const mod = moduleKey ? moduleByKey(moduleKey)! : null;
+  const mod = moduleKey ? moduleByKey(moduleKey) ?? null : null;
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
   const [sheetIdx, setSheetIdx] = useState(0);
@@ -47,9 +49,29 @@ function ImportPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [done, setDone] = useState<{ batchId: string; inserted: number; existing: number; status: string } | null>(null);
+  const [selectedShifts, setSelectedShifts] = useState<string[]>([...OFFICIAL_SHIFTS]);
+  const [includeSoc, setIncludeSoc] = useState(true);
+  const [allShifts, setAllShifts] = useState(true);
 
   const sheet = parsed?.sheets[sheetIdx];
   const table = useMemo(() => (sheet ? buildTable(sheet.rows, headerIdx) : null), [sheet, headerIdx]);
+
+  const buildAvariaPreview = (validation: ValidationResult) => {
+    if (mod?.key !== "avaria") return null;
+    const found = { AM1: 0, AM2: 0, PM1: 0, missing: 0, soc: 0 };
+    const kept = validation.valid.filter((row) => {
+      const shift = normalizedShift(row.fields.shift);
+      if (shift) found[shift as "AM1" | "AM2" | "PM1"] += 1; else found.missing += 1;
+      const soc = normalizedAvariaType({ classification: String(row.fields.classification ?? "") || null, location: String(row.fields.location ?? "") || null }) === "SOC";
+      if (soc) found.soc += 1;
+      return (allShifts || (!!shift && selectedShifts.includes(shift))) && (includeSoc || !soc);
+    });
+    return { found, kept, excluded: validation.valid.length - kept.length };
+  };
+
+  const avariaPreview = useMemo(() => result ? buildAvariaPreview(result) : null, [mod?.key, result, selectedShifts, includeSoc, allShifts]);
+
+  const resultForImport = avariaPreview && result ? { ...result, valid: avariaPreview.kept, ignoredCount: result.ignoredCount + avariaPreview.excluded } : result;
 
   async function loadMapping(headers: string[], m = mod) {
     if (!m) return;
@@ -106,12 +128,16 @@ function ImportPage() {
 
   async function confirm() {
     if (!mod || !table || !file || !parsed) return;
-    const r = await runValidation(); // re-validate before saving
-    if (!r) return;
+    const fresh = await runValidation(); // re-validate before saving
+    if (!fresh) return;
+    const freshPreview = buildAvariaPreview(fresh);
+    const r = freshPreview ? { ...fresh, valid: freshPreview.kept, ignoredCount: fresh.ignoredCount + freshPreview.excluded } : fresh;
     if (!r.valid.length) { toast.error("Nenhum registro válido para salvar."); return; }
     setBusy("Salvando registros...");
     try {
-      const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: sheet!.name, headers: table.headers, mapping, result: r, strategy });
+      const activeSheet = sheet;
+      if (!activeSheet) return;
+      const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: activeSheet.name, headers: table.headers, mapping, result: r, strategy, avariaOptions: freshPreview ? { shifts: allShifts ? ["Todos"] : selectedShifts, includeSoc, found: freshPreview.found, excluded: freshPreview.excluded } : undefined });
       setDone(res);
       await qc.invalidateQueries();
       toast.success(`Importação concluída: ${res.inserted} novos registros em ${mod.label}.`);
@@ -209,6 +235,15 @@ function ImportPage() {
         </Panel>
       )}
 
+      {result && mod?.key === "avaria" && avariaPreview && (
+        <Panel title="Filtros da importação AVARIA" subtitle="Aplicados antes de salvar no banco">
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="space-y-3"><p className="text-sm font-semibold">Turnos a importar</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><Checkbox checked={allShifts} onCheckedChange={(checked) => { setAllShifts(checked === true); if (checked) setSelectedShifts([...OFFICIAL_SHIFTS]); }} />Todos</label>{OFFICIAL_SHIFTS.map((shift) => <label key={shift} className="flex items-center gap-2 text-sm"><Checkbox checked={!allShifts && selectedShifts.includes(shift)} onCheckedChange={(checked) => { setAllShifts(false); setSelectedShifts(checked ? [...selectedShifts.filter((item) => item !== shift), shift] : selectedShifts.filter((item) => item !== shift)); }} />{shift}</label>)}</div></div>
+            <div className="space-y-3"><p className="text-sm font-semibold">SOC</p><RadioGroup value={includeSoc ? "include" : "exclude"} onValueChange={(value) => setIncludeSoc(value === "include")} className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><RadioGroupItem value="include" />Incluir SOC</label><label className="flex items-center gap-2 text-sm"><RadioGroupItem value="exclude" />Não incluir SOC</label></RadioGroup></div>
+          </div>
+        </Panel>
+      )}
+
       {result && mod && (
         <Panel title="3. Validação">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -217,6 +252,9 @@ function ImportPage() {
             ))}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">Ignorados = linhas completamente vazias. Duplicados = {result.dupInFile} repetidos no arquivo + {existing ?? "?"} já existentes no banco.</p>
+
+          {avariaPreview && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[["AM1", avariaPreview.found.AM1], ["AM2", avariaPreview.found.AM2], ["PM1", avariaPreview.found.PM1], ["Sem informação", avariaPreview.found.missing], ["SOC encontrados", avariaPreview.found.soc], ["Serão importados", avariaPreview.kept.length], ["Ignorados pelos filtros", avariaPreview.excluded], ["SOC", includeSoc ? "Incluído" : "Não incluído"]].map(([label, value]) => <div key={label as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{label}</p><p className="font-semibold tabular-nums">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p></div>)}</div>}
+          {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {allShifts ? "Todos" : selectedShifts.length ? selectedShifts.join(", ") : "Nenhum"}.</p>}
 
           {errors.length > 0 && (
             <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 p-3">
@@ -240,7 +278,7 @@ function ImportPage() {
           )}
 
           <div className="mt-4 flex justify-end">
-            <Button onClick={confirm} disabled={!!busy || !result.valid.length || !!done}>
+            <Button onClick={confirm} disabled={!!busy || !(resultForImport?.valid.length) || !!done}>
               {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}Confirmar importação
             </Button>
           </div>

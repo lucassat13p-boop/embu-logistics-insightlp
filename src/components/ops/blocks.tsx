@@ -46,9 +46,9 @@ export function Kpi({ label, value, hint, accent }: { label: string; value: numb
 
 const tip = { contentStyle: { borderRadius: 8, border: "1px solid var(--border)", fontSize: 12 } };
 
-export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean }) {
+export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12 }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number }) {
   if (!data.length) return <Empty text={emptyText} />;
-  const d = data.slice(0, 12);
+  const d = data.slice(0, limit);
   return (
     <div className="h-64">
       <ResponsiveContainer>

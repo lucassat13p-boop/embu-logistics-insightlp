@@ -63,7 +63,7 @@ function ImportPage() {
       if (shift) found[shift as "AM1" | "AM2" | "PM1"] += 1; else found.missing += 1;
       const soc = normalizedAvariaType({ classification: String(row.fields.classification ?? "") || null, location: String(row.fields.location ?? "") || null }) === "SOC";
       if (soc) found.soc += 1;
-      return !!shift && selectedShifts.includes(shift) && (includeSoc || !soc);
+      return (!shift || selectedShifts.includes(shift)) && (includeSoc || !soc);
     });
     return { found, kept, excluded: validation.valid.length - kept.length };
   };

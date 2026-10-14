@@ -35,7 +35,7 @@ export function BatchList() {
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-            <tr>{["Arquivo", "Módulo", "Data/hora", "Usuário", "Registros", "Válidos", "Erros", "Status", "Duração", ""].map((h) => <th key={h} className="px-3 py-2">{h}</th>)}</tr>
+            <tr>{["Arquivo", "Módulo", "Data/hora", "Usuário", "Registros", "Válidos", "Importados", "Ignorados", "Seleção AVARIA", "Erros", "Status", "Duração", ""].map((h) => <th key={h} className="px-3 py-2">{h}</th>)}</tr>
           </thead>
           <tbody>
             {rows.map((b) => (
@@ -46,6 +46,9 @@ export function BatchList() {
                 <td className="max-w-[180px] truncate px-3 py-2">{b.user_email}</td>
                 <td className="px-3 py-2 tabular-nums">{b.total_rows}</td>
                 <td className="px-3 py-2 tabular-nums">{b.valid_rows}</td>
+                <td className="px-3 py-2 tabular-nums">{b.inserted_rows}</td>
+                <td className="px-3 py-2 tabular-nums">{b.ignored_rows}</td>
+                <td className="max-w-[220px] px-3 py-2 text-xs">{b.module === "avaria" ? `${b.selected_shifts?.join(", ") || "Nenhum"} · SOC ${b.include_soc === null ? "—" : b.include_soc ? "incluído" : "não incluído"}` : "—"}</td>
                 <td className="px-3 py-2 tabular-nums">{b.error_rows}</td>
                 <td className="px-3 py-2"><StatusBadge status={b.status} /></td>
                 <td className="px-3 py-2 tabular-nums">{b.duration_ms != null ? `${(b.duration_ms / 1000).toFixed(1)}s` : "—"}</td>

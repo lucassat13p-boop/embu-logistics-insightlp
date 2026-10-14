@@ -16,7 +16,7 @@ import { HUB_NAME, moduleBySlug, type FieldKey, type ModuleDef } from "@/lib/mod
 import { formatDateBR } from "@/lib/parsers";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
+import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: ({ params }) => {
@@ -68,7 +68,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
 
   const classCounts = isAvaria ? countAvariaTypes(rows) : countBy(rows, "classification");
   const shiftData = isAvaria ? countAvariaShifts(rows) : countBy(rows, "shift");
-  const missingShiftCount = isAvaria ? rows.filter((row) => !OFFICIAL_SHIFTS.includes(String(row.shift ?? "").trim().replace(/\s+/g, "").toUpperCase() as (typeof OFFICIAL_SHIFTS)[number])).length : 0;
+  const missingShiftCount = isAvaria ? rows.filter((row) => !normalizedShift(row.shift)).length : 0;
   const shiftPieData = showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }] : shiftData;
   const collaboratorData = isAvaria ? countAvariaCollaborators(rows) : countBy(rows, "collaborator");
   const familyData = isAvaria ? countProductFamilies(rows) : [];

@@ -1,10 +1,10 @@
 # Tasks
-- [ ] Add independent AVARIA shift and SOC import filters, real-file preview totals and saved history metadata.
-- [ ] Replace the month-only AVARIA filter with day, week, month and custom periods plus two-period comparison.
-- [ ] Normalize SOC classification, official shifts and collaborators only for analysis while preserving source values.
+- [x] Add independent AVARIA shift and SOC import filters, real-file preview totals and saved history metadata.
+- [x] Replace the month-only AVARIA filter with day, week, month and custom periods plus two-period comparison.
+- [x] Normalize SOC classification, official shifts and collaborators only for analysis while preserving source values.
 - [x] Add real-data percentage changes, evolution summary and pairwise monthly analysis to AVARIA.
 - [x] Verify zero baselines, missing values and independent multiple-month pairs with unit tests.
-- [ ] Complete final authenticated visual verification of multiple months and reset — blocked until the user signs in to the preview; session minting could not match the requesting account.
+- [ ] Complete authenticated visual verification when requested; intentionally skipped now to conserve credits.
 - [x] Replace AVARIA type and shift charts with real-data pies and complete legends.
 - [x] Add conservative product families to rankings and month comparison without source writes.
 - [x] Verify charts, monthly filtering, comparison and original product names with real records.

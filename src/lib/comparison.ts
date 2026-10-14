@@ -19,7 +19,7 @@ export function variation(previous: number | null, current: number | null) {
 }
 
 // Zero is a measured absence only when this period has real values for the dimension.
-export function metricCount(rows: readonly RecordRow[], field?: FieldKey, name?: string, allowed?: readonly string[]): number | null {
+export function metricCount(rows: readonly RecordRow[], field?: Extract<FieldKey, keyof RecordRow>, name?: string, allowed?: readonly string[]): number | null {
   if (!rows.length) return null;
   if (!field) return rows.length;
   const real = rows.filter((row) => {

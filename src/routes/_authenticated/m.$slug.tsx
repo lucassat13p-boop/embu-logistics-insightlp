@@ -17,6 +17,7 @@ import { formatDateBR } from "@/lib/parsers";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
+import { OnHoldDashboard } from "@/components/ops/OnHoldDashboard";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: ({ params }) => {
@@ -51,6 +52,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [showMissingShifts, setShowMissingShifts] = useState(true);
   const isAvaria = mod.key === "avaria";
+  const isOnHold = mod.key === "on_hold";
   const months = useMemo(() => availableMonths(allRows), [allRows]);
   const rows = useMemo(() => isAvaria ? filterByPeriod(allRows, period) : allRows, [allRows, period, isAvaria]);
   const comparisonRows = useMemo(() => isAvaria ? filterByPeriod(allRows, comparison) : [], [allRows, comparison, isAvaria]);
@@ -65,6 +67,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   );
 
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-32" /><Skeleton className="h-64" /></div>;
+  if (isOnHold) return <OnHoldDashboard allRows={allRows} />;
 
   const classCounts = isAvaria ? countAvariaTypes(rows) : countBy(rows, "classification");
   const shiftData = isAvaria ? countAvariaShifts(rows) : countBy(rows, "shift");

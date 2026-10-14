@@ -200,20 +200,27 @@ export type Database = {
       }
       records: {
         Row: {
+          aging: string | null
           batch_id: string
+          carrier_3pl: string | null
           classification: string | null
           collaborator: string | null
           created_at: string
           created_by: string | null
           dedupe_key: string
+          delivery_attempts: string | null
+          driver_id: string | null
+          driver_name: string | null
           extra: Json
           id: string
           lh: string | null
           location: string | null
           module: string
           month: string | null
+          neighborhood: string | null
           order_id: string | null
           product: string | null
+          product_code: string | null
           quantity: number | null
           raw: Json
           reason: string | null
@@ -223,23 +230,31 @@ export type Database = {
           row_number: number | null
           shift: string | null
           status: string | null
+          treatment: string | null
           updated_at: string
         }
         Insert: {
+          aging?: string | null
           batch_id: string
+          carrier_3pl?: string | null
           classification?: string | null
           collaborator?: string | null
           created_at?: string
           created_by?: string | null
           dedupe_key: string
+          delivery_attempts?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
           extra?: Json
           id?: string
           lh?: string | null
           location?: string | null
           module: string
           month?: string | null
+          neighborhood?: string | null
           order_id?: string | null
           product?: string | null
+          product_code?: string | null
           quantity?: number | null
           raw?: Json
           reason?: string | null
@@ -249,23 +264,31 @@ export type Database = {
           row_number?: number | null
           shift?: string | null
           status?: string | null
+          treatment?: string | null
           updated_at?: string
         }
         Update: {
+          aging?: string | null
           batch_id?: string
+          carrier_3pl?: string | null
           classification?: string | null
           collaborator?: string | null
           created_at?: string
           created_by?: string | null
           dedupe_key?: string
+          delivery_attempts?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
           extra?: Json
           id?: string
           lh?: string | null
           location?: string | null
           module?: string
           month?: string | null
+          neighborhood?: string | null
           order_id?: string | null
           product?: string | null
+          product_code?: string | null
           quantity?: number | null
           raw?: Json
           reason?: string | null
@@ -275,6 +298,7 @@ export type Database = {
           row_number?: number | null
           shift?: string | null
           status?: string | null
+          treatment?: string | null
           updated_at?: string
         }
         Relationships: [

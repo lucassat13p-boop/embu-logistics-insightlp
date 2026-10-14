@@ -17,3 +17,4 @@
 - AVARIA analysis normalizes official types, shifts, and collaborator casing without source writes; import-time shift/SOC choices are independent and stored with each batch for auditability.
 - Product-family analytics use one pure, conservative whole-word resolver shared by AVARIA rankings and monthly comparison; unknown or mixed products retain normalized descriptions so original records stay untouched and unrelated objects are not merged by material.
 - AVARIA pie charts use the filtered record count as denominator and show missing values as an informational segment only when real field values exist, so absent attributes are not inferred or silently excluded.
+- ON HOLD uses dedicated record columns and a dedicated dashboard component while sharing the reusable period utilities, keeping its import and analytics isolated from every other module.

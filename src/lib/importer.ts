@@ -116,6 +116,10 @@ export async function commitImport(opts: {
       shift: (v.fields.shift as string) ?? null, route: (v.fields.route as string) ?? null, lh: (v.fields.lh as string) ?? null,
       reason: (v.fields.reason as string) ?? null, classification: (v.fields.classification as string) ?? null,
       quantity: (v.fields.quantity as number) ?? null, extra: v.extra as never, raw: v.raw as never,
+      product_code: (v.fields.product_code as string) ?? null, treatment: (v.fields.treatment as string) ?? null,
+      delivery_attempts: (v.fields.delivery_attempts as string) ?? null, aging: (v.fields.aging as string) ?? null,
+      driver_name: (v.fields.driver_name as string) ?? null, driver_id: (v.fields.driver_id as string) ?? null,
+      carrier_3pl: (v.fields.carrier_3pl as string) ?? null, neighborhood: (v.fields.neighborhood as string) ?? null,
       dedupe_key: v.dedupe_key, updated_at: new Date().toISOString(),
     }));
     for (let i = 0; i < rows.length; i += 500) {

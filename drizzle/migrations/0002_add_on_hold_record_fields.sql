@@ -1,0 +1,10 @@
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS product_code TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS treatment TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS delivery_attempts TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS aging TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS driver_name TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS driver_id TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS carrier_3pl TEXT;
+ALTER TABLE public.records ADD COLUMN IF NOT EXISTS neighborhood TEXT;
+CREATE INDEX IF NOT EXISTS records_on_hold_date_idx ON public.records (record_date) WHERE module = 'on_hold';
+CREATE INDEX IF NOT EXISTS records_on_hold_driver_idx ON public.records (driver_name) WHERE module = 'on_hold';

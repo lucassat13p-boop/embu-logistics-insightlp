@@ -10,7 +10,7 @@ import { hasField, type RecordRow } from "@/lib/data";
 import { Empty } from "./blocks";
 
 const MISSING = "Sem informação";
-const FILTERABLE: FieldKey[] = ["status", "collaborator", "shift", "route", "lh", "reason", "classification", "product"];
+const FILTERABLE: FieldKey[] = ["status", "collaborator", "shift", "route", "lh", "reason", "classification", "product", "treatment", "delivery_attempts", "driver_name", "driver_id", "carrier_3pl", "neighborhood"];
 
 export function RecordsTable({ rows, columns, forceColumns = [], showModule }: { rows: RecordRow[]; columns: FieldKey[]; forceColumns?: FieldKey[]; showModule?: boolean }) {
   const [q, setQ] = useState("");

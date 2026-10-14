@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Swap the AVARIA evolution/collaborator blocks and apply a Todos/AM1/AM2/PM1 shift filter across all AVARIA analysis and comparisons.
+- [x] Keep AVARIA evolution before collaborators as requested and apply a Todos/AM1/AM2/PM1 shift filter across all AVARIA analysis and comparisons.
 - [x] Correct ON HOLD shift detection to recognize standalone AM1/AM2/PM1 markers inside existing original row values without reimporting.
 - [x] Add the ON HOLD Todos/AM1/AM2/PM1 shift filter across the dashboard and period comparison without changing source records.
 - [x] Improve ON HOLD driver and reason chart spacing, labels and full-name tooltip without changing data or calculations.

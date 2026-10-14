@@ -16,7 +16,8 @@ import { HUB_NAME, moduleBySlug, type FieldKey, type ModuleDef } from "@/lib/mod
 import { formatDateBR } from "@/lib/parsers";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, filterAvariaByShift, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS, type AvariaShift } from "@/lib/avaria-analysis";
 import { OnHoldDashboard } from "@/components/ops/OnHoldDashboard";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
@@ -51,11 +52,12 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [showMissingShifts, setShowMissingShifts] = useState(true);
+  const [avariaShift, setAvariaShift] = useState<AvariaShift>("all");
   const isAvaria = mod.key === "avaria";
   const isOnHold = mod.key === "on_hold";
   const months = useMemo(() => availableMonths(allRows), [allRows]);
-  const rows = useMemo(() => isAvaria ? filterByPeriod(allRows, period) : allRows, [allRows, period, isAvaria]);
-  const comparisonRows = useMemo(() => isAvaria ? filterByPeriod(allRows, comparison) : [], [allRows, comparison, isAvaria]);
+  const rows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, period), avariaShift) : allRows, [allRows, period, isAvaria, avariaShift]);
+  const comparisonRows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, comparison), avariaShift) : [], [allRows, comparison, isAvaria, avariaShift]);
   const has = (f: FieldKey) => hasField(rows, f);
   const dates = rows.map((r) => r.record_date).filter(Boolean).sort() as string[];
   const columns: FieldKey[] = isAvaria
@@ -80,7 +82,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
     <div className="space-y-5">
       <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={
         <div className="flex max-w-full flex-wrap items-start gap-3">
-           {isAvaria && <PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); }} />}
+           {isAvaria && <div className="min-w-0 flex-1"><PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); setAvariaShift("all"); }} /><div className="mt-3 w-40"><Label htmlFor="avaria-shift">Turno</Label><Select value={avariaShift} onValueChange={(value) => setAvariaShift(value as AvariaShift)}><SelectTrigger id="avaria-shift" className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="AM1">AM1</SelectItem><SelectItem value="AM2">AM2</SelectItem><SelectItem value="PM1">PM1</SelectItem></SelectContent></Select></div></div>}
           {importBtn}
         </div>
       } />
@@ -140,7 +142,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
       </div>
 
       <Panel title={isAvaria ? "Ocorrências dos pedidos" : "Registros"}>
-        <RecordsTable key={JSON.stringify(period)} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
+        <RecordsTable key={`${JSON.stringify(period)}-${avariaShift}`} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
       </Panel>
     </div>
   );

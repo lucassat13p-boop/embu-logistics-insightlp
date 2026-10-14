@@ -51,6 +51,7 @@ function ImportPage() {
   const [done, setDone] = useState<{ batchId: string; inserted: number; existing: number; status: string } | null>(null);
   const [selectedShifts, setSelectedShifts] = useState<string[]>([...OFFICIAL_SHIFTS]);
   const [includeSoc, setIncludeSoc] = useState(true);
+  const [allShifts, setAllShifts] = useState(true);
 
   const sheet = parsed?.sheets[sheetIdx];
   const table = useMemo(() => (sheet ? buildTable(sheet.rows, headerIdx) : null), [sheet, headerIdx]);
@@ -63,12 +64,12 @@ function ImportPage() {
       if (shift) found[shift as "AM1" | "AM2" | "PM1"] += 1; else found.missing += 1;
       const soc = normalizedAvariaType({ classification: String(row.fields.classification ?? "") || null, location: String(row.fields.location ?? "") || null }) === "SOC";
       if (soc) found.soc += 1;
-      return (!shift || selectedShifts.includes(shift)) && (includeSoc || !soc);
+      return (allShifts || (!!shift && selectedShifts.includes(shift))) && (includeSoc || !soc);
     });
     return { found, kept, excluded: validation.valid.length - kept.length };
   };
 
-  const avariaPreview = useMemo(() => result ? buildAvariaPreview(result) : null, [mod?.key, result, selectedShifts, includeSoc]);
+  const avariaPreview = useMemo(() => result ? buildAvariaPreview(result) : null, [mod?.key, result, selectedShifts, includeSoc, allShifts]);
 
   const resultForImport = avariaPreview && result ? { ...result, valid: avariaPreview.kept, ignoredCount: result.ignoredCount + avariaPreview.excluded } : result;
 
@@ -136,7 +137,7 @@ function ImportPage() {
     try {
       const activeSheet = sheet;
       if (!activeSheet) return;
-      const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: activeSheet.name, headers: table.headers, mapping, result: r, strategy, avariaOptions: freshPreview ? { shifts: selectedShifts, includeSoc, found: freshPreview.found, excluded: freshPreview.excluded } : undefined });
+      const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: activeSheet.name, headers: table.headers, mapping, result: r, strategy, avariaOptions: freshPreview ? { shifts: allShifts ? ["Todos"] : selectedShifts, includeSoc, found: freshPreview.found, excluded: freshPreview.excluded } : undefined });
       setDone(res);
       await qc.invalidateQueries();
       toast.success(`Importação concluída: ${res.inserted} novos registros em ${mod.label}.`);
@@ -237,7 +238,7 @@ function ImportPage() {
       {result && mod.key === "avaria" && avariaPreview && (
         <Panel title="Filtros da importação AVARIA" subtitle="Aplicados antes de salvar no banco">
           <div className="grid gap-5 lg:grid-cols-2">
-            <div className="space-y-3"><p className="text-sm font-semibold">Turnos a importar</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><Checkbox checked={selectedShifts.length === OFFICIAL_SHIFTS.length} onCheckedChange={(checked) => setSelectedShifts(checked ? [...OFFICIAL_SHIFTS] : [])} />Todos</label>{OFFICIAL_SHIFTS.map((shift) => <label key={shift} className="flex items-center gap-2 text-sm"><Checkbox checked={selectedShifts.includes(shift)} onCheckedChange={(checked) => setSelectedShifts(checked ? [...selectedShifts, shift] : selectedShifts.filter((item) => item !== shift))} />{shift}</label>)}</div></div>
+            <div className="space-y-3"><p className="text-sm font-semibold">Turnos a importar</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><Checkbox checked={allShifts} onCheckedChange={(checked) => { setAllShifts(checked === true); if (checked) setSelectedShifts([...OFFICIAL_SHIFTS]); }} />Todos</label>{OFFICIAL_SHIFTS.map((shift) => <label key={shift} className="flex items-center gap-2 text-sm"><Checkbox checked={!allShifts && selectedShifts.includes(shift)} onCheckedChange={(checked) => { setAllShifts(false); setSelectedShifts(checked ? [...selectedShifts.filter((item) => item !== shift), shift] : selectedShifts.filter((item) => item !== shift)); }} />{shift}</label>)}</div></div>
             <div className="space-y-3"><p className="text-sm font-semibold">SOC</p><RadioGroup value={includeSoc ? "include" : "exclude"} onValueChange={(value) => setIncludeSoc(value === "include")} className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><RadioGroupItem value="include" />Incluir SOC</label><label className="flex items-center gap-2 text-sm"><RadioGroupItem value="exclude" />Não incluir SOC</label></RadioGroup></div>
           </div>
         </Panel>
@@ -253,7 +254,7 @@ function ImportPage() {
           <p className="mt-2 text-xs text-muted-foreground">Ignorados = linhas completamente vazias. Duplicados = {result.dupInFile} repetidos no arquivo + {existing ?? "?"} já existentes no banco.</p>
 
           {avariaPreview && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[["AM1", avariaPreview.found.AM1], ["AM2", avariaPreview.found.AM2], ["PM1", avariaPreview.found.PM1], ["Sem informação", avariaPreview.found.missing], ["SOC encontrados", avariaPreview.found.soc], ["Serão importados", avariaPreview.kept.length], ["Ignorados pelos filtros", avariaPreview.excluded], ["SOC", includeSoc ? "Incluído" : "Não incluído"]].map(([label, value]) => <div key={label as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{label}</p><p className="font-semibold tabular-nums">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p></div>)}</div>}
-          {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {selectedShifts.length ? selectedShifts.join(", ") : "Nenhum"}.</p>}
+          {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {allShifts ? "Todos" : selectedShifts.length ? selectedShifts.join(", ") : "Nenhum"}.</p>}
 
           {errors.length > 0 && (
             <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 p-3">

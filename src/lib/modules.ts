@@ -81,7 +81,7 @@ export const MODULES: ModuleDef[] = [
     fields: ["record_date", "month", "order_id", "status", "location", "product", "classification", "collaborator", "shift"],
     required: ["order_id"], dedupe: ["order_id", "record_date"], firstSheetOnly: true,
     defaultMapping: { DATA: "record_date", "MÊS": "month", BR: "order_id", AVARIA: "order_id", STATUS: "status", "LOCALIZAÇÃO": "location", PRODUTO: "product", "CLASSIFICAÇÃO": "classification", "EMAIL / OPS": "collaborator", LOG: "collaborator", TURNO: "shift" },
-    classifications: ["Líquido", "Vidro", "Sólido", "Item vazio", "SOC"],
+    classifications: ["Líquido", "Sólido", "Vidro", "Item vazio", "SOC"],
     shifts: ["AM1", "AM2", "PM1"],
     description: "Fonte: Dados Diário Avaria HUB-LSP-36 (somente 1ª planilha)",
   },

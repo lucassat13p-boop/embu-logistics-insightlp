@@ -73,6 +73,8 @@ export function validate(mod: ModuleDef, body: { rowNumber: number; values: Reco
 
 export type DupStrategy = "ignore" | "update";
 
+export type AvariaImportOptions = { shifts: string[]; includeSoc: boolean; found: { AM1: number; AM2: number; PM1: number; missing: number; soc: number }; excluded: number };
+
 export async function countExisting(mod: ModuleDef, keys: string[]) {
   let n = 0;
   for (let i = 0; i < keys.length; i += 200) {
@@ -84,7 +86,7 @@ export async function countExisting(mod: ModuleDef, keys: string[]) {
 
 export async function commitImport(opts: {
   mod: ModuleDef; fileName: string; format: string; sheetName: string; headers: string[];
-  mapping: Mapping; result: ValidationResult; strategy: DupStrategy;
+  mapping: Mapping; result: ValidationResult; strategy: DupStrategy; avariaOptions?: AvariaImportOptions;
 }) {
   const t0 = performance.now();
   const { data: u } = await supabase.auth.getUser();
@@ -98,6 +100,8 @@ export async function commitImport(opts: {
     user_id: u.user.id, user_email: u.user.email ?? null, total_rows: result.total, valid_rows: result.valid.length,
     error_rows: result.errorCount, ignored_rows: result.ignoredCount, duplicate_rows: result.dupInFile + existing,
     status: "Processando", duplicate_strategy: opts.strategy, mapping: opts.mapping, headers: opts.headers,
+     selected_shifts: opts.avariaOptions?.shifts ?? null, include_soc: opts.avariaOptions?.includeSoc ?? null,
+     soc_rows: opts.avariaOptions?.found.soc ?? null,
   }).select().single();
   if (bErr || !batch) throw new Error(bErr?.message ?? "Falha ao criar lote");
 
@@ -106,6 +110,7 @@ export async function commitImport(opts: {
     const rows = result.valid.map((v) => ({
       module: mod.key, batch_id: batch.id, row_number: v.rowNumber, created_by: u.user!.id,
       record_date: (v.fields.record_date as string) ?? null, record_date_raw: v.record_date_raw,
+      month: (v.fields.month as string) ?? null, location: (v.fields.location as string) ?? null,
       order_id: (v.fields.order_id as string) ?? null, status: (v.fields.status as string) ?? null,
       collaborator: (v.fields.collaborator as string) ?? null, product: (v.fields.product as string) ?? null,
       shift: (v.fields.shift as string) ?? null, route: (v.fields.route as string) ?? null, lh: (v.fields.lh as string) ?? null,

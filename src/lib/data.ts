@@ -54,7 +54,7 @@ export function countBy(rows: RecordRow[], f: FieldKey) {
     const k = String(v);
     m.set(k, (m.get(k) ?? 0) + 1);
   }
-  return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  return [...m.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "pt-BR"));
 }
 
 export function byDate(rows: RecordRow[]) {

@@ -235,7 +235,7 @@ function ImportPage() {
         </Panel>
       )}
 
-      {result && mod.key === "avaria" && avariaPreview && (
+      {result && mod?.key === "avaria" && avariaPreview && (
         <Panel title="Filtros da importação AVARIA" subtitle="Aplicados antes de salvar no banco">
           <div className="grid gap-5 lg:grid-cols-2">
             <div className="space-y-3"><p className="text-sm font-semibold">Turnos a importar</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><Checkbox checked={allShifts} onCheckedChange={(checked) => { setAllShifts(checked === true); if (checked) setSelectedShifts([...OFFICIAL_SHIFTS]); }} />Todos</label>{OFFICIAL_SHIFTS.map((shift) => <label key={shift} className="flex items-center gap-2 text-sm"><Checkbox checked={!allShifts && selectedShifts.includes(shift)} onCheckedChange={(checked) => { setAllShifts(false); setSelectedShifts(checked ? [...selectedShifts.filter((item) => item !== shift), shift] : selectedShifts.filter((item) => item !== shift)); }} />{shift}</label>)}</div></div>

@@ -52,12 +52,12 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [showMissingShifts, setShowMissingShifts] = useState(true);
-  const [avariaShift, setAvariaShift] = useState<AvariaShift>("all");
+  const [avariaShifts, setAvariaShifts] = useState<AvariaShift[]>(["all"]);
   const isAvaria = mod.key === "avaria";
   const isOnHold = mod.key === "on_hold";
   const months = useMemo(() => availableMonths(allRows), [allRows]);
-  const rows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, period), avariaShift) : allRows, [allRows, period, isAvaria, avariaShift]);
-  const comparisonRows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, comparison), avariaShift) : [], [allRows, comparison, isAvaria, avariaShift]);
+  const rows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, period), avariaShifts) : allRows, [allRows, period, isAvaria, avariaShifts]);
+  const comparisonRows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, comparison), avariaShifts) : [], [allRows, comparison, isAvaria, avariaShifts]);
   const has = (f: FieldKey) => hasField(rows, f);
   const dates = rows.map((r) => r.record_date).filter(Boolean).sort() as string[];
   const columns: FieldKey[] = isAvaria

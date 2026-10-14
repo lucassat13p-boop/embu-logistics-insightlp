@@ -191,7 +191,7 @@ function ImportPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name} ({s.rows.length} linhas)</SelectItem>)}</SelectContent>
               </Select>
-              {mod.firstSheetOnly && <p className="text-xs text-primary">AVARIA: somente a primeira planilha é utilizada. Outras abas são ignoradas.</p>}
+              {mod.firstSheetOnly && <p className="text-xs text-primary">{mod.label}: somente a primeira planilha é utilizada. Outras abas são ignoradas.</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Linha do cabeçalho</Label>
@@ -246,6 +246,7 @@ function ImportPage() {
 
       {result && mod && (
         <Panel title="3. Validação">
+          {mod.key === "on_hold" && <div className="mb-4 rounded-md border border-primary/30 bg-primary-soft p-3 text-sm"><p className="font-semibold">Primeira aba selecionada: {sheet?.name ?? "Sem informação"}</p><p className="mt-1 text-xs text-muted-foreground">Campos identificados: {table?.headers.length ?? 0}. Somente esta primeira aba será importada; todas as demais serão ignoradas.</p></div>}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {[["Registros encontrados", result.total], ["Registros válidos", result.valid.length], ["Registros com erro", result.errorCount], ["Registros ignorados", result.ignoredCount], ["Duplicados", result.dupInFile + (existing ?? 0)]].map(([l, v]) => (
               <div key={l as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-display text-2xl font-bold tabular-nums">{(v as number).toLocaleString("pt-BR")}</p></div>

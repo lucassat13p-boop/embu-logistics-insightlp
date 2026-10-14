@@ -55,18 +55,20 @@ function ImportPage() {
   const sheet = parsed?.sheets[sheetIdx];
   const table = useMemo(() => (sheet ? buildTable(sheet.rows, headerIdx) : null), [sheet, headerIdx]);
 
-  const avariaPreview = useMemo(() => {
-    if (mod?.key !== "avaria" || !result) return null;
+  const buildAvariaPreview = (validation: ValidationResult) => {
+    if (mod?.key !== "avaria") return null;
     const found = { AM1: 0, AM2: 0, PM1: 0, missing: 0, soc: 0 };
-    const kept = result.valid.filter((row) => {
+    const kept = validation.valid.filter((row) => {
       const shift = normalizedShift(row.fields.shift);
       if (shift) found[shift as "AM1" | "AM2" | "PM1"] += 1; else found.missing += 1;
       const soc = normalizedAvariaType({ classification: String(row.fields.classification ?? "") || null, location: String(row.fields.location ?? "") || null }) === "SOC";
       if (soc) found.soc += 1;
       return !!shift && selectedShifts.includes(shift) && (includeSoc || !soc);
     });
-    return { found, kept, excluded: result.valid.length - kept.length };
-  }, [mod?.key, result, selectedShifts, includeSoc]);
+    return { found, kept, excluded: validation.valid.length - kept.length };
+  };
+
+  const avariaPreview = useMemo(() => result ? buildAvariaPreview(result) : null, [mod?.key, result, selectedShifts, includeSoc]);
 
   const resultForImport = avariaPreview && result ? { ...result, valid: avariaPreview.kept, ignoredCount: result.ignoredCount + avariaPreview.excluded } : result;
 
@@ -125,15 +127,16 @@ function ImportPage() {
 
   async function confirm() {
     if (!mod || !table || !file || !parsed) return;
-    await runValidation(); // re-validate before saving
-    const r = resultForImport;
-    if (!r) return;
+    const fresh = await runValidation(); // re-validate before saving
+    if (!fresh) return;
+    const freshPreview = buildAvariaPreview(fresh);
+    const r = freshPreview ? { ...fresh, valid: freshPreview.kept, ignoredCount: fresh.ignoredCount + freshPreview.excluded } : fresh;
     if (!r.valid.length) { toast.error("Nenhum registro válido para salvar."); return; }
     setBusy("Salvando registros...");
     try {
       const activeSheet = sheet;
       if (!activeSheet) return;
-      const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: activeSheet.name, headers: table.headers, mapping, result: r, strategy, avariaOptions: avariaPreview ? { shifts: selectedShifts, includeSoc, found: avariaPreview.found, excluded: avariaPreview.excluded } : undefined });
+      const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: activeSheet.name, headers: table.headers, mapping, result: r, strategy, avariaOptions: freshPreview ? { shifts: selectedShifts, includeSoc, found: freshPreview.found, excluded: freshPreview.excluded } : undefined });
       setDone(res);
       await qc.invalidateQueries();
       toast.success(`Importação concluída: ${res.inserted} novos registros em ${mod.label}.`);

@@ -10,10 +10,13 @@ import { PeriodFilter } from "@/components/ops/PeriodFilter";
 import { MonthComparison } from "@/components/ops/MonthComparison";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { countProductFamilies } from "@/lib/product-families";
-import { availableMonths, filterByMonths, PERIOD_EMPTY } from "@/lib/period";
+import { availableMonths, EMPTY_PERIOD, filterByPeriod, PERIOD_EMPTY, type PeriodSelection } from "@/lib/period";
 import { byDate, countBy, hasField, recordsQuery } from "@/lib/data";
 import { HUB_NAME, moduleBySlug, type FieldKey, type ModuleDef } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: ({ params }) => {
@@ -43,15 +46,14 @@ function ModulePage() {
 
 function ModuleContent({ mod }: { mod: ModuleDef }) {
   const { data: allRows = [], isLoading } = useQuery(recordsQuery(mod.key));
-  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
-  const [comparing, setComparing] = useState(false);
+  const [period, setPeriod] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [mode, setMode] = useState<"single" | "compare">("single");
+  const [showMissingShifts, setShowMissingShifts] = useState(true);
   const isAvaria = mod.key === "avaria";
   const months = useMemo(() => availableMonths(allRows), [allRows]);
-  const rows = useMemo(() => isAvaria ? filterByMonths(allRows, selectedMonths) : allRows, [allRows, selectedMonths, isAvaria]);
-  const changeMonths = (selected: string[]) => {
-    setSelectedMonths(selected);
-    if (selected.length < 2) setComparing(false);
-  };
+  const rows = useMemo(() => isAvaria ? filterByPeriod(allRows, period) : allRows, [allRows, period, isAvaria]);
+  const comparisonRows = useMemo(() => isAvaria ? filterByPeriod(allRows, comparison) : [], [allRows, comparison, isAvaria]);
   const has = (f: FieldKey) => hasField(rows, f);
   const dates = rows.map((r) => r.record_date).filter(Boolean).sort() as string[];
   const columns: FieldKey[] = isAvaria
@@ -64,23 +66,26 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
 
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-32" /><Skeleton className="h-64" /></div>;
 
-  const classCounts = countBy(rows, "classification");
-  const shiftData = countBy(rows, "shift");
+  const classCounts = isAvaria ? countAvariaTypes(rows) : countBy(rows, "classification");
+  const shiftData = isAvaria ? countAvariaShifts(rows) : countBy(rows, "shift");
+  const missingShiftCount = isAvaria ? rows.filter((row) => !OFFICIAL_SHIFTS.includes(String(row.shift ?? "").trim().replace(/\s+/g, "").toUpperCase() as (typeof OFFICIAL_SHIFTS)[number])).length : 0;
+  const shiftPieData = showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }] : shiftData;
+  const collaboratorData = isAvaria ? countAvariaCollaborators(rows) : countBy(rows, "collaborator");
   const familyData = isAvaria ? countProductFamilies(rows) : [];
 
   return (
     <div className="space-y-5">
       <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={
         <div className="flex max-w-full flex-wrap items-start gap-3">
-          {isAvaria && <PeriodFilter months={months} selected={selectedMonths} onChange={changeMonths} comparing={comparing} onCompare={() => setComparing((value) => !value)} />}
+           {isAvaria && <PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); }} />}
           {importBtn}
         </div>
       } />
 
-      {isAvaria && comparing && selectedMonths.length >= 2 && <MonthComparison rows={allRows} months={selectedMonths} classifications={mod.classifications ?? []} />}
+      {isAvaria && mode === "compare" && <MonthComparison firstRows={rows} secondRows={comparisonRows} firstPeriod={period} secondPeriod={comparison} />}
 
       {!rows.length && (
-        <div className="rounded-lg border border-dashed bg-card p-6"><Empty text={selectedMonths.length ? PERIOD_EMPTY : undefined} hint={allRows.length ? undefined : "Importe um relatório para visualizar os indicadores."} /></div>
+        <div className="rounded-lg border border-dashed bg-card p-6"><Empty text={allRows.length ? PERIOD_EMPTY : undefined} hint={allRows.length ? undefined : "Importe um relatório para visualizar os indicadores."} /></div>
       )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -88,7 +93,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
         {isAvaria ? (
           (mod.classifications ?? []).map((c) => {
             const n = classCounts.find((x) => x.name === c)?.value;
-            return <Kpi key={c} label={c} value={has("classification") ? n ?? 0 : null} hint="Sem informação no relatório" />;
+            return <Kpi key={c} label={c} value={rows.length ? n ?? 0 : null} hint="Sem informação no relatório" />;
           })
         ) : (
           <>
@@ -103,11 +108,11 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
 
       {isAvaria && <>
         <div className="grid gap-4 lg:grid-cols-2">
-          <Panel title="Avarias por tipo"><PieBlock label="Avarias por tipo" data={classCounts} total={rows.length} categories={mod.classifications ?? []} /></Panel>
-          <Panel title="Avarias por turno"><PieBlock label="Avarias por turno" data={shiftData} total={rows.length} categories={mod.shifts ?? []} /></Panel>
+          <Panel title="Avarias por tipo"><PieBlock label="Avarias por tipo" data={classCounts} total={rows.length} categories={[...OFFICIAL_AVARIA_TYPES]} /></Panel>
+          <Panel title="Avarias por turno" action={<label className="flex items-center gap-2 text-xs"><Switch checked={showMissingShifts} onCheckedChange={setShowMissingShifts} /><Label>Exibir “Sem informação”</Label></label>}><PieBlock label="Avarias por turno" data={shiftPieData} total={showMissingShifts ? rows.length : shiftData.reduce((sum, item) => sum + item.value, 0)} categories={[...OFFICIAL_SHIFTS]} includeMissing={false} /></Panel>
         </div>
         <Panel title="Evolução das avarias" subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
-        <Panel title="Colaboradores com mais avarias"><Ranking data={countBy(rows, "collaborator")} /></Panel>
+        <Panel title="Colaboradores com mais avarias"><Ranking data={collaboratorData} /></Panel>
         <Panel title="Produtos com mais ocorrências" subtitle="Famílias de produtos"><Ranking data={familyData} /></Panel>
       </>}
 
@@ -125,14 +130,14 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {!isAvaria && has("collaborator") && <Panel title="Colaboradores com mais ocorrências"><Ranking data={countBy(rows, "collaborator")} /></Panel>}
         {isAvaria && <Panel title="Status das avarias"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>}
-        {isAvaria && <Panel title="Turnos mais ofensores"><Ranking data={shiftData} /></Panel>}
+        {isAvaria && <Panel title="Turnos mais ofensores"><Ranking data={showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "pt-BR")) : shiftData} /></Panel>}
         {has("reason") && <Panel title="Motivos mais frequentes"><Ranking data={countBy(rows, "reason")} /></Panel>}
         {has("route") && <Panel title="Rotas com mais ocorrências"><Ranking data={countBy(rows, "route")} /></Panel>}
         {!isAvaria && has("product") && <Panel title="Produtos mais envolvidos"><Ranking data={countBy(rows, "product")} /></Panel>}
       </div>
 
       <Panel title={isAvaria ? "Ocorrências dos pedidos" : "Registros"}>
-        <RecordsTable key={selectedMonths.join(",")} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
+        <RecordsTable key={JSON.stringify(period)} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
       </Panel>
     </div>
   );

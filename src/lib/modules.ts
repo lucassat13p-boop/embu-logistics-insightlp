@@ -13,6 +13,7 @@ export type FieldKey =
   | "month"
   | "location"
   | "quantity"
+  | "tracking_number"
   | "product_code"
   | "treatment"
   | "delivery_attempts"
@@ -46,6 +47,7 @@ export const FIELD_LABELS: Record<FieldKey, string> = {
   month: "Mês",
   location: "Localização",
   quantity: "Quantidade",
+  tracking_number: "Tracking Number",
   product_code: "Código do Produto",
   treatment: "Tratativa",
   delivery_attempts: "Tentativas de entrega",
@@ -71,6 +73,7 @@ export const FIELD_ALIASES: Record<FieldKey, string[]> = {
   month: ["mes"],
   location: ["localizacao", "local", "location"],
   quantity: ["quantidade", "qtd", "qty", "volume", "volumes"],
+  tracking_number: ["tracking number", "tracking", "spx tn", "awb"],
   product_code: ["codigo do produto", "código do produto", "codigo produto", "sku"],
   treatment: ["tratativa"],
   delivery_attempts: ["tentativas de entrega", "tentativa de entrega", "tentativas"],
@@ -114,9 +117,9 @@ export const MODULES: ModuleDef[] = [
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {
     key: "on_hold", slug: "on-hold", label: "ON HOLD", short: "ON HOLD",
-    fields: ["order_id", "product_code", "reason", "treatment", "delivery_attempts", "record_date", "aging", "driver_name", "driver_id", "carrier_3pl", "neighborhood"],
+    fields: ["order_id", "tracking_number", "reason", "treatment", "delivery_attempts", "record_date", "aging", "driver_name", "driver_id", "carrier_3pl", "neighborhood"],
     required: ["order_id"], dedupe: ["order_id", "record_date", "reason"], firstSheetOnly: true,
-    defaultMapping: { "TRACKING NUMBER": "order_id", "CÓDIGO DO PRODUTO": "product_code", "CODIGO DO PRODUTO": "product_code", "MOTIVO DO ONHOLD": "reason", "MOTIVO DO ON HOLD": "reason", TRATATIVA: "treatment", "TENTATIVAS DE ENTREGA": "delivery_attempts", "DATA DE SAÍDA COM O DRIVER": "record_date", "DATA DE SAIDA COM O DRIVER": "record_date", AGING: "aging", MOTORISTA: "driver_name", "DRIVER ID": "driver_id", "3PL": "carrier_3pl", BAIRRO: "neighborhood" },
+    defaultMapping: { "TRACKING NUMBER": "tracking_number", "CÓDIGO DO PRODUTO": "order_id", "CODIGO DO PRODUTO": "order_id", "MOTIVO DO ONHOLD": "reason", "MOTIVO DO ON HOLD": "reason", "TRATATIVA (SEPARAR \"FAZER REVERSA\")": "treatment", TRATATIVA: "treatment", "TENTATIVAS DE ENTREGA": "delivery_attempts", "DATA DE SAÍDA COM O DRIVER": "record_date", "DATA DE SAIDA COM O DRIVER": "record_date", AGING: "aging", MOTORISTA: "driver_name", "DRIVER ID": "driver_id", "3PL": "carrier_3pl", BAIRRO: "neighborhood" },
     description: "Relatório operacional ON HOLD (somente 1ª planilha)",
   },
   { key: "lost_damaged", slug: "lost-damaged", label: "LOST & DAMAGED", short: "L&D", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Lost & Damaged" },

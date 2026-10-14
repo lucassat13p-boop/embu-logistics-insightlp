@@ -230,6 +230,7 @@ export type Database = {
           row_number: number | null
           shift: string | null
           status: string | null
+          tracking_number: string | null
           treatment: string | null
           updated_at: string
         }
@@ -264,6 +265,7 @@ export type Database = {
           row_number?: number | null
           shift?: string | null
           status?: string | null
+          tracking_number?: string | null
           treatment?: string | null
           updated_at?: string
         }
@@ -298,6 +300,7 @@ export type Database = {
           row_number?: number | null
           shift?: string | null
           status?: string | null
+          tracking_number?: string | null
           treatment?: string | null
           updated_at?: string
         }

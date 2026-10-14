@@ -1,6 +1,25 @@
 import type { RecordRow } from "./data";
+import { normalizeHeader } from "./modules";
 
 export type OnHoldField = "reason" | "neighborhood" | "treatment" | "delivery_attempts" | "driver_name";
+export type OnHoldShift = "all" | "AM1" | "AM2" | "PM1";
+
+export function normalizeOnHoldShift(value: unknown) {
+  const compact = String(value ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  return compact === "AM1" || compact === "AM2" || compact === "PM1" ? compact : null;
+}
+
+function sourceShift(row: RecordRow) {
+  const direct = normalizeOnHoldShift(row.shift);
+  if (direct) return direct;
+  if (!row.raw || typeof row.raw !== "object" || Array.isArray(row.raw)) return null;
+  const entry = Object.entries(row.raw).find(([key]) => normalizeHeader(key) === "turno");
+  return normalizeOnHoldShift(entry?.[1]);
+}
+
+export function filterOnHoldByShift(rows: RecordRow[], shift: OnHoldShift) {
+  return shift === "all" ? rows : rows.filter((row) => sourceShift(row) === shift);
+}
 
 export function countOnHold(rows: RecordRow[], field: OnHoldField) {
   const counts = new Map<string, number>();

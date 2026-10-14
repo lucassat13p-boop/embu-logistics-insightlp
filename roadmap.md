@@ -1,4 +1,5 @@
 # Tasks
+- [x] Add the ON HOLD Todos/AM1/AM2/PM1 shift filter across the dashboard and period comparison without changing source records.
 - [x] Improve ON HOLD driver and reason chart spacing, labels and full-name tooltip without changing data or calculations.
 - [x] Build the isolated ON HOLD first-sheet import mapping, real-data dashboard, period filtering, comparisons and detailed records table.
 - [x] Add independent AVARIA shift and SOC import filters, real-file preview totals and saved history metadata.

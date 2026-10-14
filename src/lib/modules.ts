@@ -117,9 +117,10 @@ export const MODULES: ModuleDef[] = [
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {
     key: "on_hold", slug: "on-hold", label: "ON HOLD", short: "ON HOLD",
-    fields: ["order_id", "tracking_number", "reason", "treatment", "delivery_attempts", "record_date", "aging", "driver_name", "driver_id", "carrier_3pl", "neighborhood"],
+    fields: ["order_id", "tracking_number", "reason", "treatment", "delivery_attempts", "record_date", "aging", "driver_name", "driver_id", "carrier_3pl", "neighborhood", "shift"],
     required: ["order_id"], dedupe: ["order_id", "record_date", "reason"], firstSheetOnly: true,
-    defaultMapping: { "TRACKING NUMBER": "tracking_number", "CÓDIGO DO PRODUTO": "order_id", "CODIGO DO PRODUTO": "order_id", "MOTIVO DO ONHOLD": "reason", "MOTIVO DO ON HOLD": "reason", "TRATATIVA (SEPARAR \"FAZER REVERSA\")": "treatment", TRATATIVA: "treatment", "TENTATIVAS DE ENTREGA": "delivery_attempts", "DATA DE SAÍDA COM O DRIVER": "record_date", "DATA DE SAIDA COM O DRIVER": "record_date", AGING: "aging", MOTORISTA: "driver_name", "DRIVER ID": "driver_id", "3PL": "carrier_3pl", BAIRRO: "neighborhood" },
+    defaultMapping: { "TRACKING NUMBER": "tracking_number", "CÓDIGO DO PRODUTO": "order_id", "CODIGO DO PRODUTO": "order_id", "MOTIVO DO ONHOLD": "reason", "MOTIVO DO ON HOLD": "reason", "TRATATIVA (SEPARAR \"FAZER REVERSA\")": "treatment", TRATATIVA: "treatment", "TENTATIVAS DE ENTREGA": "delivery_attempts", "DATA DE SAÍDA COM O DRIVER": "record_date", "DATA DE SAIDA COM O DRIVER": "record_date", AGING: "aging", MOTORISTA: "driver_name", "DRIVER ID": "driver_id", "3PL": "carrier_3pl", BAIRRO: "neighborhood", TURNO: "shift" },
+    shifts: ["AM1", "AM2", "PM1"],
     description: "Relatório operacional ON HOLD (somente 1ª planilha)",
   },
   { key: "lost_damaged", slug: "lost-damaged", label: "LOST & DAMAGED", short: "L&D", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Lost & Damaged" },

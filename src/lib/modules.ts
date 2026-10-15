@@ -38,6 +38,7 @@ export type ModuleKey =
   | "lost_damaged"
   | "rotas"
   | "retidos_veiculos";
+// Operational errors share storage but never share a module discriminator.
 
 export const FIELD_LABELS: Record<FieldKey, string> = {
   record_date: "Data",

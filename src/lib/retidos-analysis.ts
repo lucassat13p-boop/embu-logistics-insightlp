@@ -33,7 +33,7 @@ export function parseRetidosTime(value: unknown): { date: string | null; minutes
 export const RETIDOS_SHIFTS = ["AM1", "AM2", "PM1"] as const;
 /** Presentation only: the first recognized reason is primary; source text stays intact. */
 export function summarizedRetidosReason(value: unknown): string | null {
-  const text = cellText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const text = (cellText(value) ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (!text.trim()) return null;
   const rules = [
     { name: "Etiqueta avariada", pattern: /\betiqueta\s+(?:avariada|danificada)\b|\bdamaged\s+label\b/ },

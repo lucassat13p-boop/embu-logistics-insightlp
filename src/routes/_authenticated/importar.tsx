@@ -165,7 +165,7 @@ function ImportPage() {
             <Label>Módulo de destino</Label>
             <Select value={moduleKey} onValueChange={(v) => { setModuleKey(v as ModuleKey); setParsed(null); setFile(null); setResult(null); setDone(null); }}>
               <SelectTrigger><SelectValue placeholder="Selecione o módulo" /></SelectTrigger>
-              <SelectContent>{MODULES.map((m) => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}</SelectContent>
+              <SelectContent>{MODULES.filter((m) => m.key !== "motivos").map((m) => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}</SelectContent>
             </Select>
             {mod && <p className="text-xs text-muted-foreground">{mod.description}. Os registros alimentam somente este módulo.</p>}
           </div>
@@ -214,7 +214,7 @@ function ImportPage() {
                           <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none">IGNORAR — não importar (mantido no arquivo original)</SelectItem>
-                            {mod.fields.map((k) => <SelectItem key={k} value={k}>{FIELD_LABELS[k]}{mod.required.includes(k) ? " *" : ""}</SelectItem>)}
+                            {mod.fields.map((k) => <SelectItem key={k} value={k}>{mod.fieldLabels?.[k] ?? FIELD_LABELS[k]}{mod.required.includes(k) ? " *" : ""}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </td>
@@ -246,13 +246,13 @@ function ImportPage() {
 
       {result && mod && (
         <Panel title="3. Validação">
-          {mod.key === "on_hold" && <div className="mb-4 rounded-md border border-primary/30 bg-primary-soft p-3 text-sm"><p className="font-semibold">Primeira aba selecionada: {sheet?.name ?? "Sem informação"}</p><p className="mt-1 text-xs text-muted-foreground">Campos identificados: {table?.headers.length ?? 0}. Somente esta primeira aba será importada; todas as demais serão ignoradas.</p></div>}
+          {(mod.key === "on_hold" || mod.key === "retidos_veiculos") && <div className="mb-4 rounded-md border border-primary/30 bg-primary-soft p-3 text-sm"><p className="font-semibold">Primeira aba selecionada: {sheet?.name ?? "Sem informação"}</p><p className="mt-1 text-xs text-muted-foreground">Campos identificados: {table?.headers.length ?? 0}. Somente esta primeira aba será importada; todas as demais serão ignoradas.</p></div>}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {[["Registros encontrados", result.total], ["Registros válidos", result.valid.length], ["Registros com erro", result.errorCount], ["Registros ignorados", result.ignoredCount], ["Duplicados", result.dupInFile + (existing ?? 0)]].map(([l, v]) => (
               <div key={l as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-display text-2xl font-bold tabular-nums">{(v as number).toLocaleString("pt-BR")}</p></div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Ignorados = linhas completamente vazias. Duplicados = {result.dupInFile} repetidos no arquivo + {existing ?? "?"} já existentes no banco.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{mod.appendOnly ? "Cada linha será salva como uma ocorrência independente, inclusive pedidos repetidos. Ignorados = linhas completamente vazias." : `Ignorados = linhas completamente vazias. Duplicados = ${result.dupInFile} repetidos no arquivo + ${existing ?? "?"} já existentes no banco.`}</p>
 
           {avariaPreview && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[["AM1", avariaPreview.found.AM1], ["AM2", avariaPreview.found.AM2], ["PM1", avariaPreview.found.PM1], ["Sem informação", avariaPreview.found.missing], ["SOC encontrados", avariaPreview.found.soc], ["Serão importados", avariaPreview.kept.length], ["Ignorados pelos filtros", avariaPreview.excluded], ["SOC", includeSoc ? "Incluído" : "Não incluído"]].map(([label, value]) => <div key={label as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{label}</p><p className="font-semibold tabular-nums">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p></div>)}</div>}
           {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {allShifts ? "Todos" : selectedShifts.length ? selectedShifts.join(", ") : "Nenhum"}.</p>}

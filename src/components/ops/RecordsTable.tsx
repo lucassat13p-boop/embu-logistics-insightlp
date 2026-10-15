@@ -10,9 +10,10 @@ import { hasField, type RecordRow } from "@/lib/data";
 import { Empty } from "./blocks";
 
 const MISSING = "Sem informação";
-const FILTERABLE: FieldKey[] = ["status", "collaborator", "shift", "route", "lh", "reason", "classification", "product", "tracking_number", "treatment", "delivery_attempts", "driver_name", "driver_id", "carrier_3pl", "neighborhood"];
+const FILTERABLE: FieldKey[] = ["status", "collaborator", "shift", "route", "lh", "reason", "classification", "product", "tracking_number", "treatment", "delivery_attempts", "driver_name", "driver_id", "carrier_3pl", "neighborhood", "exception_order_id", "follow_up_action"];
 
-export function RecordsTable({ rows, columns, forceColumns = [], showModule }: { rows: RecordRow[]; columns: FieldKey[]; forceColumns?: FieldKey[]; showModule?: boolean }) {
+export function RecordsTable({ rows, columns, forceColumns = [], showModule, columnLabels = {}, emptyText }: { rows: RecordRow[]; columns: FieldKey[]; forceColumns?: FieldKey[]; showModule?: boolean; columnLabels?: Partial<Record<FieldKey, string>>; emptyText?: string }) {
+  const label = (field: FieldKey) => columnLabels[field] ?? FIELD_LABELS[field];
   const [q, setQ] = useState("");
   const [filters, setFilters] = useState<Partial<Record<FieldKey, string>>>({});
   const [from, setFrom] = useState("");
@@ -69,9 +70,9 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule }: {
         )}
         {filterFields.map((f) => (
           <Select key={f} value={filters[f] ?? "__all"} onValueChange={(v) => { setFilters((p) => ({ ...p, [f]: v === "__all" ? "" : v })); setPage(0); }}>
-            <SelectTrigger className="w-[150px]"><SelectValue placeholder={FIELD_LABELS[f]} /></SelectTrigger>
+            <SelectTrigger className="w-[150px]"><SelectValue placeholder={label(f)} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all">{FIELD_LABELS[f]}: todos</SelectItem>
+              <SelectItem value="__all">{label(f)}: todos</SelectItem>
               {options[f]?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -85,7 +86,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule }: {
               {cols.map((c) => (
                 <th key={c} className="px-3 py-2">
                   <button className="inline-flex items-center gap-1 font-semibold" onClick={() => setSort((s) => ({ f: c, dir: s.f === c ? (-s.dir as 1 | -1) : 1 }))}>
-                    {FIELD_LABELS[c]}
+                    {label(c)}
                     {sort.f === c && (sort.dir === 1 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
                   </button>
                 </th>
@@ -103,7 +104,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule }: {
             ))}
           </tbody>
         </table>
-        {!pageRows.length && <Empty text="Nenhum registro encontrado." hint={rows.length ? undefined : "Importe um relatório para visualizar os dados."} />}
+        {!pageRows.length && <Empty text={emptyText ?? "Nenhum registro encontrado."} hint={rows.length || emptyText ? undefined : "Importe um relatório para visualizar os dados."} />}
       </div>
       {filtered.length > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -122,7 +123,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule }: {
             <div className="space-y-4 text-sm">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <dt className="text-muted-foreground">Módulo</dt><dd>{moduleByKey(detail.module)?.label}</dd>
-                {cols.map((c) => (<Fragment key={c}><dt className="text-muted-foreground">{FIELD_LABELS[c]}</dt><dd>{fmt(detail, c)}</dd></Fragment>))}
+                {cols.map((c) => (<Fragment key={c}><dt className="text-muted-foreground">{label(c)}</dt><dd>{fmt(detail, c)}</dd></Fragment>))}
                 <dt className="text-muted-foreground">Data original</dt><dd>{detail.record_date_raw ?? MISSING}</dd>
                 <dt className="text-muted-foreground">Linha no arquivo</dt><dd>{detail.row_number}</dd>
               </dl>

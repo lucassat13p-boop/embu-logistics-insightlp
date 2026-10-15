@@ -16,6 +16,7 @@ import { buildTable, detectHeaderRow, parseDate, parseFile, type ParsedFile } fr
 import { commitImport, countExisting, headerSignature, validate, type DupStrategy, type Mapping, type ValidationResult } from "@/lib/importer";
 import { cn } from "@/lib/utils";
 import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
+import { buildOperationalTable } from "@/lib/operational-errors";
 
 export const Route = createFileRoute("/_authenticated/importar")({
   validateSearch: (s: Record<string, unknown>) => ({ modulo: typeof s.modulo === "string" ? (s.modulo as string) : undefined }),
@@ -54,7 +55,12 @@ function ImportPage() {
   const [allShifts, setAllShifts] = useState(true);
 
   const sheet = parsed?.sheets[sheetIdx];
-  const table = useMemo(() => (sheet ? buildTable(sheet.rows, headerIdx) : null), [sheet, headerIdx]);
+  const preparedTable = useMemo(() => {
+    if (!sheet) return { table: null, error: null };
+    try { return { table: mod?.key === "erros_operacionais" ? buildOperationalTable(sheet.rows) : buildTable(sheet.rows, headerIdx), error: null }; }
+    catch (error) { return { table: null, error: error instanceof Error ? error.message : "Cabeçalhos não identificados com segurança." }; }
+  }, [sheet, headerIdx, mod?.key]);
+  const table = preparedTable.table;
 
   const buildAvariaPreview = (validation: ValidationResult) => {
     if (mod?.key !== "avaria") return null;
@@ -85,14 +91,19 @@ function ImportPage() {
     if (!mod) { toast.error("Selecione o módulo antes do arquivo."); return; }
     setFile(f); setResult(null); setDone(null); setExisting(null); setBusy("Lendo arquivo...");
     try {
-      const p = await parseFile(f);
+      const operational = mod.key === "erros_operacionais";
+      const p = await parseFile(f, { preserveBlankRows: operational });
       if (!p.sheets.length || p.sheets.every((s) => !s.rows.length)) throw new Error("Arquivo sem conteúdo legível.");
+      if (operational && (p.format !== "xlsx" && p.format !== "xls" || !p.sheets[4])) throw new Error("Erros Operacionais requer uma planilha Excel com a quinta aba TABELAS.");
+      const idx = operational ? 4 : mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
+      const active = p.sheets[idx];
+      if (!active) throw new Error("Planilha não encontrada.");
+      const h = operational ? 1 : detectHeaderRow(active.rows);
+      const prepared = operational ? buildOperationalTable(active.rows) : buildTable(active.rows, h);
       setParsed(p);
-      const idx = mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
       setSheetIdx(idx);
-      const h = detectHeaderRow(p.sheets[idx].rows);
       setHeaderIdx(h);
-      await loadMapping(buildTable(p.sheets[idx].rows, h).headers);
+      await loadMapping(prepared.headers);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao ler arquivo"); setParsed(null);
     } finally { setBusy(null); }
@@ -180,6 +191,7 @@ function ImportPage() {
           </div>
         </div>
         {busy && <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{busy}</p>}
+        {preparedTable.error && <p className="mt-3 text-sm text-destructive">{preparedTable.error}</p>}
       </Panel>
 
       {parsed && table && mod && (
@@ -187,7 +199,7 @@ function ImportPage() {
           <div className="mb-4 grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label>{parsed.format === "pdf" ? "Página" : "Planilha"}</Label>
-              <Select value={String(sheetIdx)} onValueChange={(v) => changeSheet(Number(v))} disabled={mod.firstSheetOnly}>
+              <Select value={String(sheetIdx)} onValueChange={(v) => changeSheet(Number(v))} disabled={mod.firstSheetOnly || mod.key === "erros_operacionais"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name} ({s.rows.length} linhas)</SelectItem>)}</SelectContent>
               </Select>
@@ -195,7 +207,7 @@ function ImportPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Linha do cabeçalho</Label>
-              <Input type="number" min={1} value={headerIdx + 1} onChange={(e) => { const v = Math.max(0, Number(e.target.value) - 1); setHeaderIdx(v); setResult(null); if (sheet) loadMapping(buildTable(sheet.rows, v).headers); }} />
+              <Input type="number" min={1} value={headerIdx + 1} disabled={mod.key === "erros_operacionais"} onChange={(e) => { const v = Math.max(0, Number(e.target.value) - 1); setHeaderIdx(v); setResult(null); if (sheet) loadMapping(buildTable(sheet.rows, v).headers); }} />
             </div>
           </div>
           <div className="overflow-x-auto rounded-md border">

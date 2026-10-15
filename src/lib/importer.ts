@@ -3,6 +3,7 @@ import type { FieldKey, ModuleDef } from "./modules";
 import { FIELD_LABELS } from "./modules";
 import { cellText, parseDate } from "./parsers";
 import { parseRetidosTime } from "./retidos-analysis";
+import { recordMonth } from "./period";
 
 export type Mapping = Record<string, FieldKey | "">;
 export type RowIssue = { rowNumber: number; column: string | null; message: string; kind: "erro" | "ignorado" | "duplicado"; raw?: Record<string, unknown> };
@@ -35,11 +36,11 @@ export function validate(mod: ModuleDef, body: { rowNumber: number; values: Reco
       if (f === "record_date") {
         const d = parseDate(v);
         dateRaw = d.raw;
-        if (d.raw && !d.iso) {
+        if (d.raw && !d.iso && mod.key !== "erros_operacionais") {
           issues.push({ rowNumber: row.rowNumber, column: col, message: `Data inválida "${d.raw}" na coluna "${col}"`, kind: "erro", raw: row.values });
           rowError = true;
         }
-        fields.record_date = d.iso;
+        fields.record_date = mod.key === "erros_operacionais" && !recordMonth(d.iso) ? null : d.iso;
       } else if (f === "quantity") {
         const t = cellText(v);
         if (t !== null) {

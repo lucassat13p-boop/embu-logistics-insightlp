@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Create isolated Erros Operacionais with fifth-sheet named-header import, real-data analysis, multi-shift and period comparisons.
+- [x] Create isolated Erros Operacionais with fifth-sheet named-header import, real-data analysis, multi-shift and period comparisons.
 - [x] Compact Retidos reason chart using presentation-only categories and show summarized plus full original reasons in records.
 - [x] Add isolated Retidos de Veículos with append-only imports, local-time shifts, periods, comparisons and records, replacing Motivos in the menu.
 - [x] Keep AVARIA evolution before collaborators as requested and apply a Todos/AM1/AM2/PM1 shift filter across all AVARIA analysis and comparisons.

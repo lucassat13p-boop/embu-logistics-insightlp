@@ -121,14 +121,6 @@ export type ModuleDef = {
 const ALL: FieldKey[] = ["record_date", "order_id", "status", "collaborator", "product", "shift", "route", "lh", "reason", "classification", "quantity"];
 
 export const MODULES: ModuleDef[] = [
-  {
-    key: "erros_operacionais", slug: "erros-operacionais", label: "ERROS OPERACIONAIS", short: "ERROS",
-    fields: ["reason", "shift", "order_id", "collaborator", "record_date", "classification"],
-    required: [], dedupe: [], appendOnly: true,
-    fieldLabels: { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login" },
-    defaultMapping: { "ERRO/MOTIVO": "reason", TURNO: "shift", BR: "order_id", LOGIN: "collaborator", DATA: "record_date", "CLASSIFICAÇÃO": "classification" },
-    description: "Fonte: quinta aba TABELAS · cabeçalho na linha 2",
-  },
   { key: "full", slug: "full", label: "FULL", short: "FULL", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios FULL do HUB" },
   {
     key: "avaria", slug: "avaria", label: "AVARIA", short: "AVARIA",
@@ -148,6 +140,14 @@ export const MODULES: ModuleDef[] = [
     defaultMapping: { "SPX TRACKING NUMBER": "tracking_number", "EXCEPTION ORDER ID": "exception_order_id", "EXCEPTION REASON": "reason", "FOLLOW UP ACTION": "follow_up_action", "EO STATUS": "status", "CREATE TIME": "create_time", "EHA INBOUND TIME": "eha_inbound_time", "RESOLVE TIME": "resolve_time" },
     fieldLabels: { tracking_number: "BR / SPX Tracking Number", reason: "Motivo da Retirada", status: "EO Status" },
     description: "Retidos de Veículos (somente 1ª planilha)",
+  },
+  {
+    key: "erros_operacionais", slug: "erros-operacionais", label: "ERROS OPERACIONAIS", short: "ERROS",
+    fields: ["reason", "shift", "order_id", "collaborator", "record_date", "classification"],
+    required: [], dedupe: [], appendOnly: true,
+    fieldLabels: { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login" },
+    defaultMapping: { "ERRO/MOTIVO": "reason", TURNO: "shift", BR: "order_id", LOGIN: "collaborator", DATA: "record_date", "CLASSIFICAÇÃO": "classification" },
+    description: "Fonte: quinta aba TABELAS · cabeçalho na linha 2",
   },
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {

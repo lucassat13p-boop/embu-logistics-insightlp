@@ -12,45 +12,51 @@ import { Empty } from "./blocks";
 const MISSING = "Sem informação";
 const FILTERABLE: FieldKey[] = ["status", "collaborator", "shift", "route", "lh", "reason", "classification", "product", "tracking_number", "treatment", "delivery_attempts", "driver_name", "driver_id", "carrier_3pl", "neighborhood", "exception_order_id", "follow_up_action"];
 
-export function RecordsTable({ rows, columns, forceColumns = [], showModule, columnLabels = {}, emptyText }: { rows: RecordRow[]; columns: FieldKey[]; forceColumns?: FieldKey[]; showModule?: boolean; columnLabels?: Partial<Record<FieldKey, string>>; emptyText?: string }) {
-  const label = (field: FieldKey) => columnLabels[field] ?? FIELD_LABELS[field];
+export type PresentationColumn = { key: string; label: string; before: FieldKey; value: (row: RecordRow) => string | null };
+
+export function RecordsTable({ rows, columns, forceColumns = [], showModule, columnLabels = {}, emptyText, presentationColumns = [], wrapColumns = [] }: { rows: RecordRow[]; columns: FieldKey[]; forceColumns?: FieldKey[]; showModule?: boolean; columnLabels?: Partial<Record<FieldKey, string>>; emptyText?: string; presentationColumns?: PresentationColumn[]; wrapColumns?: FieldKey[] }) {
+  const label = (field: string) => presentationColumns.find((column) => column.key === field)?.label ?? columnLabels[field as FieldKey] ?? FIELD_LABELS[field as FieldKey];
+  const value = (row: RecordRow, field: string) => {
+    const presentation = presentationColumns.find((column) => column.key === field);
+    return presentation ? presentation.value(row) : row[field as keyof RecordRow];
+  };
   const [q, setQ] = useState("");
-  const [filters, setFilters] = useState<Partial<Record<FieldKey, string>>>({});
+  const [filters, setFilters] = useState<Record<string, string>>({});
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [sort, setSort] = useState<{ f: FieldKey; dir: 1 | -1 }>({ f: "record_date", dir: -1 });
+  const [sort, setSort] = useState<{ f: string; dir: 1 | -1 }>({ f: "record_date", dir: -1 });
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<RecordRow | null>(null);
   const size = 25;
 
-  const cols = columns.filter((c) => forceColumns.includes(c) || hasField(rows, c));
-  const filterFields = FILTERABLE.filter((f) => cols.includes(f) && hasField(rows, f));
+  const cols: string[] = columns.filter((c) => forceColumns.includes(c) || hasField(rows, c)).flatMap((field) => [...presentationColumns.filter((column) => column.before === field).map((column) => column.key), field]);
+  const filterFields: string[] = [...FILTERABLE.filter((f) => cols.includes(f) && hasField(rows, f)), ...presentationColumns.filter((column) => rows.some((row) => column.value(row))).map((column) => column.key)];
   const options = useMemo(() => {
-    const o: Partial<Record<FieldKey, string[]>> = {};
-    for (const f of filterFields) o[f] = [...new Set(rows.map((r) => r[f as keyof RecordRow] as string).filter(Boolean))].sort().slice(0, 300);
+    const o: Record<string, string[]> = {};
+    for (const f of filterFields) o[f] = [...new Set(rows.map((r) => value(r, f) as string).filter(Boolean))].sort().slice(0, 300);
     return o;
-  }, [rows, filterFields.join()]);
+  }, [rows, filterFields.join(), presentationColumns]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     let out = rows.filter((r) => {
       if (from && (!r.record_date || r.record_date < from)) return false;
       if (to && (!r.record_date || r.record_date > to)) return false;
-      for (const [f, v] of Object.entries(filters)) if (v && r[f as keyof RecordRow] !== v) return false;
+      for (const [f, v] of Object.entries(filters)) if (v && value(r, f) !== v) return false;
       if (!s) return true;
-      return cols.some((c) => String(r[c as keyof RecordRow] ?? "").toLowerCase().includes(s));
+      return cols.some((c) => String(value(r, c) ?? "").toLowerCase().includes(s));
     });
     out = [...out].sort((a, b) => {
-      const av = String(a[sort.f as keyof RecordRow] ?? ""), bv = String(b[sort.f as keyof RecordRow] ?? "");
+      const av = String(value(a, sort.f) ?? ""), bv = String(value(b, sort.f) ?? "");
       return av.localeCompare(bv, "pt-BR", { numeric: true }) * sort.dir;
     });
     return out;
-  }, [rows, q, filters, from, to, sort, cols.join()]);
+  }, [rows, q, filters, from, to, sort, cols.join(), presentationColumns]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / size));
   const pageRows = filtered.slice(page * size, page * size + size);
-  const fmt = (r: RecordRow, c: FieldKey) => {
-    const v = r[c as keyof RecordRow];
+  const fmt = (r: RecordRow, c: string) => {
+    const v = value(r, c);
     if (v === null || v === undefined || v === "") return <span className="text-muted-foreground/70 italic">{MISSING}</span>;
     return c === "record_date" ? formatDateBR(v as string) : String(v);
   };
@@ -98,7 +104,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule, col
             {pageRows.map((r) => (
               <tr key={r.id} className="border-t hover:bg-accent/40">
                 {showModule && <td className="px-3 py-2 text-xs font-semibold text-primary">{moduleByKey(r.module)?.label}</td>}
-                {cols.map((c) => <td key={c} className="max-w-[260px] truncate px-3 py-2">{fmt(r, c)}</td>)}
+                {cols.map((c) => <td key={c} className={wrapColumns.includes(c as FieldKey) ? "min-w-[240px] max-w-[360px] whitespace-normal break-words px-3 py-2" : "max-w-[260px] truncate px-3 py-2"} title={String(value(r, c) ?? "")}>{fmt(r, c)}</td>)}
                 <td className="px-2"><Button size="icon" variant="ghost" onClick={() => setDetail(r)} aria-label="Detalhes"><Eye className="h-4 w-4" /></Button></td>
               </tr>
             ))}

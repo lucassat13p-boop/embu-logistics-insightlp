@@ -31,6 +31,52 @@ export function parseRetidosTime(value: unknown): { date: string | null; minutes
 }
 
 export const RETIDOS_SHIFTS = ["AM1", "AM2", "PM1"] as const;
+/** Presentation only: the first recognized reason is primary; source text stays intact. */
+export function summarizedRetidosReason(value: unknown): string | null {
+  const text = (cellText(value) ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (!text.trim()) return null;
+  const rules = [
+    { name: "Etiqueta avariada", pattern: /\betiqueta\s+(?:avariada|danificada)\b|\bdamaged\s+label\b/ },
+    { name: "Pacote não coube", pattern: /\bpacote\s+nao\s+coube\b|\bnao\s+coube\s+no\s+veiculo\b/ },
+    { name: "Network Exception", pattern: /\bnetwork\s+exception\b/ },
+    { name: "Misroute", pattern: /\bmisroute\b/ },
+    { name: "Start Return", pattern: /\bstart\s+return\b/ },
+    { name: "Avaria", pattern: /\bavaria(?:s)?\b|\bdamaged\b/ },
+    { name: "Exceção", pattern: /\bexcecao\b|\bexception\b/ },
+  ];
+  let primary: { name: string; index: number } | null = null;
+  for (const rule of rules) {
+    const match = rule.pattern.exec(text);
+    if (!match) continue;
+    // Do not reclassify words inside a more specific matched phrase.
+    if (rules.some((specific) => specific !== rule && (specific.name === "Etiqueta avariada" || specific.name === "Network Exception") && (() => {
+      const phrase = specific.pattern.exec(text);
+      return phrase !== null && match.index >= phrase.index && match.index < phrase.index + phrase[0].length;
+    })())) continue;
+    if (primary === null || match.index < primary.index) primary = { name: rule.name, index: match.index };
+  }
+  return primary?.name ?? "Outros";
+}
+
+export function countRetidosReasons(rows: RecordRow[]) {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const name = summarizedRetidosReason(row.reason);
+    if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return [...counts].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "pt-BR"));
+}
+
+export function retidosVehicle(row: RecordRow): string | null {
+  if (!row.raw || typeof row.raw !== "object" || Array.isArray(row.raw)) return null;
+  for (const [key, value] of Object.entries(row.raw)) {
+    const header = key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+    if (["veiculo", "vehicle", "vehicle number", "vehicle id", "placa", "placa do veiculo"].includes(header)) {
+      return cellText(value) || null;
+    }
+  }
+  return null;
+}
 export type RetidosShift = (typeof RETIDOS_SHIFTS)[number];
 export function retidosShift(row: RecordRow): RetidosShift | null {
   const { minutes } = parseRetidosTime(row.create_time);

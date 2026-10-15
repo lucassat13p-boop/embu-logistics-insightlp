@@ -1,4 +1,5 @@
 # Tasks
+- [x] Compact Retidos reason chart using presentation-only categories and show summarized plus full original reasons in records.
 - [x] Add isolated Retidos de Veículos with append-only imports, local-time shifts, periods, comparisons and records, replacing Motivos in the menu.
 - [x] Keep AVARIA evolution before collaborators as requested and apply a Todos/AM1/AM2/PM1 shift filter across all AVARIA analysis and comparisons.
 - [x] Correct ON HOLD shift detection to recognize standalone AM1/AM2/PM1 markers inside existing original row values without reimporting.

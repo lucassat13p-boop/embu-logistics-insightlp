@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { errorsQuery } from "@/lib/data";
 import { FIELD_LABELS, moduleByKey, type FieldKey } from "@/lib/modules";
 import { Empty, Kpi, PageHeader, Panel, StatusBadge } from "@/components/ops/blocks";
+import { DeleteImportButton } from "@/components/ops/DeleteImportButton";
 
 export const Route = createFileRoute("/_authenticated/historico/$id")({
   head: () => ({
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/historico/$id")({
 
 function Page() {
   const { id } = Route.useParams();
+  const navigate = Route.useNavigate();
   const [all, setAll] = useState(false);
   const { data: b } = useQuery({ queryKey: ["batch", id], queryFn: async () => (await supabase.from("import_batches").select("*").eq("id", id).single()).data });
   const { data: errs = [] } = useQuery(errorsQuery(id));
@@ -30,7 +32,7 @@ function Page() {
   return (
     <div className="space-y-5">
       <Link to="/historico" className="text-xs text-primary">← Histórico</Link>
-      <PageHeader title={b.file_name} subtitle={`${moduleByKey(b.module)?.label} · ${new Date(b.created_at).toLocaleString("pt-BR")} · ${b.user_email ?? ""} · ${b.sheet_name ?? ""}`} action={<StatusBadge status={b.status} />} />
+      <PageHeader title={b.file_name} subtitle={`${moduleByKey(b.module)?.label ?? b.module} · ${new Date(b.created_at).toLocaleString("pt-BR")} · ${b.user_email ?? "Sem informação"} · ${b.sheet_name ?? "Sem informação"}`} action={<div className="flex items-center gap-2"><StatusBadge status={b.status} /><DeleteImportButton batch={b} onDeleted={() => navigate({ to: "/historico" })} /></div>} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         <Kpi label="Encontrados" value={b.total_rows} /><Kpi label="Válidos" value={b.valid_rows} /><Kpi label="Com erro" value={b.error_rows} />
         <Kpi label="Ignorados" value={b.ignored_rows} /><Kpi label="Duplicados" value={b.duplicate_rows} /><Kpi label="Novos salvos" value={b.inserted_rows} accent />

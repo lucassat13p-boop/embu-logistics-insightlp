@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
+- Import deletion uses the owner-authorized atomic `delete_import_batch` database function and one shared confirmation control; exact batch/module/source-row links prevent cross-import deletion, collaborator identities remain intact, and affected query caches refresh after success.
 - Erros Operacionais uses a dedicated module and named-header fifth-sheet adapter with opt-in blank-row preservation; only explicit shift-qualified fields form blocks, preserving source rows and preventing positional or temporal inference.
 - All imported report rows live in `public.records` with a strict `module` discriminator and `batch_id` → `import_batches`; pages must always filter by module so reports never leak across modules.
 - Module definitions (fields, required, dedupe key, aliases) live in `src/lib/modules.ts`; file parsing runs client-side in `src/lib/parsers.ts`, validation/commit in `src/lib/importer.ts`.

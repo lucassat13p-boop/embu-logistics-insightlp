@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
+- Erros Operacionais uses a dedicated module and named-header fifth-sheet adapter with opt-in blank-row preservation; only explicit shift-qualified fields form blocks, preserving source rows and preventing positional or temporal inference.
 - All imported report rows live in `public.records` with a strict `module` discriminator and `batch_id` → `import_batches`; pages must always filter by module so reports never leak across modules.
 - Module definitions (fields, required, dedupe key, aliases) live in `src/lib/modules.ts`; file parsing runs client-side in `src/lib/parsers.ts`, validation/commit in `src/lib/importer.ts`.
 - Never seed or fabricate data; UI shows "Nenhum dado disponível" when a field has no real values.

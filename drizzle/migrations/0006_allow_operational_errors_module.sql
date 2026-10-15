@@ -1,0 +1,2 @@
+ALTER TABLE public.records DROP CONSTRAINT records_module_check;
+ALTER TABLE public.records ADD CONSTRAINT records_module_check CHECK (module IN ('full','avaria','desvios','motivos','auto_add','on_hold','lost_damaged','rotas','retidos_veiculos','erros_operacionais'));

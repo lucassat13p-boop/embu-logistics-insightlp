@@ -8,7 +8,7 @@ export function detectFormat(name: string): ParsedFile["format"] | null {
   return null;
 }
 
-export async function parseFile(file: File): Promise<ParsedFile> {
+export async function parseFile(file: File, options?: { preserveBlankRows?: boolean }): Promise<ParsedFile> {
   const format = detectFormat(file.name);
   if (!format) throw new Error("Formato não suportado. Use XLSX, XLS, CSV ou PDF.");
   if (format === "pdf") return { format, sheets: await parsePdf(file) };
@@ -20,7 +20,7 @@ export async function parseFile(file: File): Promise<ParsedFile> {
       : XLSX.read(buf, { type: "array", cellDates: false });
   const sheets = wb.SheetNames.map((name) => ({
     name,
-    rows: XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], { header: 1, raw: true, defval: null, blankrows: false }),
+    rows: XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], { header: 1, raw: true, defval: null, blankrows: options?.preserveBlankRows ?? false, ...(options?.preserveBlankRows ? { range: 0 } : {}) }),
   }));
   return { format, sheets };
 }

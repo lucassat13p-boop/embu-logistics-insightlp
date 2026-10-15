@@ -50,6 +50,13 @@
       "when": 1792104257862,
       "tag": "0006_allow_operational_errors_module",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792105028647,
+      "tag": "0007_add_safe_import_deletion",
+      "breakpoints": true
     }
   ]
 }

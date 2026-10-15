@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { batchesQuery } from "@/lib/data";
 import { MODULES, moduleByKey } from "@/lib/modules";
 import { Empty, StatusBadge } from "./blocks";
+import { DeleteImportButton } from "./DeleteImportButton";
 
 export function BatchList() {
   const { data = [], isLoading } = useQuery(batchesQuery());
@@ -41,9 +42,9 @@ export function BatchList() {
             {rows.map((b) => (
               <tr key={b.id} className="border-t hover:bg-accent/40">
                 <td className="max-w-[240px] truncate px-3 py-2 font-medium">{b.file_name}</td>
-                <td className="px-3 py-2 text-xs font-semibold text-primary">{moduleByKey(b.module)?.label}</td>
+                <td className="px-3 py-2 text-xs font-semibold text-primary">{moduleByKey(b.module)?.label ?? b.module}</td>
                 <td className="px-3 py-2">{new Date(b.created_at).toLocaleString("pt-BR")}</td>
-                <td className="max-w-[180px] truncate px-3 py-2">{b.user_email}</td>
+                <td className="max-w-[180px] truncate px-3 py-2">{b.user_email ?? "Sem informação"}</td>
                 <td className="px-3 py-2 tabular-nums">{b.total_rows}</td>
                 <td className="px-3 py-2 tabular-nums">{b.valid_rows}</td>
                 <td className="px-3 py-2 tabular-nums">{b.inserted_rows}</td>
@@ -52,7 +53,7 @@ export function BatchList() {
                 <td className="px-3 py-2 tabular-nums">{b.error_rows}</td>
                 <td className="px-3 py-2"><StatusBadge status={b.status} /></td>
                 <td className="px-3 py-2 tabular-nums">{b.duration_ms != null ? `${(b.duration_ms / 1000).toFixed(1)}s` : "—"}</td>
-                <td className="px-3 py-2"><Link to="/historico/$id" params={{ id: b.id }} className="text-xs font-semibold text-primary">Detalhes</Link></td>
+                <td className="px-3 py-2"><div className="flex items-center gap-2"><Link to="/historico/$id" params={{ id: b.id }} className="text-xs font-semibold text-primary">Detalhes</Link><DeleteImportButton batch={b} /></div></td>
               </tr>
             ))}
           </tbody>

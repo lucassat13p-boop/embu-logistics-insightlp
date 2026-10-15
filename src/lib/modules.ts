@@ -21,7 +21,12 @@ export type FieldKey =
   | "driver_name"
   | "driver_id"
   | "carrier_3pl"
-  | "neighborhood";
+  | "neighborhood"
+  | "exception_order_id"
+  | "follow_up_action"
+  | "create_time"
+  | "eha_inbound_time"
+  | "resolve_time";
 
 export type ModuleKey =
   | "full"
@@ -31,7 +36,8 @@ export type ModuleKey =
   | "auto_add"
   | "on_hold"
   | "lost_damaged"
-  | "rotas";
+  | "rotas"
+  | "retidos_veiculos";
 
 export const FIELD_LABELS: Record<FieldKey, string> = {
   record_date: "Data",
@@ -56,6 +62,11 @@ export const FIELD_LABELS: Record<FieldKey, string> = {
   driver_id: "Driver ID",
   carrier_3pl: "3PL",
   neighborhood: "Bairro",
+  exception_order_id: "Exception Order ID",
+  follow_up_action: "Follow Up Action",
+  create_time: "Data de Criação",
+  eha_inbound_time: "Data de Entrada",
+  resolve_time: "Data de Resolução",
 };
 
 // Header aliases used only to SUGGEST a mapping; the user confirms it.
@@ -82,6 +93,11 @@ export const FIELD_ALIASES: Record<FieldKey, string[]> = {
   driver_id: ["driver id", "id do driver", "id motorista"],
   carrier_3pl: ["3pl", "transportadora"],
   neighborhood: ["bairro"],
+  exception_order_id: ["exception order id"],
+  follow_up_action: ["follow up action"],
+  create_time: ["create time"],
+  eha_inbound_time: ["eha inbound time"],
+  resolve_time: ["resolve time"],
 };
 
 export type ModuleDef = {
@@ -93,6 +109,8 @@ export type ModuleDef = {
   required: FieldKey[];
   dedupe: FieldKey[];
   firstSheetOnly?: boolean;
+  appendOnly?: boolean;
+  fieldLabels?: Partial<Record<FieldKey, string>>;
   defaultMapping?: Record<string, FieldKey>;
   classifications?: string[];
   shifts?: string[];
@@ -114,6 +132,14 @@ export const MODULES: ModuleDef[] = [
   },
   { key: "desvios", slug: "desvios", label: "DESVIOS", short: "DESVIOS", fields: ALL, required: [], dedupe: ["order_id", "record_date", "reason"], description: "Desvios operacionais" },
   { key: "motivos", slug: "motivos", label: "MOTIVOS", short: "MOTIVOS", fields: ALL, required: ["reason"], dedupe: ["order_id", "record_date", "reason"], description: "Motivos identificados nos relatórios" },
+  {
+    key: "retidos_veiculos", slug: "retidos-de-veiculos", label: "RETIDOS DE VEÍCULOS", short: "RETIDOS",
+    fields: ["tracking_number", "exception_order_id", "reason", "follow_up_action", "status", "create_time", "eha_inbound_time", "resolve_time"],
+    required: [], dedupe: [], firstSheetOnly: true, appendOnly: true,
+    defaultMapping: { "SPX TRACKING NUMBER": "tracking_number", "EXCEPTION ORDER ID": "exception_order_id", "EXCEPTION REASON": "reason", "FOLLOW UP ACTION": "follow_up_action", "EO STATUS": "status", "CREATE TIME": "create_time", "EHA INBOUND TIME": "eha_inbound_time", "RESOLVE TIME": "resolve_time" },
+    fieldLabels: { tracking_number: "BR / SPX Tracking Number", reason: "Motivo da Retirada", status: "EO Status" },
+    description: "Retidos de Veículos (somente 1ª planilha)",
+  },
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {
     key: "on_hold", slug: "on-hold", label: "ON HOLD", short: "ON HOLD",

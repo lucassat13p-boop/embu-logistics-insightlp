@@ -43,6 +43,13 @@
       "when": 1792100299632,
       "tag": "0005_allow_retidos_record_module",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792104257862,
+      "tag": "0006_allow_operational_errors_module",
+      "breakpoints": true
     }
   ]
 }

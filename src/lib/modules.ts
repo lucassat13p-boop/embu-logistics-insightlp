@@ -141,6 +141,14 @@ export const MODULES: ModuleDef[] = [
     fieldLabels: { tracking_number: "BR / SPX Tracking Number", reason: "Motivo da Retirada", status: "EO Status" },
     description: "Retidos de Veículos (somente 1ª planilha)",
   },
+  {
+    key: "erros_operacionais", slug: "erros-operacionais", label: "ERROS OPERACIONAIS", short: "ERROS",
+    fields: ["reason", "shift", "order_id", "collaborator", "record_date", "classification"],
+    required: [], dedupe: [], appendOnly: true,
+    fieldLabels: { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login" },
+    defaultMapping: { "ERRO/MOTIVO": "reason", TURNO: "shift", BR: "order_id", LOGIN: "collaborator", DATA: "record_date", "CLASSIFICAÇÃO": "classification" },
+    description: "Fonte: quinta aba TABELAS · cabeçalho na linha 2",
+  },
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {
     key: "on_hold", slug: "on-hold", label: "ON HOLD", short: "ON HOLD",

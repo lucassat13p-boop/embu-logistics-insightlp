@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, filterAvariaByShift, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS, type AvariaShift } from "@/lib/avaria-analysis";
 import { OnHoldDashboard } from "@/components/ops/OnHoldDashboard";
+import { RetidosDashboard } from "@/components/ops/RetidosDashboard";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: ({ params }) => {
@@ -70,6 +71,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
 
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-32" /><Skeleton className="h-64" /></div>;
   if (isOnHold) return <OnHoldDashboard allRows={allRows} />;
+  if (mod.key === "retidos_veiculos") return <RetidosDashboard allRows={allRows} />;
 
   const classCounts = isAvaria ? countAvariaTypes(rows) : countBy(rows, "classification");
   const shiftData = isAvaria ? countAvariaShifts(rows) : countBy(rows, "shift");

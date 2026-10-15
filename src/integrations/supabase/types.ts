@@ -205,13 +205,17 @@ export type Database = {
           carrier_3pl: string | null
           classification: string | null
           collaborator: string | null
+          create_time: string | null
           created_at: string
           created_by: string | null
           dedupe_key: string
           delivery_attempts: string | null
           driver_id: string | null
           driver_name: string | null
+          eha_inbound_time: string | null
+          exception_order_id: string | null
           extra: Json
+          follow_up_action: string | null
           id: string
           lh: string | null
           location: string | null
@@ -226,6 +230,7 @@ export type Database = {
           reason: string | null
           record_date: string | null
           record_date_raw: string | null
+          resolve_time: string | null
           route: string | null
           row_number: number | null
           shift: string | null
@@ -240,13 +245,17 @@ export type Database = {
           carrier_3pl?: string | null
           classification?: string | null
           collaborator?: string | null
+          create_time?: string | null
           created_at?: string
           created_by?: string | null
           dedupe_key: string
           delivery_attempts?: string | null
           driver_id?: string | null
           driver_name?: string | null
+          eha_inbound_time?: string | null
+          exception_order_id?: string | null
           extra?: Json
+          follow_up_action?: string | null
           id?: string
           lh?: string | null
           location?: string | null
@@ -261,6 +270,7 @@ export type Database = {
           reason?: string | null
           record_date?: string | null
           record_date_raw?: string | null
+          resolve_time?: string | null
           route?: string | null
           row_number?: number | null
           shift?: string | null
@@ -275,13 +285,17 @@ export type Database = {
           carrier_3pl?: string | null
           classification?: string | null
           collaborator?: string | null
+          create_time?: string | null
           created_at?: string
           created_by?: string | null
           dedupe_key?: string
           delivery_attempts?: string | null
           driver_id?: string | null
           driver_name?: string | null
+          eha_inbound_time?: string | null
+          exception_order_id?: string | null
           extra?: Json
+          follow_up_action?: string | null
           id?: string
           lh?: string | null
           location?: string | null
@@ -296,6 +310,7 @@ export type Database = {
           reason?: string | null
           record_date?: string | null
           record_date_raw?: string | null
+          resolve_time?: string | null
           route?: string | null
           row_number?: number | null
           shift?: string | null

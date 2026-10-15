@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { FieldKey, ModuleDef } from "./modules";
 import { FIELD_LABELS } from "./modules";
 import { cellText, parseDate } from "./parsers";
+import { parseRetidosTime } from "./retidos-analysis";
 
 export type Mapping = Record<string, FieldKey | "">;
 export type RowIssue = { rowNumber: number; column: string | null; message: string; kind: "erro" | "ignorado" | "duplicado"; raw?: Record<string, unknown> };
@@ -58,9 +59,13 @@ export function validate(mod: ModuleDef, body: { rowNumber: number; values: Reco
     if (rowError) { errorCount++; continue; }
     const extra: Record<string, unknown> = {};
     Object.entries(mapping).forEach(([col, f]) => { if (!f) extra[col] = row.values[col]; });
+    if (mod.key === "retidos_veiculos") {
+      dateRaw = cellText(fields.create_time);
+      fields.record_date = parseRetidosTime(fields.create_time).date;
+    }
     const keyParts = mod.dedupe.map((f) => String(fields[f] ?? ""));
-    const dedupe_key = keyParts.every((p) => p === "") ? JSON.stringify(row.values) : keyParts.join("|");
-    if (seen.has(dedupe_key)) {
+    const dedupe_key = mod.appendOnly ? crypto.randomUUID() : keyParts.every((p) => p === "") ? JSON.stringify(row.values) : keyParts.join("|");
+    if (!mod.appendOnly && seen.has(dedupe_key)) {
       dupInFile++;
       issues.push({ rowNumber: row.rowNumber, column: null, message: "Registro duplicado dentro do próprio arquivo", kind: "duplicado", raw: row.values });
       continue;
@@ -76,6 +81,7 @@ export type DupStrategy = "ignore" | "update";
 export type AvariaImportOptions = { shifts: string[]; includeSoc: boolean; found: { AM1: number; AM2: number; PM1: number; missing: number; soc: number }; excluded: number };
 
 export async function countExisting(mod: ModuleDef, keys: string[]) {
+  if (mod.appendOnly) return 0;
   let n = 0;
   for (let i = 0; i < keys.length; i += 200) {
     const { count } = await supabase.from("records").select("id", { count: "exact", head: true }).eq("module", mod.key).in("dedupe_key", keys.slice(i, i + 200));
@@ -91,6 +97,7 @@ export async function commitImport(opts: {
   const t0 = performance.now();
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Sessão expirada. Entre novamente.");
+  const user = u.user;
   const { mod, result } = opts;
   const keys = result.valid.map((v) => v.dedupe_key);
   const existing = await countExisting(mod, keys);
@@ -99,7 +106,7 @@ export async function commitImport(opts: {
     module: mod.key, file_name: opts.fileName, file_type: opts.format, sheet_name: opts.sheetName,
     user_id: u.user.id, user_email: u.user.email ?? null, total_rows: result.total, valid_rows: result.valid.length,
     error_rows: result.errorCount, ignored_rows: result.ignoredCount, duplicate_rows: result.dupInFile + existing,
-    status: "Processando", duplicate_strategy: opts.strategy, mapping: opts.mapping, headers: opts.headers,
+    status: "Processando", duplicate_strategy: mod.appendOnly ? "append" : opts.strategy, mapping: opts.mapping, headers: opts.headers,
      selected_shifts: opts.avariaOptions?.shifts ?? null, include_soc: opts.avariaOptions?.includeSoc ?? null,
      soc_rows: opts.avariaOptions?.found.soc ?? null,
   }).select().single();
@@ -108,7 +115,7 @@ export async function commitImport(opts: {
   let failed: string | null = null;
   try {
     const rows = result.valid.map((v) => ({
-      module: mod.key, batch_id: batch.id, row_number: v.rowNumber, created_by: u.user!.id,
+      module: mod.key, batch_id: batch.id, row_number: v.rowNumber, created_by: user.id,
       record_date: (v.fields.record_date as string) ?? null, record_date_raw: v.record_date_raw,
       month: (v.fields.month as string) ?? null, location: (v.fields.location as string) ?? null,
       order_id: (v.fields.order_id as string) ?? null, status: (v.fields.status as string) ?? null,
@@ -121,10 +128,15 @@ export async function commitImport(opts: {
       delivery_attempts: (v.fields.delivery_attempts as string) ?? null, aging: (v.fields.aging as string) ?? null,
       driver_name: (v.fields.driver_name as string) ?? null, driver_id: (v.fields.driver_id as string) ?? null,
       carrier_3pl: (v.fields.carrier_3pl as string) ?? null, neighborhood: (v.fields.neighborhood as string) ?? null,
-      dedupe_key: v.dedupe_key, updated_at: new Date().toISOString(),
+      exception_order_id: (v.fields.exception_order_id as string) ?? null,
+      follow_up_action: (v.fields.follow_up_action as string) ?? null,
+      create_time: (v.fields.create_time as string) ?? null,
+      eha_inbound_time: (v.fields.eha_inbound_time as string) ?? null,
+      resolve_time: (v.fields.resolve_time as string) ?? null,
+      dedupe_key: mod.appendOnly ? `${batch.id}:${v.rowNumber}:${v.dedupe_key}` : v.dedupe_key, updated_at: new Date().toISOString(),
     }));
     for (let i = 0; i < rows.length; i += 500) {
-      const { error } = await supabase.from("records").upsert(rows.slice(i, i + 500), {
+      const { error } = mod.appendOnly ? await supabase.from("records").insert(rows.slice(i, i + 500)) : await supabase.from("records").upsert(rows.slice(i, i + 500), {
         onConflict: "module,dedupe_key", ignoreDuplicates: opts.strategy === "ignore",
       });
       if (error) throw error;

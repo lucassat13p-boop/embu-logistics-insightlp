@@ -29,6 +29,20 @@
       "when": 1792003481921,
       "tag": "0003_add_on_hold_tracking_number",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792100239768,
+      "tag": "0004_add_retidos_vehicle_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792100299632,
+      "tag": "0005_allow_retidos_record_module",
+      "breakpoints": true
     }
   ]
 }

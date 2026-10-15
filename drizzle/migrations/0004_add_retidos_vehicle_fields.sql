@@ -1,0 +1,3 @@
+ALTER TABLE public.records ADD COLUMN exception_order_id text, ADD COLUMN follow_up_action text, ADD COLUMN create_time text, ADD COLUMN eha_inbound_time text, ADD COLUMN resolve_time text;
+CREATE INDEX records_retidos_period_idx ON public.records (record_date) WHERE module = 'retidos_veiculos';
+COMMENT ON COLUMN public.records.create_time IS 'Original Create Time for Retidos de Veiculos; interpreted as local operational wall time without timezone conversion.';

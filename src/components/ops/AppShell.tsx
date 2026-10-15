@@ -18,7 +18,7 @@ const NAV = [
   { title: "Configurações", to: "/configuracoes", icon: Settings },
 ] as const;
 
-const TOP = MODULES.filter((m) => m.key !== "rotas");
+const TOP = MODULES.filter((m) => m.key !== "rotas" && m.key !== "motivos");
 
 export function AppShell({ children, email }: { children: ReactNode; email?: string | null }) {
   const path = useRouterState({ select: (s) => s.location.pathname });

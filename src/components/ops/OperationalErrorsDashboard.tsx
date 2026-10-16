@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { byDate, countBy, type RecordRow } from "@/lib/data";
 import { HUB_NAME, type FieldKey } from "@/lib/modules";
 import { availableMonths, EMPTY_PERIOD, filterByPeriod, periodLabel, recordMonth, type PeriodSelection } from "@/lib/period";
-import { countErrorCategories, definedErrorPeriod, ERROR_SHIFTS, errorShift, filterErrorShifts, type ErrorShift } from "@/lib/operational-errors";
+import { countErrorCategories, definedErrorPeriod, ERROR_SHIFTS, errorShift, filterBacklog, filterErrorShifts, type ErrorShift } from "@/lib/operational-errors";
 import { variation } from "@/lib/comparison";
 import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "./blocks";
 import { PeriodFilter } from "./PeriodFilter";
@@ -36,8 +36,9 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [shifts, setShifts] = useState<ErrorShift[]>([]);
-  const rows = useMemo(() => filterErrorShifts(filterByPeriod(originals, period), shifts), [originals, period, shifts]);
-  const second = useMemo(() => filterErrorShifts(filterByPeriod(originals, comparison), shifts), [originals, comparison, shifts]);
+  const [includeBacklog, setIncludeBacklog] = useState(false);
+  const rows = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, period), shifts), includeBacklog), [originals, period, shifts, includeBacklog]);
+  const second = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, comparison), shifts), includeBacklog), [originals, comparison, shifts, includeBacklog]);
   const months = availableMonths(originals);
   const hasDates = originals.some((row) => recordMonth(row.record_date));
   const comparisonReady = hasDates && definedErrorPeriod(period) && definedErrorPeriod(comparison) && period.kind === comparison.kind;
@@ -52,7 +53,7 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   return <div className="space-y-5">{title}
     <PeriodFilter months={months} period={period} onChange={(value) => { setPeriod(value); setComparison((previous) => ({ ...previous, kind: value.kind })); }} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={(value) => { setComparison(value); setPeriod((previous) => ({ ...previous, kind: value.kind })); }} onClear={clear} />
     {!hasDates && <p className="text-sm text-muted-foreground">Análise temporal indisponível: sem data no relatório.</p>}
-    <div><Label>Turnos</Label><div className="mt-2 flex flex-wrap gap-2"><Button size="sm" variant={!shifts.length ? "default" : "outline"} aria-pressed={!shifts.length} onClick={() => setShifts([])}>Todos</Button><ToggleGroup type="multiple" size="sm" variant="outline" value={shifts} onValueChange={(values) => setShifts(values.filter((value): value is ErrorShift => ERROR_SHIFTS.some((shift) => shift === value)))}>{ERROR_SHIFTS.map((shift) => <ToggleGroupItem key={shift} value={shift}>{shift}</ToggleGroupItem>)}</ToggleGroup></div></div>
+    <div><Label>Turnos</Label><div className="mt-2 flex flex-wrap gap-2"><Button size="sm" variant={!shifts.length ? "default" : "outline"} aria-pressed={!shifts.length} onClick={() => setShifts([])}>Todos</Button><ToggleGroup type="multiple" size="sm" variant="outline" value={shifts} onValueChange={(values) => setShifts(values.filter((value): value is ErrorShift => ERROR_SHIFTS.some((shift) => shift === value)))}>{ERROR_SHIFTS.map((shift) => <ToggleGroupItem key={shift} value={shift}>{shift}</ToggleGroupItem>)}</ToggleGroup><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={includeBacklog} onChange={(event) => setIncludeBacklog(event.target.checked)} />Incluir Backlog</label></div></div>
     {!rows.length ? <Empty text="Nenhum dado disponível" /> : <>
       <div className="grid gap-3 md:grid-cols-3"><Kpi accent label="Total de erros" value={rows.length} />{categories.map((item) => <Kpi key={item.name} label={item.name} value={item.value} />)}</div>
       {reasonData.length > 0 && <Panel title="Erros por motivo"><BarBlock data={reasonData} horizontal rowHeight={38} yAxisWidth={180} valueName="Ocorrências" /></Panel>}
@@ -67,6 +68,6 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
       <ComparisonTable title="Comparação por Login" labels={periodLabels} first={countBy(rows, "collaborator")} second={countBy(second, "collaborator")} />
       <ComparisonTable title="Etiquetagem e Sorting" labels={periodLabels} first={countErrorCategories(rows)} second={countErrorCategories(second)} />
     </>}</section>}
-    {rows.length > 0 && <Panel title="Registros de Erros Operacionais"><RecordsTable defaultToToday={false} key={`${JSON.stringify(period)}-${shifts.join()}`} rows={rows} columns={columns} columnLabels={labels} wrapColumns={["reason"]} emptyText="Nenhum dado disponível" /></Panel>}
+    {rows.length > 0 && <Panel title="Registros de Erros Operacionais"><RecordsTable defaultToToday={false} key={`${JSON.stringify(period)}-${shifts.join()}-${includeBacklog}`} rows={rows} columns={columns} columnLabels={labels} wrapColumns={["reason"]} emptyText="Nenhum dado disponível" /></Panel>}
   </div>;
 }

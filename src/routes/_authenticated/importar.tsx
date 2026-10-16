@@ -94,7 +94,7 @@ function ImportPage() {
       const operational = mod.key === "erros_operacionais";
       const p = await parseFile(f, { preserveBlankRows: operational });
       if (!p.sheets.length || p.sheets.every((s) => !s.rows.length)) throw new Error("Arquivo sem conteúdo legível.");
-      if (operational && p.format === "pdf") throw new Error("Erros Operacionais aceita XLSX (abas AM1/AM2/PM1) ou CSV com blocos por turno.");
+      if (operational && p.format === "pdf") throw new Error("Erros Operacionais aceita XLSX (aba TABELAS) ou CSV exportado da aba TABELAS.");
       const op = operational ? buildOperationalImport(p.sheets, p.format) : null;
       const idx = op ? op.sheetIdx : mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
       const active = p.sheets[idx];

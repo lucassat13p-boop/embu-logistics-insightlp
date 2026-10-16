@@ -12,6 +12,7 @@ import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel } from "./blocks";
 import { PeriodFilter } from "./PeriodFilter";
 import { RecordsTable, type PresentationColumn } from "./RecordsTable";
 import { RetidosComparison } from "./RetidosComparison";
+import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 
 function Breakdown({ rows, field, label }: { rows: RecordRow[]; field: "reason" | "follow_up_action"; label: string }) {
   const [all, setAll] = useState(false);
@@ -27,7 +28,7 @@ const summaryColumn: PresentationColumn = { key: "reason_summary", label: "Motiv
 const vehicleColumn: PresentationColumn = { key: "vehicle", label: "Veículo", before: "reason", value: retidosVehicle };
 
 export function RetidosDashboard({ allRows }: { allRows: RecordRow[] }) {
-  const [period, setPeriod] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [period, setPeriod] = useInitialTodayPeriod();
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [shifts, setShifts] = useState<RetidosShift[]>([]);

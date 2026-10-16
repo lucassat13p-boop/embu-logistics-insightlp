@@ -12,6 +12,7 @@ import { availableMonths, EMPTY_PERIOD, filterByPeriod, PERIOD_EMPTY, type Perio
 import { byDate, type RecordRow } from "@/lib/data";
 import { countOnHold, driverRanking, filterOnHoldByShift, percentage, uniqueDrivers, type OnHoldShift } from "@/lib/on-hold-analysis";
 import { HUB_NAME } from "@/lib/modules";
+import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 
 function Breakdown({ data, total, initial = 10, spaciousChart = false }: { data: { name: string; value: number }[]; total: number; initial?: number; spaciousChart?: boolean }) {
   const [all, setAll] = useState(false);
@@ -21,7 +22,7 @@ function Breakdown({ data, total, initial = 10, spaciousChart = false }: { data:
 }
 
 export function OnHoldDashboard({ allRows }: { allRows: RecordRow[] }) {
-  const [period, setPeriod] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [period, setPeriod] = useInitialTodayPeriod();
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [shift, setShift] = useState<OnHoldShift>("all");

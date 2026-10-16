@@ -21,6 +21,7 @@ import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, filterAv
 import { OnHoldDashboard } from "@/components/ops/OnHoldDashboard";
 import { RetidosDashboard } from "@/components/ops/RetidosDashboard";
 import { OperationalErrorsDashboard } from "@/components/ops/OperationalErrorsDashboard";
+import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: ({ params }) => {
@@ -50,7 +51,7 @@ function ModulePage() {
 
 function ModuleContent({ mod }: { mod: ModuleDef }) {
   const { data: allRows = [], isLoading } = useQuery(recordsQuery(mod.key));
-  const [period, setPeriod] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [period, setPeriod] = useInitialTodayPeriod();
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [showMissingShifts, setShowMissingShifts] = useState(true);
@@ -146,7 +147,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
       </div>
 
       <Panel title={isAvaria ? "Ocorrências dos pedidos" : "Registros"}>
-        <RecordsTable key={`${JSON.stringify(period)}-${avariaShifts.join(",")}`} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
+        <RecordsTable defaultToToday={!isAvaria} key={`${JSON.stringify(period)}-${avariaShifts.join(",")}`} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
       </Panel>
     </div>
   );

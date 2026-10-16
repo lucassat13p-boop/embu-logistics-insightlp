@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Eye, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FIELD_LABELS, moduleByKey, type FieldKey } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
 import { hasField, type RecordRow } from "@/lib/data";
+import { currentSystemDate } from "@/lib/period";
 import { Empty } from "./blocks";
 
 const MISSING = "Sem informação";
@@ -14,7 +15,7 @@ const FILTERABLE: FieldKey[] = ["status", "collaborator", "shift", "route", "lh"
 
 export type PresentationColumn = { key: string; label: string; before: FieldKey; value: (row: RecordRow) => string | null };
 
-export function RecordsTable({ rows, columns, forceColumns = [], showModule, columnLabels = {}, emptyText, presentationColumns = [], wrapColumns = [] }: { rows: RecordRow[]; columns: FieldKey[]; forceColumns?: FieldKey[]; showModule?: boolean; columnLabels?: Partial<Record<FieldKey, string>>; emptyText?: string; presentationColumns?: PresentationColumn[]; wrapColumns?: FieldKey[] }) {
+export function RecordsTable({ rows, columns, forceColumns = [], showModule, columnLabels = {}, emptyText, presentationColumns = [], wrapColumns = [], defaultToToday = true }: { rows: RecordRow[]; columns: FieldKey[]; forceColumns?: FieldKey[]; showModule?: boolean; columnLabels?: Partial<Record<FieldKey, string>>; emptyText?: string; presentationColumns?: PresentationColumn[]; wrapColumns?: FieldKey[]; defaultToToday?: boolean }) {
   const label = (field: string) => presentationColumns.find((column) => column.key === field)?.label ?? columnLabels[field as FieldKey] ?? FIELD_LABELS[field as FieldKey];
   const value = (row: RecordRow, field: string) => {
     const presentation = presentationColumns.find((column) => column.key === field);
@@ -24,6 +25,16 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule, col
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const initialDateApplied = useRef(false);
+  const hasDates = hasField(rows, "record_date");
+  useEffect(() => {
+    if (!defaultToToday || !hasDates || initialDateApplied.current) return;
+    initialDateApplied.current = true;
+    const today = currentSystemDate();
+    setFrom(today);
+    setTo(today);
+    setPage(0);
+  }, [defaultToToday, hasDates]);
   const [sort, setSort] = useState<{ f: string; dir: 1 | -1 }>({ f: "record_date", dir: -1 });
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<RecordRow | null>(null);

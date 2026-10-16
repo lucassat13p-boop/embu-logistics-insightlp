@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,19 @@ function Page() {
     <div>
       <PageHeader title={`Busca: "${q}"`} subtitle={isLoading ? "Buscando..." : `${data.length} resultado(s) no banco`} />
       <Panel title="Resultados">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Select value={moduleFilter} onValueChange={setModuleFilter}>
+            <SelectTrigger className="w-[200px]" aria-label="Módulo">
+              <SelectValue placeholder="Módulo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Módulo: todos</SelectItem>
+              {MODULES.map((m) => (
+                <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <RecordsTable showModule rows={data} columns={["record_date", "order_id", "status", "product", "collaborator", "lh", "route", "reason"]} forceColumns={["record_date", "order_id"]} defaultToToday={false} />
       </Panel>
     </div>

@@ -67,6 +67,6 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
       <ComparisonTable title="Comparação por Login" labels={periodLabels} first={countBy(rows, "collaborator")} second={countBy(second, "collaborator")} />
       <ComparisonTable title="Etiquetagem e Sorting" labels={periodLabels} first={countErrorCategories(rows)} second={countErrorCategories(second)} />
     </>}</section>}
-    {rows.length > 0 && <Panel title="Registros de Erros Operacionais"><RecordsTable key={`${JSON.stringify(period)}-${shifts.join()}`} rows={rows} columns={columns} columnLabels={labels} wrapColumns={["reason"]} emptyText="Nenhum dado disponível" /></Panel>}
+    {rows.length > 0 && <Panel title="Registros de Erros Operacionais"><RecordsTable defaultToToday={false} key={`${JSON.stringify(period)}-${shifts.join()}`} rows={rows} columns={columns} columnLabels={labels} wrapColumns={["reason"]} emptyText="Nenhum dado disponível" /></Panel>}
   </div>;
 }

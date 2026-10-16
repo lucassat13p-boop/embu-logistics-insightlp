@@ -80,3 +80,88 @@ export function definedErrorPeriod(period: PeriodSelection) {
   const range = periodRange(period);
   return !!range && !!recordMonth(range.start) && !!recordMonth(range.end) && range.start <= range.end;
 }
+type Sheetish = { name: string; rows: unknown[][] };
+type Body = ReturnType<typeof buildTable>["body"];
+const OP_LABELS: Partial<Record<FieldKey, string>> = { order_id: "BR", collaborator: "Login", reason: "Erro/Motivo", shift: "Turno", record_date: "Data", classification: "Classificação" };
+function sheetShift(name: string): ErrorShift | null {
+  const found = [...new Set([...normalizeHeader(name).matchAll(/\b(am\s*[12]|pm\s*1)\b/g)].map((m) => errorShift(m[0])).filter(Boolean))];
+  return found.length === 1 ? (found[0] as ErrorShift) : null;
+}
+function markersIn(value: unknown): ErrorShift[] {
+  const text = cellText(value); if (!text) return [];
+  return [...new Set([...normalizeHeader(text).matchAll(/\b(am\s*[12]|pm\s*1)\b/g)].map((m) => errorShift(m[0])).filter((s): s is ErrorShift => !!s))];
+}
+const colName = (i: number) => { let s = ""; for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
+
+/** Reads side-by-side record blocks (BR/Login/Erro/Turno) from one sheet; summaries without BR are skipped. */
+function readBlocks(sheet: Sheetish, defaultShift: ErrorShift | null, fields: Set<FieldKey>, body: Body) {
+  const rows = sheet.rows;
+  let headerIdx = -1, best = 0;
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
+    const ids = (rows[i] ?? []).map((c) => (cellText(c) ? identify(String(c)) : null));
+    const score = ids.filter((x) => x?.field).length;
+    if (ids.some((x) => x?.field === "order_id") && score > best) { best = score; headerIdx = i; }
+  }
+  if (headerIdx < 0) return 0;
+  const header = rows[headerIdx] ?? [];
+  // contiguous non-empty header ranges = blocks
+  const blocks: { start: number; end: number }[] = [];
+  header.forEach((c, j) => { if (!cellText(c)) return; const last = blocks[blocks.length - 1]; if (last && last.end === j - 1) last.end = j; else blocks.push({ start: j, end: j }); });
+  let count = 0;
+  for (const b of blocks) {
+    const cols: { j: number; field: FieldKey }[] = [];
+    let headerShift: ErrorShift | null = null;
+    for (let j = b.start; j <= b.end; j++) {
+      const id = identify(String(header[j]));
+      if (id.ambiguous) throw new Error(`Aba "${sheet.name}", coluna ${colName(j)}, linha ${headerIdx + 1}: cabeçalho com múltiplos turnos.`);
+      if (id.shift) headerShift = headerShift && headerShift !== id.shift ? (() => { throw new Error(`Aba "${sheet.name}", coluna ${colName(j)}, linha ${headerIdx + 1}: turnos diferentes no mesmo bloco.`); })() : id.shift;
+      if (!id.field) continue;
+      if (cols.some((c) => c.field === id.field)) throw new Error(`Aba "${sheet.name}", coluna ${colName(j)}, linha ${headerIdx + 1}: campo "${OP_LABELS[id.field] ?? id.field}" repetido dentro do mesmo bloco.`);
+      cols.push({ j, field: id.field });
+    }
+    if (!cols.some((c) => c.field === "order_id")) continue; // ranking/resumo/totais
+    // superior header rows identify the block's shift
+    let aboveShift: ErrorShift | null = null;
+    for (let i = headerIdx - 1; i >= 0 && !aboveShift; i--) {
+      const r = rows[i] ?? [];
+      const found = new Set<ErrorShift>();
+      for (let j = b.start; j <= b.end; j++) markersIn(r[j]).forEach((s) => found.add(s));
+      if (found.size > 1) throw new Error(`Aba "${sheet.name}", linha ${i + 1}: mais de um turno identificado acima do mesmo bloco (colunas ${colName(b.start)}–${colName(b.end)}).`);
+      if (found.size === 1) aboveShift = [...found][0];
+    }
+    const blockShift = headerShift ?? aboveShift ?? defaultShift;
+    cols.forEach((c) => fields.add(c.field));
+    if (blockShift) fields.add("shift");
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const r = rows[i] ?? [];
+      const cells = cols.map((c) => ({ ...c, v: r[c.j] ?? null }));
+      if (cells.every((c) => !cellText(c.v))) break; // fim do bloco de registros
+      const first = cellText(r[b.start]) ?? "";
+      if (/^(total|soma|ranking|resumo)\b/i.test(normalizeHeader(first))) break;
+      const values: Record<string, unknown> = { __original: Object.fromEntries(cols.map((c) => [String(header[c.j]).trim(), r[c.j] ?? null])), __sheet: sheet.name, __block: blockShift };
+      for (const c of cells) values[OP_LABELS[c.field] ?? c.field] = c.v;
+      if (blockShift) {
+        const actual = cellText(values.Turno);
+        if (actual && errorShift(actual) !== blockShift) throw new Error(`Aba "${sheet.name}", coluna ${colName(cols.find((c) => c.field === "shift")!.j)}, linha ${i + 1}: turno "${actual}" conflita com o turno ${blockShift} do bloco.`);
+        if (!actual) values.Turno = blockShift;
+      }
+      body.push({ rowNumber: i + 1, values, empty: false });
+      count++;
+    }
+  }
+  return count;
+}
+
+/** Unified Erros Operacionais reader: XLSX tabs AM1/AM2/PM1, CSV side-by-side blocks, or legacy fifth tab. */
+export function buildOperationalImport(sheets: Sheetish[], format: string) {
+  const body: Body = [];
+  const fields = new Set<FieldKey>();
+  const shiftSheets = sheets.filter((s) => sheetShift(s.name));
+  if (format !== "csv" && shiftSheets.length) shiftSheets.forEach((s) => readBlocks(s, sheetShift(s.name), fields, body));
+  else if (format === "csv") sheets.forEach((s) => readBlocks(s, null, fields, body));
+  else if (sheets[4]) return { ...buildOperationalTable(sheets[4].rows), sheetIdx: 4 };
+  if (!body.length) throw new Error(format === "csv" ? "Nenhum bloco de registros com BR identificado no CSV." : "Nenhuma aba AM1, AM2 ou PM1 com registros identificada.");
+  const order: FieldKey[] = ["order_id", "collaborator", "reason", "shift", "record_date", "classification"];
+  const headers = order.filter((f) => fields.has(f)).map((f) => OP_LABELS[f]!);
+  return { headers, body, sheetIdx: format !== "csv" ? sheets.indexOf(shiftSheets[0]) : 0 };
+}

@@ -144,10 +144,10 @@ export const MODULES: ModuleDef[] = [
   {
     key: "erros_operacionais", slug: "erros-operacionais", label: "ERROS OPERACIONAIS", short: "ERROS",
     fields: ["reason", "shift", "order_id", "collaborator", "record_date", "classification"],
-    required: [], dedupe: [], appendOnly: true,
-    fieldLabels: { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login" },
-    defaultMapping: { "ERRO/MOTIVO": "reason", TURNO: "shift", BR: "order_id", LOGIN: "collaborator", DATA: "record_date", "CLASSIFICAÇÃO": "classification" },
-    description: "Fonte: quinta aba TABELAS · cabeçalho na linha 2",
+    required: ["order_id"], dedupe: [],
+    fieldLabels: { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login", shift: "Turno responsável" },
+    defaultMapping: { "ERRO/MOTIVO": "reason", "TURNO RESPONSÁVEL": "shift", "TURNO RESPONSAVEL": "shift", BR: "order_id", LOGIN: "collaborator", DATA: "record_date", "CLASSIFICAÇÃO": "classification" },
+    description: "Fonte: aba TABELAS (XLSX) ou CSV · blocos AM1 A–D, AM2 E–H, PM1 I–L",
   },
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {

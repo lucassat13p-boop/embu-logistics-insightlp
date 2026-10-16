@@ -152,16 +152,32 @@ function readBlocks(sheet: Sheetish, defaultShift: ErrorShift | null, fields: Se
   return count;
 }
 
-/** Unified Erros Operacionais reader: XLSX tabs AM1/AM2/PM1, CSV side-by-side blocks, or legacy fifth tab. */
+const FIXED_BLOCKS: { shift: ErrorShift; start: number; letters: string }[] = [
+  { shift: "AM1", start: 0, letters: "A–D" }, { shift: "AM2", start: 4, letters: "E–H" }, { shift: "PM1", start: 8, letters: "I–L" },
+];
+const normSheet = (n: string) => normalizeHeader(n).replace(/\s+/g, "");
+
+/** Fixed TABELAS layout (XLSX tab or CSV export): blocks A–D/E–H/I–L = AM1/AM2/PM1; row 1 labels, row 2 headers, data from row 3. Responsible shift comes only from the block. */
 export function buildOperationalImport(sheets: Sheetish[], format: string) {
+  let sheetIdx = 0;
+  if (format !== "csv") {
+    sheetIdx = sheets.findIndex((s) => normSheet(s.name) === "tabelas");
+    if (sheetIdx < 0) throw new Error(`XLSX: aba "TABELAS" não encontrada. Abas disponíveis: ${sheets.map((s) => s.name).join(", ")}.`);
+  }
+  const rows = sheets[sheetIdx]?.rows ?? [];
   const body: Body = [];
-  const fields = new Set<FieldKey>();
-  const shiftSheets = sheets.filter((s) => sheetShift(s.name));
-  if (format !== "csv" && shiftSheets.length) shiftSheets.forEach((s) => readBlocks(s, sheetShift(s.name), fields, body));
-  else if (format === "csv") sheets.forEach((s) => readBlocks(s, null, fields, body));
-  else if (sheets[4]) return { ...buildOperationalTable(sheets[4].rows), sheetIdx: 4 };
-  if (!body.length) throw new Error(format === "csv" ? "Nenhum bloco de registros com BR identificado no CSV." : "Nenhuma aba AM1, AM2 ou PM1 com registros identificada.");
-  const order: FieldKey[] = ["order_id", "collaborator", "reason", "shift", "record_date", "classification"];
-  const headers = order.filter((f) => fields.has(f)).map((f) => OP_LABELS[f]!);
-  return { headers, body, sheetIdx: format !== "csv" ? sheets.indexOf(shiftSheets[0]) : 0 };
+  for (const b of FIXED_BLOCKS) {
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i] ?? [];
+      const br = cellText(r[b.start]);
+      if (!br) continue;
+      const original = r[b.start + 3] ?? null;
+      body.push({ rowNumber: i + 1, empty: false, values: {
+        BR: r[b.start] ?? null, Login: r[b.start + 1] ?? null, "Erro/Motivo": r[b.start + 2] ?? null,
+        "Turno responsável": b.shift, "Turno original": original, "Bloco de origem": `${b.shift} (${b.letters})`, "Linha de origem": i + 1,
+      } });
+    }
+  }
+  if (!body.length) throw new Error(`${format === "csv" ? "CSV" : "XLSX (aba TABELAS)"}: nenhuma ocorrência com BR preenchido nas colunas A, E ou I a partir da linha 3.`);
+  return { headers: ["BR", "Login", "Erro/Motivo", "Turno responsável", "Turno original", "Bloco de origem", "Linha de origem"], body, sheetIdx };
 }

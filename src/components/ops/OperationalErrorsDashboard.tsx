@@ -26,7 +26,7 @@ function ComparisonTable({ title, first, second, labels }: { title: string; firs
   })}</tbody></table></div></div>;
 }
 const columns: FieldKey[] = ["record_date", "reason", "shift", "order_id", "collaborator", "classification"];
-const labels = { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login" };
+const labels = { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login", shift: "Turno responsável" };
 function shiftsCount(rows: RecordRow[]): Metric[] {
   return ERROR_SHIFTS.map((name) => ({ name, value: rows.filter((row) => errorShift(row.shift) === name).length })).filter((item) => item.value > 0);
 }
@@ -56,7 +56,7 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
     {!rows.length ? <Empty text="Nenhum dado disponível" /> : <>
       <div className="grid gap-3 md:grid-cols-3"><Kpi accent label="Total de erros" value={rows.length} />{categories.map((item) => <Kpi key={item.name} label={item.name} value={item.value} />)}</div>
       {reasonData.length > 0 && <Panel title="Erros por motivo"><BarBlock data={reasonData} horizontal rowHeight={38} yAxisWidth={180} valueName="Ocorrências" /></Panel>}
-      {shiftData.length > 0 && <Panel title="Erros por turno"><BarBlock data={shiftData} valueName="Ocorrências" /></Panel>}
+      {shiftData.length > 0 && <Panel title="Erros por turno responsável"><BarBlock data={shiftData} valueName="Ocorrências" /></Panel>}
       {loginData.length > 0 && <Panel title="Erros por login"><Ranking data={loginData} /></Panel>}
       {byDate(rows).length > 0 && <Panel title="Evolução dos erros"><LineBlock data={byDate(rows)} /></Panel>}
     </>}

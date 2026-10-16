@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel } from "@/components/ops/blocks";
 import { RecordsTable } from "@/components/ops/RecordsTable";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MODULES } from "@/lib/modules";
 
 export const Route = createFileRoute("/_authenticated/busca")({
   validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : "" }),
@@ -21,13 +24,16 @@ export const Route = createFileRoute("/_authenticated/busca")({
 
 function Page() {
   const { q } = Route.useSearch();
+  const [moduleFilter, setModuleFilter] = useState("all");
   const { data = [], isLoading } = useQuery({
-    queryKey: ["search", q],
+    queryKey: ["search", q, moduleFilter],
     enabled: !!q,
     queryFn: async () => {
       const s = q.replace(/[%,()]/g, " ").trim();
       const cols = ["order_id", "collaborator", "product", "lh", "route", "status", "reason"];
-      const { data, error } = await supabase.from("records").select("*").or(cols.map((c) => `${c}.ilike.%${s}%`).join(",")).limit(1000);
+      let query = supabase.from("records").select("*").or(cols.map((c) => `${c}.ilike.%${s}%`).join(","));
+      if (moduleFilter !== "all") query = query.eq("module", moduleFilter);
+      const { data, error } = await query.limit(1000);
       if (error) throw error;
       return data ?? [];
     },
@@ -36,6 +42,19 @@ function Page() {
     <div>
       <PageHeader title={`Busca: "${q}"`} subtitle={isLoading ? "Buscando..." : `${data.length} resultado(s) no banco`} />
       <Panel title="Resultados">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Select value={moduleFilter} onValueChange={setModuleFilter}>
+            <SelectTrigger className="w-[200px]" aria-label="Módulo">
+              <SelectValue placeholder="Módulo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Módulo: todos</SelectItem>
+              {MODULES.map((m) => (
+                <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <RecordsTable showModule rows={data} columns={["record_date", "order_id", "status", "product", "collaborator", "lh", "route", "reason"]} forceColumns={["record_date", "order_id"]} defaultToToday={false} />
       </Panel>
     </div>

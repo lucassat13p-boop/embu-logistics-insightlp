@@ -16,7 +16,7 @@ import { buildTable, detectHeaderRow, parseDate, parseFile, type ParsedFile } fr
 import { commitImport, countExisting, headerSignature, validate, type DupStrategy, type Mapping, type ValidationResult } from "@/lib/importer";
 import { cn } from "@/lib/utils";
 import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
-import { buildOperationalTable } from "@/lib/operational-errors";
+import { buildOperationalImport } from "@/lib/operational-errors";
 
 export const Route = createFileRoute("/_authenticated/importar")({
   validateSearch: (s: Record<string, unknown>) => ({ modulo: typeof s.modulo === "string" ? (s.modulo as string) : undefined }),
@@ -57,9 +57,9 @@ function ImportPage() {
   const sheet = parsed?.sheets[sheetIdx];
   const preparedTable = useMemo(() => {
     if (!sheet) return { table: null, error: null };
-    try { return { table: mod?.key === "erros_operacionais" ? buildOperationalTable(sheet.rows) : buildTable(sheet.rows, headerIdx), error: null }; }
+    try { return { table: mod?.key === "erros_operacionais" && parsed ? buildOperationalImport(parsed.sheets, parsed.format) : buildTable(sheet.rows, headerIdx), error: null }; }
     catch (error) { return { table: null, error: error instanceof Error ? error.message : "Cabeçalhos não identificados com segurança." }; }
-  }, [sheet, headerIdx, mod?.key]);
+  }, [sheet, headerIdx, mod?.key, parsed]);
   const table = preparedTable.table;
 
   const buildAvariaPreview = (validation: ValidationResult) => {
@@ -94,12 +94,13 @@ function ImportPage() {
       const operational = mod.key === "erros_operacionais";
       const p = await parseFile(f, { preserveBlankRows: operational });
       if (!p.sheets.length || p.sheets.every((s) => !s.rows.length)) throw new Error("Arquivo sem conteúdo legível.");
-      if (operational && (p.format !== "xlsx" && p.format !== "xls" || !p.sheets[4])) throw new Error("Erros Operacionais requer uma planilha Excel com a quinta aba TABELAS.");
-      const idx = operational ? 4 : mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
+      if (operational && p.format === "pdf") throw new Error("Erros Operacionais aceita XLSX (abas AM1/AM2/PM1) ou CSV com blocos por turno.");
+      const op = operational ? buildOperationalImport(p.sheets, p.format) : null;
+      const idx = op ? op.sheetIdx : mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
       const active = p.sheets[idx];
       if (!active) throw new Error("Planilha não encontrada.");
       const h = operational ? 1 : detectHeaderRow(active.rows);
-      const prepared = operational ? buildOperationalTable(active.rows) : buildTable(active.rows, h);
+      const prepared = op ? op : buildTable(active.rows, h);
       setParsed(p);
       setSheetIdx(idx);
       setHeaderIdx(h);

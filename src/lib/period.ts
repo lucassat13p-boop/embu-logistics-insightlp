@@ -6,6 +6,12 @@ export type PeriodSelection = { kind: PeriodKind; date: string; week: string; mo
 export const PERIOD_EMPTY = "Nenhum dado disponível para o período selecionado.";
 export const EMPTY_PERIOD: PeriodSelection = { kind: "month", date: "", week: "", months: [], start: "", end: "" };
 
+// Call after hydration so today's date follows the user's system clock, not SSR UTC.
+export function currentSystemDate(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 export function recordMonth(date: string | null): string | null {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const parsed = new Date(`${date}T00:00:00Z`);

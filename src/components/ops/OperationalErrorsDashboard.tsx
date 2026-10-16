@@ -12,6 +12,7 @@ import { variation } from "@/lib/comparison";
 import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "./blocks";
 import { PeriodFilter } from "./PeriodFilter";
 import { RecordsTable } from "./RecordsTable";
+import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 
 type Metric = { name: string; value: number };
 function ComparisonTable({ title, first, second, labels }: { title: string; first: Metric[]; second: Metric[]; labels: string[] }) {
@@ -31,7 +32,7 @@ function shiftsCount(rows: RecordRow[]): Metric[] {
 }
 export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }) {
   const originals = useMemo(() => allRows.filter((row) => row.module === "erros_operacionais"), [allRows]);
-  const [period, setPeriod] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
+  const [period, setPeriod] = useInitialTodayPeriod();
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [shifts, setShifts] = useState<ErrorShift[]>([]);
@@ -66,6 +67,6 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
       <ComparisonTable title="Comparação por Login" labels={periodLabels} first={countBy(rows, "collaborator")} second={countBy(second, "collaborator")} />
       <ComparisonTable title="Etiquetagem e Sorting" labels={periodLabels} first={countErrorCategories(rows)} second={countErrorCategories(second)} />
     </>}</section>}
-    {rows.length > 0 && <Panel title="Registros de Erros Operacionais"><RecordsTable key={`${JSON.stringify(period)}-${shifts.join()}`} rows={rows} columns={columns} columnLabels={labels} wrapColumns={["reason"]} emptyText="Nenhum dado disponível" /></Panel>}
+    {rows.length > 0 && <Panel title="Registros de Erros Operacionais"><RecordsTable defaultToToday={false} key={`${JSON.stringify(period)}-${shifts.join()}`} rows={rows} columns={columns} columnLabels={labels} wrapColumns={["reason"]} emptyText="Nenhum dado disponível" /></Panel>}
   </div>;
 }

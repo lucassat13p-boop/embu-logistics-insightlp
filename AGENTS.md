@@ -16,6 +16,7 @@
 - Module definitions (fields, required, dedupe key, aliases) live in `src/lib/modules.ts`; file parsing runs client-side in `src/lib/parsers.ts`, validation/commit in `src/lib/importer.ts`.
 - Never seed or fabricate data; UI shows "Nenhum dado disponível" when a field has no real values.
 - Period analysis uses reusable pure date helpers and a shared day/week/month/custom selector; AVARIA filters its fetched module rows before every visualization, while two-period comparison reads the same originals without writes.
+- Initial date defaults are applied once after hydration through shared system-date utilities; tables inside period-controlled dashboards opt out of their independent default so manual period changes never acquire a second date restriction.
 - AVARIA analysis normalizes official types, simple AM1/AM 1, AM2/AM 2, PM1/PM 1 shift spellings, and collaborator casing without source writes; its shift filter applies after period filtering to the complete dashboard and both compared periods, while import-time shift/SOC choices remain independent and auditable.
 - Product-family analytics use one pure, conservative whole-word resolver shared by AVARIA rankings and monthly comparison; unknown or mixed products retain normalized descriptions so original records stay untouched and unrelated objects are not merged by material.
 - AVARIA pie charts use the filtered record count as denominator and show missing values as an informational segment only when real field values exist, so absent attributes are not inferred or silently excluded.

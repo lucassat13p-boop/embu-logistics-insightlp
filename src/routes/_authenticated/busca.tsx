@@ -36,7 +36,7 @@ function Page() {
     <div>
       <PageHeader title={`Busca: "${q}"`} subtitle={isLoading ? "Buscando..." : `${data.length} resultado(s) no banco`} />
       <Panel title="Resultados">
-        <RecordsTable showModule rows={data} columns={["record_date", "order_id", "status", "product", "collaborator", "lh", "route", "reason"]} forceColumns={["record_date", "order_id"]} />
+        <RecordsTable showModule rows={data} columns={["record_date", "order_id", "status", "product", "collaborator", "lh", "route", "reason"]} forceColumns={["record_date", "order_id"]} defaultToToday={false} />
       </Panel>
     </div>
   );

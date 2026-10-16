@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel } from "@/components/ops/blocks";
 import { RecordsTable } from "@/components/ops/RecordsTable";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MODULES } from "@/lib/modules";
 
 export const Route = createFileRoute("/_authenticated/busca")({
   validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : "" }),
@@ -21,13 +23,16 @@ export const Route = createFileRoute("/_authenticated/busca")({
 
 function Page() {
   const { q } = Route.useSearch();
+  const [moduleFilter, setModuleFilter] = useState("all");
   const { data = [], isLoading } = useQuery({
-    queryKey: ["search", q],
+    queryKey: ["search", q, moduleFilter],
     enabled: !!q,
     queryFn: async () => {
       const s = q.replace(/[%,()]/g, " ").trim();
       const cols = ["order_id", "collaborator", "product", "lh", "route", "status", "reason"];
-      const { data, error } = await supabase.from("records").select("*").or(cols.map((c) => `${c}.ilike.%${s}%`).join(",")).limit(1000);
+      let query = supabase.from("records").select("*").or(cols.map((c) => `${c}.ilike.%${s}%`).join(","));
+      if (moduleFilter !== "all") query = query.eq("module", moduleFilter);
+      const { data, error } = await query.limit(1000);
       if (error) throw error;
       return data ?? [];
     },

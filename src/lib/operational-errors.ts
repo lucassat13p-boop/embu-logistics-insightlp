@@ -62,10 +62,12 @@ export function buildOperationalTable(rows: unknown[][]) {
   }
   return { headers, body };
 }
-/** Backlog é identificado apenas por marcador explícito "backlog" nos valores reais do registro. */
+/** Backlog é identificado pelo Login (ou outro valor real do registro) igual a "backlog", ignorando maiúsculas e espaços extras. */
 export function isBacklog(row: RecordRow): boolean {
-  const text = normalizeHeader([row.classification, row.reason].filter(Boolean).join(" "));
-  return /\bbacklog\b/.test(text);
+  return [row.collaborator, row.classification, row.reason].some((value) => {
+    const text = normalizeHeader(value ?? "").replace(/\s+/g, " ").trim();
+    return text === "backlog" || /\bbacklog\b/.test(text);
+  });
 }
 export function filterBacklog(rows: RecordRow[], includeBacklog: boolean) {
   return includeBacklog ? rows : rows.filter((row) => !isBacklog(row));

@@ -116,7 +116,13 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
   }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: 0; }
+}
+
+.donut-block { container-type: inline-size; }
+.donut-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: center; }
+@container (min-width: 560px) {
+  .donut-layout { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
 }
 
 @utility bg-brand { background-image: var(--gradient-brand); }

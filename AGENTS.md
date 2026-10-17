@@ -11,7 +11,7 @@
 
 ## Architecture
 - Import deletion uses the owner-authorized atomic `delete_import_batch` database function and one shared confirmation control; exact batch/module/source-row links prevent cross-import deletion, collaborator identities remain intact, and affected query caches refresh after success.
-- Erros Operacionais reads only the TABELAS tab (or its CSV export) by fixed column positions A–D/E–H/I–L = AM1/AM2/PM1; the block alone defines the responsible shift, the original shift is kept in extra, and row/block-based dedupe keys make re-imports idempotent without merging legitimate repeated BRs.
+- Erros Operacionais reads only TABELAS or its CSV using header-evidenced four-column legacy or five-column dated blocks; ambiguous layouts stop before import, the block defines responsible shift, original values remain intact, and the isolated date-only parser feeds existing normalized/raw date columns without changing other modules.
 - All imported report rows live in `public.records` with a strict `module` discriminator and `batch_id` → `import_batches`; pages must always filter by module so reports never leak across modules.
 - Module definitions (fields, required, dedupe key, aliases) live in `src/lib/modules.ts`; file parsing runs client-side in `src/lib/parsers.ts`, validation/commit in `src/lib/importer.ts`.
 - Never seed or fabricate data; UI shows "Nenhum dado disponível" when a field has no real values.

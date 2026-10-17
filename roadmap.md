@@ -1,4 +1,5 @@
 # Tasks
+- [ ] Improve shared dashboard charts, donut legends, rankings and indicator presentation without changing data or filtering.
 - [x] Support legacy and dated TABELAS imports exclusively for Erros Operacionais, preserving original values and rejecting ambiguous layouts.
 - [x] Set automatic current-day initial values on existing date filters without changing manual selection, comparisons or source data.
 - [x] Add confirmed, atomic, owner-authorized deletion of a specific import and refresh affected history and reports.

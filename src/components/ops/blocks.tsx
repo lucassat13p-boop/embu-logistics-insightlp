@@ -73,7 +73,7 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
               formatter={(value) => [Number(value).toLocaleString("pt-BR"), valueName]}
             />
             <Bar dataKey="value" name={valueName} fill="var(--chart-1)" radius={[0, 4, 4, 0]} maxBarSize={32} isAnimationActive={false}>
-              <LabelList dataKey="value" position="right" {...valueLabel} formatter={(value) => Number(value).toLocaleString("pt-BR")} />
+              <LabelList dataKey="value" position="right" {...valueLabel} formatter={(value: unknown) => Number(value).toLocaleString("pt-BR")} />
             </Bar>
           </BarChart>
         ) : (
@@ -83,7 +83,7 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
             <YAxis tick={axisTick} allowDecimals={false} width={48} axisLine={false} tickLine={false} />
             <Tooltip {...tip} labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${String(label)}` : String(label)} formatter={(value) => [Number(value).toLocaleString("pt-BR"), valueName]} />
             <Bar dataKey="value" name={valueName} fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={48} isAnimationActive={false}>
-              <LabelList dataKey="value" position="top" {...valueLabel} formatter={(value) => Number(value).toLocaleString("pt-BR")} />
+              <LabelList dataKey="value" position="top" {...valueLabel} formatter={(value: unknown) => Number(value).toLocaleString("pt-BR")} />
             </Bar>
           </BarChart>
         )}

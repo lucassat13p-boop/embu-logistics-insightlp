@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Support legacy and dated TABELAS imports exclusively for Erros Operacionais, preserving original values and rejecting ambiguous layouts.
+- [x] Support legacy and dated TABELAS imports exclusively for Erros Operacionais, preserving original values and rejecting ambiguous layouts.
 - [x] Set automatic current-day initial values on existing date filters without changing manual selection, comparisons or source data.
 - [x] Add confirmed, atomic, owner-authorized deletion of a specific import and refresh affected history and reports.
 - [x] Create isolated Erros Operacionais with fifth-sheet named-header import, real-data analysis, multi-shift and period comparisons.

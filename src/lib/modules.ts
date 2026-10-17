@@ -147,7 +147,7 @@ export const MODULES: ModuleDef[] = [
     required: ["order_id"], dedupe: [],
     fieldLabels: { reason: "Erro/Motivo", order_id: "BR", collaborator: "Login", shift: "Turno responsável" },
     defaultMapping: { "ERRO/MOTIVO": "reason", "TURNO RESPONSÁVEL": "shift", "TURNO RESPONSAVEL": "shift", BR: "order_id", LOGIN: "collaborator", DATA: "record_date", "CLASSIFICAÇÃO": "classification" },
-    description: "Fonte: aba TABELAS (XLSX) ou CSV · blocos AM1 A–D, AM2 E–H, PM1 I–L",
+    description: "Fonte: aba TABELAS (XLSX) ou CSV · blocos de 4 colunas ou 5 colunas com Data",
   },
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {

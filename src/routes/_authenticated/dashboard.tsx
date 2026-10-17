@@ -68,8 +68,8 @@ function Dashboard() {
         <Kpi label="Rotas/LHs distintas" value={hasField(all, "route") || hasField(all, "lh") ? new Set(all.map((r) => r.route ?? r.lh).filter(Boolean)).size : null} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Panel className="lg:col-span-2" title="Evolução temporal" subtitle="Registros por data (FULL + AUTO ADD + ON HOLD)"><LineBlock data={evo} /></Panel>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Panel className="xl:col-span-2" title="Evolução temporal" subtitle="Registros por data (FULL + AUTO ADD + ON HOLD)"><LineBlock data={evo} /></Panel>
         <Panel title="Alertas de importação">
           {alerts.length ? (
             <ul className="space-y-2 text-sm">

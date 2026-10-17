@@ -98,7 +98,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
         <div className="rounded-lg border border-dashed bg-card p-6"><Empty text={allRows.length ? PERIOD_EMPTY : undefined} hint={allRows.length ? undefined : "Importe um relatório para visualizar os indicadores."} /></div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <Kpi accent label={isAvaria ? "Total de Avarias" : "Total de registros"} value={rows.length || null} />
         {isAvaria ? (
           (mod.classifications ?? []).map((c) => {
@@ -117,7 +117,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
       </div>
 
       {isAvaria && <>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2">
           <Panel title="Avarias por tipo"><PieBlock label="Avarias por tipo" data={classCounts} total={rows.length} categories={[...OFFICIAL_AVARIA_TYPES]} /></Panel>
           <Panel title="Avarias por turno" action={<label className="flex items-center gap-2 text-xs"><Switch checked={showMissingShifts} onCheckedChange={setShowMissingShifts} /><Label>Exibir “Sem informação”</Label></label>}><PieBlock label="Avarias por turno" data={shiftPieData} total={showMissingShifts ? rows.length : shiftData.reduce((sum, item) => sum + item.value, 0)} categories={[...OFFICIAL_SHIFTS]} includeMissing={false} /></Panel>
         </div>
@@ -126,7 +126,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
         <Panel title="Produtos com mais ocorrências" subtitle="Famílias de produtos"><Ranking data={familyData} /></Panel>
       </>}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-2">
         {!isAvaria && <>
           <Panel title="Evolução" subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
           <Panel title="Status"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>
@@ -137,7 +137,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
         {!isAvaria && has("reason") && <Panel title={mod.key === "motivos" ? "Distribuição dos motivos" : "Por motivo"}><BarBlock data={countBy(rows, "reason")} horizontal /></Panel>}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-2">
         {!isAvaria && has("collaborator") && <Panel title="Colaboradores com mais ocorrências"><Ranking data={countBy(rows, "collaborator")} /></Panel>}
         {isAvaria && <Panel title="Status das avarias"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>}
         {isAvaria && <Panel title="Turnos mais ofensores"><Ranking data={showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "pt-BR")) : shiftData} /></Panel>}

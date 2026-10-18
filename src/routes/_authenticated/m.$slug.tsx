@@ -85,12 +85,9 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={
-        <div className="flex max-w-full flex-wrap items-start gap-3">
-           {isAvaria && <div className="min-w-0 flex-1"><PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); setAvariaShifts(["all"]); }} /><div className="mt-3"><Label>Turno</Label><ToggleGroup type="multiple" variant="outline" size="sm" className="mt-2" value={avariaShifts} onValueChange={(value: string[]) => { setAvariaShifts((prev) => { const next = value as AvariaShift[]; if (next.includes("all")) { return prev.includes("all") && next.length > 1 ? next.filter((item) => item !== "all") as AvariaShift[] : ["all"]; } return next.length ? next : ["all"]; }); }}><ToggleGroupItem value="all">Todos</ToggleGroupItem><ToggleGroupItem value="AM1">AM1</ToggleGroupItem><ToggleGroupItem value="AM2">AM2</ToggleGroupItem><ToggleGroupItem value="PM1">PM1</ToggleGroupItem></ToggleGroup></div></div>}
-          {importBtn}
-        </div>
-      } />
+      <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={importBtn} />
+      {isAvaria && <PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); setAvariaShifts(["all"]); }} />}
+      {isAvaria && <div><Label>Turno</Label><ToggleGroup type="multiple" variant="outline" size="sm" className="mt-2 justify-start" value={avariaShifts} onValueChange={(value: string[]) => { setAvariaShifts((prev) => { const next = value as AvariaShift[]; if (next.includes("all")) { return prev.includes("all") && next.length > 1 ? next.filter((item) => item !== "all") as AvariaShift[] : ["all"]; } return next.length ? next : ["all"]; }); }}><ToggleGroupItem value="all">Todos</ToggleGroupItem><ToggleGroupItem value="AM1">AM1</ToggleGroupItem><ToggleGroupItem value="AM2">AM2</ToggleGroupItem><ToggleGroupItem value="PM1">PM1</ToggleGroupItem></ToggleGroup></div>}
 
       {isAvaria && mode === "compare" && <MonthComparison firstRows={rows} secondRows={comparisonRows} firstPeriod={period} secondPeriod={comparison} />}
 

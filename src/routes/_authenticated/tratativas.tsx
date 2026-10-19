@@ -16,6 +16,7 @@ import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 import { supabase } from "@/integrations/supabase/client";
 import { HUB_NAME } from "@/lib/modules";
 import { currentSystemDate, EMPTY_PERIOD, type PeriodSelection } from "@/lib/period";
+import { filterTreatedImports, sumTreatedImports, treatedImportsQuery } from "@/lib/on-hold-treated";
 import { filterTreatments, sumTreatments, TREATMENT_SHIFTS, treatmentsQuery, type TreatmentRow, type TreatmentShift } from "@/lib/treatments";
 
 export const Route = createFileRoute("/_authenticated/tratativas")({
@@ -40,6 +41,7 @@ const validInt = (v: string) => /^\d+$/.test(v.trim());
 function TratativasPage() {
   const qc = useQueryClient();
   const { data: all = [], isLoading } = useQuery(treatmentsQuery());
+  const { data: imported = [] } = useQuery(treatedImportsQuery());
   const [period, setPeriod] = useInitialTodayPeriod();
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [shifts, setShifts] = useState<TreatmentShift[]>([]);
@@ -50,19 +52,20 @@ function TratativasPage() {
 
   const rows = useMemo(() => filterTreatments(all, period, shifts), [all, period, shifts]);
   const totals = sumTreatments(rows);
+  const importedTotals = sumTreatedImports(filterTreatedImports(imported, period, shifts));
   const months = useMemo(() => [...new Set(all.map((r) => r.operation_date.slice(0, 7)))].sort(), [all]);
   const pageRows = rows.slice(page * PAGE, page * PAGE + PAGE);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
 
-  const openNew = () => setForm({ date: currentSystemDate(), shift: "", avarias: "", onHold: "", notes: "" });
+  const openNew = () => setForm({ date: currentSystemDate(), shift: "", avarias: "", onHold: "0", notes: "" });
   const openEdit = (r: TreatmentRow) => setForm({ id: r.id, date: r.operation_date, shift: r.shift as TreatmentShift, avarias: String(r.avarias_saved), onHold: String(r.on_hold_treated), notes: r.notes ?? "" });
 
   async function save() {
     if (!form || saving) return;
     if (!form.date || !form.shift) { toast.error("Informe a data e o turno."); return; }
-    if (!validInt(form.avarias) || !validInt(form.onHold)) { toast.error("Informe números inteiros não negativos."); return; }
+    if (!validInt(form.avarias)) { toast.error("Informe números inteiros não negativos."); return; }
     setSaving(true);
-    const payload = { operation_date: form.date, shift: form.shift, avarias_saved: Number(form.avarias), on_hold_treated: Number(form.onHold), notes: form.notes.trim() || null };
+    const payload = { operation_date: form.date, shift: form.shift, avarias_saved: Number(form.avarias), on_hold_treated: form.id ? Number(form.onHold) : 0, notes: form.notes.trim() || null };
     let error;
     if (form.id) ({ error } = await supabase.from("operational_treatments").update(payload).eq("id", form.id));
     else {
@@ -74,6 +77,7 @@ function TratativasPage() {
     toast.success(form.id ? "Lançamento atualizado." : "Lançamento registrado.");
     setForm(null);
     qc.invalidateQueries({ queryKey: ["operational_treatments"] });
+    qc.invalidateQueries({ queryKey: ["official_treatments"] });
   }
 
   const allShifts = shifts.length === 0;
@@ -89,14 +93,14 @@ function TratativasPage() {
       </div></div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Kpi accent label="Avarias salvas" value={totals.entries ? totals.avarias : null} hint={totals.entries ? undefined : "Sem lançamento registrado"} />
-        <Kpi label="Pacotes tratados do ON HOLD" value={totals.entries ? totals.onHold : null} hint={totals.entries ? undefined : "Sem lançamento registrado"} />
+        <Kpi label="Pacotes tratados do ON HOLD (automático)" value={importedTotals.entries ? importedTotals.total : null} hint={importedTotals.entries ? "Importado do relatório ON HOLD" : "Sem importação no período"} />
         <Kpi label="Total de lançamentos" value={totals.entries} />
       </div>
       <Panel title="Histórico dos lançamentos" subtitle={`${rows.length} lançamentos`}>
         {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : !rows.length ? <Empty text="Sem lançamento registrado para o período selecionado." /> : <>
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead><tr className="border-b text-left text-xs uppercase text-muted-foreground">
-              <th className="p-2">Data operacional</th><th className="p-2">Turno</th><th className="p-2 text-right">Avarias salvas</th><th className="p-2 text-right">ON HOLD tratados</th><th className="p-2">Responsável</th><th className="p-2">Observações</th><th className="p-2 text-right">Ações</th>
+              <th className="p-2">Data operacional</th><th className="p-2">Turno</th><th className="p-2 text-right">Avarias salvas</th><th className="p-2 text-right">ON HOLD tratados (manual, histórico)</th><th className="p-2">Responsável</th><th className="p-2">Observações</th><th className="p-2 text-right">Ações</th>
             </tr></thead>
             <tbody>{pageRows.map((r) => (
               <tr key={r.id} className="border-b last:border-0 hover:bg-muted/40">
@@ -120,7 +124,7 @@ function TratativasPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Avarias salvas</Label><Input type="number" min={0} step={1} inputMode="numeric" value={form.avarias} onChange={(e) => setForm({ ...form, avarias: e.target.value })} /></div>
-              <div><Label>Pacotes tratados do ON HOLD</Label><Input type="number" min={0} step={1} inputMode="numeric" value={form.onHold} onChange={(e) => setForm({ ...form, onHold: e.target.value })} /></div>
+              <div><Label>Pacotes tratados do ON HOLD</Label><Input value={form.id ? `${form.onHold} (manual, histórico)` : "Automático"} disabled /><p className="mt-1 text-xs text-muted-foreground">Agora vem da importação ON HOLD.</p></div>
             </div>
             <div><Label>Observações (opcional)</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
           </div>}

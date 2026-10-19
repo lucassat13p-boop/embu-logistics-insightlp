@@ -86,7 +86,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
                 <td className={fs === FULL_PENDING ? "font-semibold text-destructive" : "font-semibold"}>{fs}{r.manual_status && <span className="ml-1 text-xs font-normal text-muted-foreground">(manual)</span>}</td>
                 <td className="text-muted-foreground">{r.br_status ?? "Sem informação"}</td>
                 <td className="text-xs text-muted-foreground">{r.status_issue ?? "—"}</td>
-                <td>{(r.status_issue || r.manual_status) && <Button size="sm" variant="outline" onClick={() => { setEditing(r); setValue(r.manual_status ?? ""); }}>{r.manual_status ? "Editar" : "Classificar"}</Button>}</td>
+                <td>{(r.status_issue || r.manual_status || fs === FULL_PENDING) && <Button size="sm" variant="outline" onClick={() => { setEditing(r); setValue(r.manual_status ?? ""); }}>{r.manual_status ? "Editar" : "Classificar"}</Button>}</td>
               </tr>); })}</tbody>
           </table>
           <div className="mt-3 flex items-center justify-end gap-2 text-xs"><Button size="sm" variant="outline" disabled={!page} onClick={() => setPage(page - 1)}>Anterior</Button><span>{page + 1} / {Math.max(1, Math.ceil(rows.length / PAGE))}</span><Button size="sm" variant="outline" disabled={(page + 1) * PAGE >= rows.length} onClick={() => setPage(page + 1)}>Próxima</Button></div></div>}

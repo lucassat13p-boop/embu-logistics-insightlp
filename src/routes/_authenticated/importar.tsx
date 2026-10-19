@@ -298,6 +298,7 @@ function ImportPage() {
               </div>
               <p className="mt-2 text-xs text-muted-foreground">Data selecionada: {treatedDate ? treatedDate.split("-").reverse().join("/") : "não informada"} · Turno: {treatedShift || "não informado"}.{treatedPrevious ? ` Já existe resultado (${treatedPrevious.quantity}) para esta data e turno; ele será substituído.` : ""}</p>
             </>}
+            <p className="mt-2 text-[11px] text-muted-foreground">Abas detectadas no arquivo ({treatedPreview.sheetNames.length}): {treatedPreview.sheetNames.length ? treatedPreview.sheetNames.map((n) => `"${n}"`).join(", ") : "nenhuma"}</p>
           </div>}
 
           {errors.length > 0 && (

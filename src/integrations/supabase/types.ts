@@ -198,6 +198,59 @@ export type Database = {
           },
         ]
       }
+      on_hold_treated_imports: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          created_by: string
+          file_name: string | null
+          id: string
+          operation_date: string
+          processed_at: string
+          quantity: number
+          rows_analyzed: number
+          sheet_name: string
+          shift: string
+          source: string
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          created_by?: string
+          file_name?: string | null
+          id?: string
+          operation_date: string
+          processed_at?: string
+          quantity: number
+          rows_analyzed?: number
+          sheet_name: string
+          shift: string
+          source?: string
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          created_by?: string
+          file_name?: string | null
+          id?: string
+          operation_date?: string
+          processed_at?: string
+          quantity?: number
+          rows_analyzed?: number
+          sheet_name?: string
+          shift?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "on_hold_treated_imports_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operational_treatments: {
         Row: {
           avarias_saved: number

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp, ArrowUpRight, Truck, ScanLine, Tags, PackageX, Boxes, ShieldCheck, PackageCheck, ClipboardCheck, type LucideIcon } from "lucide-react";
 import { BarBlock, Empty, LineBlock, PageHeader, Panel } from "@/components/ops/blocks";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { treatmentsQuery } from "@/lib/treatments";
 import { HUB_NAME, moduleByKey } from "@/lib/modules";
 import { OFFICIAL_AVARIA_TYPES } from "@/lib/avaria-analysis";
 import { currentSystemDate } from "@/lib/period";
+import { normId } from "@/lib/full-import";
 import {
   DASH_SHIFTS, SHIFT_SUPPORT, avariaTypeKey, countBy, errorCategoryOf, errorTypeKey, evolution, filterItems, fullStatusKey, onHoldReasonKey,
   presetRange, previousRange, retidosReasonKey, shiftKey, sumBy, sumT, toItems, variation, type DashShift, type Item, type Preset, type Range, type SourceKey,
@@ -106,7 +107,7 @@ function Dashboard() {
   const periodText = range ? (range.start === range.end ? fmtDate(range.start) : `${fmtDate(range.start)} – ${fmtDate(range.end)}`) : "Período incompleto";
   const shiftText = shiftFiltered ? shifts.join(" + ") : "Todos os turnos";
 
-  const summary = buildSummary(cur, all, shiftFiltered);
+  const summary = buildSummary(cur, all, shiftFiltered, range);
   const toggleShift = (s: DashShift) => setShifts(shifts.includes(s) ? shifts.filter((x) => x !== s) : [...shifts, s].sort());
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-32" /><Skeleton className="h-64" /></div>;
@@ -139,15 +140,18 @@ function Dashboard() {
         <p className="text-xs text-muted-foreground">{periodText} · {shiftText}</p>
       </div>
 
-      <section className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-card">
-        <h2 className="font-display text-sm font-bold tracking-widest text-primary">RESUMO DO TURNO</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Principais resultados operacionais do período e turnos selecionados.</p>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{summary.map((s) => <SummaryCard key={s.label} {...s} />)}</div>
+      <section className="space-y-4" aria-labelledby="shift-summary-title">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+          <h2 id="shift-summary-title" className="flex items-center gap-2 font-display text-lg font-bold"><span className="h-5 w-1 rounded bg-primary" />RESUMO DO TURNO</h2>
+          <p className="text-xs text-muted-foreground">{periodText} · {shiftText}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-12">{summary.map((s, index) => <SummaryCard key={s.label} {...s} wide={index > 3} />)}</div>
       </section>
 
-      <Panel title="Pontos de atenção do turno" subtitle="Resultados registrados manualmente em Tratativas Operacionais">
+      <section className="space-y-3" aria-labelledby="shift-attention-title">
+        <h2 id="shift-attention-title" className="flex items-center gap-2 font-display text-base font-semibold"><ClipboardCheck className="h-5 w-5 text-primary" />Pontos de atenção do turno</h2>
         <AttentionPoints items={cur.tratativas} />
-      </Panel>
+      </section>
 
       {!advanced && <>
         <div className="flex items-center justify-between"><h2 className="font-display text-lg font-semibold">Análises dos módulos</h2><Button variant="outline" size="sm" onClick={() => setCustomize(true)}><Settings2 className="h-4 w-4" />Personalizar gráficos</Button></div>
@@ -176,21 +180,30 @@ function Dashboard() {
   );
 }
 
-type Summary = { label: string; value: number | null; note?: string; source?: SourceKey };
-function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Item[]>, shiftFiltered: boolean): Summary[] {
+type Summary = { label: string; value: number | null; note?: string; source: SourceKey; icon: LucideIcon; tone: "brand" | "neutral" | "warning" | "danger" | "success" };
+function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Item[]>, shiftFiltered: boolean, range: Range | null): Summary[] {
   const errCat = (name: string) => {
     const hasCat = all.erros_operacionais.some((i) => errorCategoryOf(i) === name);
     return hasCat ? cur.erros_operacionais.filter((i) => errorCategoryOf(i) === name).length : null;
   };
   const tr = cur.tratativas.length;
+  const validFull = all.full.filter((i) => normId(i.row?.order_id));
+  const periodFull = filterItems(validFull, range, []);
+  const missingDate = validFull.filter((i) => !i.date).length;
+  const missingShift = periodFull.filter((i) => !i.shift).length;
+  const fullUnavailable = (range !== null && validFull.length > 0 && validFull.every((i) => !i.date)) || (shiftFiltered && periodFull.length > 0 && periodFull.every((i) => !i.shift));
+  const fullNotes = ["FULL · BRs únicos"];
+  if (range && missingDate) fullNotes.push(`${fmt(missingDate)} registro(s) sem data operacional fora do período`);
+  if (shiftFiltered && missingShift) fullNotes.push(`${fmt(missingShift)} registro(s) sem turno confiável fora do filtro`);
   return [
-    { label: "Pacotes retirados do veículo", value: all.retidos_veiculos.length ? cur.retidos_veiculos.length : null, note: "Ocorrências de Retidos de Veículos (repetições de BR mantidas)", source: "retidos_veiculos" },
-    { label: "Erros de sorting", value: errCat("SORTING"), note: errCat("SORTING") === null ? "Classificação SORTING não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais" },
-    { label: "Erros de etiqueta", value: errCat("ETIQUETAGEM"), note: errCat("ETIQUETAGEM") === null ? "Classificação ETIQUETAGEM não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais" },
-    { label: "Avarias recebidas", value: null, note: "Não disponível: não há classificação real que identifique avarias recebidas", source: "avaria" },
-    { label: "Avarias salvas", value: tr ? sumT(cur.tratativas, "avarias_saved") : null, note: tr ? `${tr} lançamento(s) em Tratativas` : "Sem lançamentos no período", source: "tratativas" },
-    { label: "Pacotes tratados do ON HOLD", value: tr ? sumT(cur.tratativas, "on_hold_treated") : null, note: tr ? `${tr} lançamento(s) em Tratativas` : "Sem lançamentos no período", source: "tratativas" },
-  ].map((s) => ({ ...s, note: shiftFiltered && s.source && !SHIFT_SUPPORT[s.source as SourceKey] ? "Sem turno no módulo" : s.note })) as Summary[];
+    { label: "PACOTES RETIRADOS DO VEÍCULO", value: all.retidos_veiculos.length ? cur.retidos_veiculos.length : null, note: "Retidos de Veículos · ocorrências, incluindo BRs repetidos", source: "retidos_veiculos", icon: Truck, tone: "brand" },
+    { label: "ERROS DE SORTING", value: errCat("SORTING"), note: errCat("SORTING") === null ? "Classificação SORTING não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: ScanLine, tone: "neutral" },
+    { label: "ERROS DE ETIQUETA", value: errCat("ETIQUETAGEM"), note: errCat("ETIQUETAGEM") === null ? "Classificação ETIQUETAGEM não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: Tags, tone: "warning" },
+    { label: "AVARIAS RECEBIDAS", value: cur.avaria.length || null, note: "AVARIA · total de avarias no período e turno", source: "avaria", icon: PackageX, tone: "danger" },
+    { label: "PACOTES FULL", value: validFull.length && !fullUnavailable ? new Set(cur.full.map((i) => normId(i.row?.order_id)).filter(Boolean)).size : null, note: fullUnavailable ? `Não é possível aplicar o filtro: ${fullNotes.slice(1).join(" · ")}` : fullNotes.join(" · "), source: "full", icon: Boxes, tone: "brand" },
+    { label: "AVARIAS SALVAS", value: tr ? sumT(cur.tratativas, "avarias_saved") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: ShieldCheck, tone: "success" },
+    { label: "PACOTES TRATADOS DO ON HOLD", value: tr ? sumT(cur.tratativas, "on_hold_treated") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: PackageCheck, tone: "success" },
+  ];
 }
 
 function SourceLink({ source, children, className }: { source: SourceKey; children: ReactNode; className?: string }) {
@@ -199,23 +212,39 @@ function SourceLink({ source, children, className }: { source: SourceKey; childr
   return m ? <Link to="/m/$slug" params={{ slug: m.slug }} className={className}>{children}</Link> : <div className={className}>{children}</div>;
 }
 
-function SummaryCard({ label, value, note, source }: Summary) {
-  const body = <><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-    {value === null ? <p className="mt-2 text-lg font-semibold text-muted-foreground">{note?.startsWith("Não disponível") ? "Não disponível" : "Sem dados"}</p> : <p className="mt-1 font-display text-3xl font-bold tabular-nums">{fmt(value)}</p>}
-    {note && <p className="mt-1 text-[11px] text-muted-foreground">{note}</p>}</>;
-  const cls = "block rounded-lg border bg-card p-4 transition hover:border-primary/50";
-  return source ? <SourceLink source={source} className={cls}>{body}</SourceLink> : <div className={cls}>{body}</div>;
+function SummaryCard({ label, value, note, source, icon: Icon, tone, wide }: Summary & { wide: boolean }) {
+  return <SourceLink source={source} className={`summary-metric summary-tone-${tone} group block min-w-0 rounded-lg border bg-card p-5 shadow-card ${wide ? "xl:col-span-4" : "xl:col-span-3"}`}>
+    <div className="mb-4 flex items-center justify-between">
+      <span className="summary-metric-icon flex h-10 w-10 items-center justify-center rounded-lg"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+      <ArrowUpRight className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-primary" aria-hidden="true" />
+    </div>
+    <p className="min-h-10 break-words text-xs font-semibold leading-5 text-muted-foreground">{label}</p>
+    <div className="mt-2 flex min-h-14 items-center">
+      {value === null ? <p className="max-w-48 text-sm font-medium leading-5 text-muted-foreground">Nenhum dado disponível</p> : <p className="break-all font-display text-5xl font-bold tabular-nums">{fmt(value)}</p>}
+    </div>
+    {note && <p className="mt-3 border-t pt-3 text-xs leading-5 text-muted-foreground">{note}</p>}
+  </SourceLink>;
 }
 
 function AttentionPoints({ items }: { items: Item[] }) {
-  if (!items.length) return <Empty text="Nenhum ponto de atenção registrado para o período." />;
-  const byShift = new Map<string, { av: number; oh: number }>();
-  for (const i of items) { const k = i.shift ?? "Sem turno"; const c = byShift.get(k) ?? { av: 0, oh: 0 }; c.av += i.t?.avarias_saved ?? 0; c.oh += i.t?.on_hold_treated ?? 0; byShift.set(k, c); }
-  const notes = items.filter((i) => i.t?.notes?.trim());
-  return <div className="space-y-3">
-    <ul className="grid gap-2 sm:grid-cols-3">{[...byShift].sort().map(([s, c]) => <li key={s} className="rounded-md border bg-muted/30 p-3 text-sm"><span className="font-semibold text-primary">{s}</span><p>{fmt(c.av)} avarias salvas</p><p>{fmt(c.oh)} pacotes do ON HOLD tratados</p></li>)}</ul>
-    {notes.length > 0 && <ul className="space-y-1 text-sm">{notes.map((i) => <li key={i.t!.id} className="flex gap-2"><Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span><b>{fmtDate(i.t!.operation_date)} · {i.t!.shift}:</b> {i.t!.notes}</span></li>)}</ul>}
-  </div>;
+  if (!items.length) return <div className="border-y"><Empty text="Nenhum ponto de atenção registrado para o período." /></div>;
+  const byShift = new Map<string, { av: number; oh: number; notes: { id: string; date: string; text: string }[]; entries: number }>();
+  for (const i of items) {
+    if (!i.t) continue;
+    const k = i.shift ?? "Sem turno";
+    const c = byShift.get(k) ?? { av: 0, oh: 0, notes: [], entries: 0 };
+    c.av += i.t.avarias_saved; c.oh += i.t.on_hold_treated; c.entries += 1;
+    if (i.t.notes?.trim()) c.notes.push({ id: i.t.id, date: i.t.operation_date, text: i.t.notes });
+    byShift.set(k, c);
+  }
+  return <ul className="grid gap-3 lg:grid-cols-3">{[...byShift].sort().map(([shift, c]) => <li key={shift} className="min-w-0 rounded-lg border bg-card p-4 shadow-card">
+    <div className="mb-4 flex items-center justify-between gap-2"><h3 className="font-display text-base font-bold text-primary">{shift}</h3><span className="text-xs text-muted-foreground">{fmt(c.entries)} lançamento(s)</span></div>
+    <dl className="grid grid-cols-2 gap-3">
+      <div className="border-l-2 border-success/40 pl-3"><dt className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0 text-success" />Avarias salvas</dt><dd className="mt-1 break-all font-display text-2xl font-bold tabular-nums">{fmt(c.av)}</dd></div>
+      <div className="border-l-2 border-primary/40 pl-3"><dt className="flex items-center gap-1.5 text-xs text-muted-foreground"><PackageCheck className="h-4 w-4 shrink-0 text-primary" />ON HOLD tratados</dt><dd className="mt-1 break-all font-display text-2xl font-bold tabular-nums">{fmt(c.oh)}</dd></div>
+    </dl>
+    {c.notes.length > 0 && <ul className="mt-4 space-y-2 border-t pt-3">{c.notes.map((note) => <li key={note.id} className="flex items-start gap-2 text-xs leading-5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /><div className="min-w-0"><span className="font-medium text-muted-foreground">{fmtDate(note.date)}</span><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{note.text}</p></div></li>)}</ul>}
+  </li>)}</ul>;
 }
 
 function ModuleCard({ source, items, shiftFiltered }: { source: SourceKey; items: Item[]; shiftFiltered: boolean }) {

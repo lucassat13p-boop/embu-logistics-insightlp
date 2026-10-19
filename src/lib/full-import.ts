@@ -10,8 +10,11 @@ export type FullStatusMapping = Record<string, FullStatusField | "">;
 
 export const FULL_BASE_LABELS: Record<FullBaseField, string> = { to_number: "TO Number", order_id: "Pedido/BR", sender_name: "Sender Name" };
 export const FULL_STATUS_LABELS: Record<FullStatusField, string> = { match_br: "BR para cruzamento", br_status: "Status do BR" };
-export const FULL_AUTO_STATUSES = ["Delivered", "Delivering", "LMHub_Received", "OnHold", "Return_LMHub_Received", "SOC_LHTransported"] as const;
+// "LMHub_Received" is never a final status: the package arrived at the HUB and needs a justification for not leaving.
+export const FULL_AUTO_STATUSES = ["Delivered", "Delivering", "OnHold", "Return_LMHub_Received", "SOC_LHTransported"] as const;
 export const FULL_PENDING = "Pendente de classificação";
+export const FULL_LMHUB = "LMHub_Received";
+export const FULL_LMHUB_MSG = "Informe por que este pacote recebido no HUB não saiu";
 
 const BASE_ALIASES: Record<string, FullBaseField> = { "to number": "to_number", "spx tracking number": "order_id", "sender name": "sender_name" };
 // "TO Status" is the TO status, never the package status — only an exact "Status" header is suggested.

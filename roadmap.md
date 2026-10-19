@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Apply measured database read-index and import-scoped cache refresh optimizations; verify cache behavior without inserting fabricated operational data.
+- [x] Apply database read-index and import-scoped cache refresh optimizations; five cache tests passed and index validity confirmed. Representative database gains and real-file end-to-end verification remain unavailable because current records are empty.
 - [x] Apply Premium 3.0 reference styling only to shift summary and attention sections, preserving real calculations and all other dashboard areas.
 - [x] Refine the seven shift-summary indicators and treatment attention cards; align AVARIA total and FULL unique-BR counting without changing advanced analytics.
 - [x] Add persistent Claro/Escuro/Automático themes to authenticated pages with shared dark tokens, preserving light theme and login.

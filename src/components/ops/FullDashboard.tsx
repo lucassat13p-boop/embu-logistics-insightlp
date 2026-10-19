@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { HUB_NAME } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
 import type { RecordRow } from "@/lib/data";
-import { FULL_AUTO_STATUSES, FULL_PENDING, fullFinalStatus, normId } from "@/lib/full-import";
+import { FULL_AUTO_STATUSES, FULL_LMHUB, FULL_LMHUB_MSG, FULL_PENDING, fullFinalStatus, normId } from "@/lib/full-import";
 
 const PAGE = 50;
 const classOf = (r: RecordRow) => r.manual_status?.trim() ? "manual" : fullFinalStatus(r) === FULL_PENDING ? "pending" : "auto";
@@ -48,6 +48,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
 
   async function save(v: string | null) {
     if (!editing) return;
+    if (v && v.trim().replace(/\s+/g, "_").toLowerCase() === FULL_LMHUB.toLowerCase()) { toast.error(`“${FULL_LMHUB}” não resolve a pendência. ${FULL_LMHUB_MSG}.`); return; }
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("records").update({ manual_status: v, manual_status_by: v ? u.user?.id ?? null : null, manual_status_at: v ? new Date().toISOString() : null }).eq("id", editing.id).eq("module", "full");
     if (error) { toast.error(error.message); return; }
@@ -80,13 +81,13 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
         <Panel title="Registros FULL" subtitle={`${rows.length} resultados`}>
           {!rows.length ? <Empty /> : <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm">
             <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="py-2">TO Number</th><th>Pedido/BR</th><th>Sender Name</th><th>Status final</th><th>Status original</th><th>Pendência</th><th /></tr></thead>
-            <tbody>{slice.map((r) => { const fs = fullFinalStatus(r); return (
+            <tbody>{slice.map((r) => { const fs = fullFinalStatus(r); const isLmhub = r.br_status === FULL_LMHUB; const issue = r.status_issue ?? (isLmhub ? FULL_LMHUB_MSG : null); return (
               <tr key={r.id} className="border-t">
                 <td className="py-1.5">{r.to_number ?? "—"}</td><td className="font-medium">{r.order_id}</td><td>{r.sender_name ?? "—"}</td>
-                <td className={fs === FULL_PENDING ? "font-semibold text-destructive" : "font-semibold"}>{fs}{r.manual_status && <span className="ml-1 text-xs font-normal text-muted-foreground">(manual)</span>}</td>
+                <td className={fs === FULL_PENDING ? "font-semibold text-destructive" : "font-semibold"}>{fs}{r.manual_status && fs !== FULL_PENDING && <span className="ml-1 text-xs font-normal text-muted-foreground">(manual)</span>}</td>
                 <td className="text-muted-foreground">{r.br_status ?? "Sem informação"}</td>
-                <td className="text-xs text-muted-foreground">{r.status_issue ?? "—"}</td>
-                <td>{(r.status_issue || r.manual_status || fs === FULL_PENDING) && <Button size="sm" variant="outline" onClick={() => { setEditing(r); setValue(r.manual_status ?? ""); }}>{r.manual_status ? "Editar" : "Classificar"}</Button>}</td>
+                <td className="text-xs text-muted-foreground">{issue ?? "—"}</td>
+                <td>{(issue || r.manual_status || fs === FULL_PENDING) && <Button size="sm" variant="outline" onClick={() => { setEditing(r); setValue(r.manual_status ?? ""); }}>{r.manual_status ? "Editar" : "Classificar"}</Button>}</td>
               </tr>); })}</tbody>
           </table>
           <div className="mt-3 flex items-center justify-end gap-2 text-xs"><Button size="sm" variant="outline" disabled={!page} onClick={() => setPage(page - 1)}>Anterior</Button><span>{page + 1} / {Math.max(1, Math.ceil(rows.length / PAGE))}</span><Button size="sm" variant="outline" disabled={(page + 1) * PAGE >= rows.length} onClick={() => setPage(page + 1)}>Próxima</Button></div></div>}
@@ -96,10 +97,11 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Classificação manual · {editing?.order_id}</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Status original: {editing?.br_status ?? "Sem informação"} · {editing?.status_issue ?? "—"}</p>
+          <p className="text-sm text-muted-foreground">Status original: {editing?.br_status ?? "Sem informação"} · {editing?.status_issue ?? (editing?.br_status === FULL_LMHUB ? FULL_LMHUB_MSG : "—")}</p>
+          {editing?.br_status === FULL_LMHUB && <p className="rounded-md border border-primary/40 bg-primary/5 p-2 text-sm">{FULL_LMHUB_MSG} (ex.: Avaria, Reversa, Pacote Retirado).</p>}
           <Input autoFocus list="full-status-suggestions" placeholder="Digite qualquer status (ex.: PERDA, Pacote Retirado, Avaria)" value={value} onChange={(e) => setValue(e.target.value)} />
           <datalist id="full-status-suggestions">{[...new Set([...FULL_AUTO_STATUSES, ...allStatuses.filter((s) => s !== FULL_PENDING)])].map((s) => <option key={s} value={s} />)}</datalist>
-          {editing?.br_status && <Button variant="outline" size="sm" className="self-start" onClick={() => setValue(editing.br_status ?? "")}>Usar status original: {editing.br_status}</Button>}
+          {editing?.br_status && editing.br_status !== FULL_LMHUB && <Button variant="outline" size="sm" className="self-start" onClick={() => setValue(editing.br_status ?? "")}>Usar status original: {editing.br_status}</Button>}
           <div className="flex justify-between gap-2">
             {editing?.manual_status ? <Button variant="ghost" onClick={() => save(null)}>Remover classificação</Button> : <span />}
             <Button disabled={!value.trim()} onClick={() => save(value.trim())}>Salvar</Button>

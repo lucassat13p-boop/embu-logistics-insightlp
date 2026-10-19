@@ -10,8 +10,11 @@ export type FullStatusMapping = Record<string, FullStatusField | "">;
 
 export const FULL_BASE_LABELS: Record<FullBaseField, string> = { to_number: "TO Number", order_id: "Pedido/BR", sender_name: "Sender Name" };
 export const FULL_STATUS_LABELS: Record<FullStatusField, string> = { match_br: "BR para cruzamento", br_status: "Status do BR" };
-export const FULL_AUTO_STATUSES = ["Delivered", "Delivering", "LMHub_Received", "OnHold", "Return_LMHub_Received", "SOC_LHTransported"] as const;
+// "LMHub_Received" is never a final status: the package arrived at the HUB and needs a justification for not leaving.
+export const FULL_AUTO_STATUSES = ["Delivered", "Delivering", "OnHold", "Return_LMHub_Received", "SOC_LHTransported"] as const;
 export const FULL_PENDING = "Pendente de classificação";
+export const FULL_LMHUB = "LMHub_Received";
+export const FULL_LMHUB_MSG = "Informe por que este pacote recebido no HUB não saiu";
 
 const BASE_ALIASES: Record<string, FullBaseField> = { "to number": "to_number", "spx tracking number": "order_id", "sender name": "sender_name" };
 // "TO Status" is the TO status, never the package status — only an exact "Status" header is suggested.
@@ -78,7 +81,7 @@ export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<
       const vals = [...found].filter(Boolean);
       if (vals.length > 1) { issue = `Status conflitantes: ${vals.join(" / ")}`; conflicts++; }
       else if (!vals.length) issue = "Status vazio na fonte de status";
-      else { br_status = vals[0]; if (!autoStatus(br_status)) issue = "Status não reconhecido automaticamente"; }
+      else { br_status = vals[0]; if (normStatus(br_status) === normStatus(FULL_LMHUB)) issue = FULL_LMHUB_MSG; else if (!autoStatus(br_status)) issue = "Status não reconhecido automaticamente"; }
     }
     if (issue) pending++;
     rows.push({ rowNumber: r.rowNumber, to_number: to, order_id: br, sender_name: snCol ? cellText(r.values[snCol]) : null, br_status, status_issue: issue, key, raw: r.values });
@@ -86,9 +89,12 @@ export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<
   return { rows, total, missingBr, dupInFile, pending, conflicts, uniqueBr: new Set(rows.map((x) => normId(x.order_id))).size };
 }
 
-/** Final status: manual classification wins; otherwise recognized automatic status; otherwise pending. */
+/** Final status: manual classification wins (unless it just repeats LMHub_Received); otherwise recognized automatic status; otherwise pending. */
 export function fullFinalStatus(r: { manual_status?: string | null; br_status?: string | null; status_issue?: string | null }) {
-  if (r.manual_status?.trim()) return r.manual_status.trim();
+  const manual = r.manual_status?.trim();
+  if (manual && normStatus(manual) !== normStatus(FULL_LMHUB)) return manual;
+  // LMHub_Received is never final, even for rows imported before this rule (status_issue may be empty).
+  if (r.br_status && normStatus(r.br_status) === normStatus(FULL_LMHUB)) return FULL_PENDING;
   if (!r.status_issue) return autoStatus(r.br_status ?? null) ?? r.br_status ?? FULL_PENDING;
   return FULL_PENDING;
 }

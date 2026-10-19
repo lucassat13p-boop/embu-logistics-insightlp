@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { HUB_NAME } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
 import type { RecordRow } from "@/lib/data";
-import { FULL_AUTO_STATUSES, FULL_LMHUB, FULL_LMHUB_MSG, FULL_PENDING, fullFinalStatus, normId } from "@/lib/full-import";
+import { FULL_LMHUB, FULL_LMHUB_MSG, FULL_PENDING, fullFinalStatus, normId } from "@/lib/full-import";
 
 const PAGE = 50;
 const classOf = (r: RecordRow) => r.manual_status?.trim() ? "manual" : fullFinalStatus(r) === FULL_PENDING ? "pending" : "auto";

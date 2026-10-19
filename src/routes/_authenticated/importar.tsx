@@ -178,7 +178,7 @@ function ImportPage() {
             <Label>Módulo de destino</Label>
             <Select value={moduleKey} onValueChange={(v) => { setModuleKey(v as ModuleKey); setParsed(null); setFile(null); setResult(null); setDone(null); }}>
               <SelectTrigger><SelectValue placeholder="Selecione o módulo" /></SelectTrigger>
-              <SelectContent>{MODULES.filter((m) => m.key !== "motivos").map((m) => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}</SelectContent>
+              <SelectContent>{MODULES.filter((m) => !["motivos", "desvios", "lost_damaged"].includes(m.key)).map((m) => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}</SelectContent>
             </Select>
             {mod && <p className="text-xs text-muted-foreground">{mod.description}. Os registros alimentam somente este módulo.</p>}
           </div>

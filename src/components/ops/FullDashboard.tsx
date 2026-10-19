@@ -90,11 +90,10 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
       </div>
 
       {!allRows.length ? <div className="rounded-lg border border-dashed bg-card p-6"><Empty hint="Importe um relatório FULL para visualizar os indicadores." /></div> : <>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Kpi accent label="Pacotes (BR único)" value={byBr.size} />
           <Kpi label="TOs distintas" value={new Set(rows.map((r) => r.to_number).filter(Boolean)).size} />
           <Kpi label="Pendentes de classificação" value={pending} />
-          <Kpi label="Classificados manualmente" value={manual} />
         </div>
         <Panel title="Pacotes por status final"><BarBlock data={statusCounts} horizontal yAxisWidth={170} valueName="Pacotes" /></Panel>
         <Panel title="Registros FULL" subtitle={`${rows.length} resultados`}>

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Upload } from "lucide-react";
@@ -26,6 +26,8 @@ import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: ({ params }) => {
+    if (params.slug === "lost-damaged") throw redirect({ to: "/tratativas" });
+    if (params.slug === "desvios") throw redirect({ to: "/dashboard" });
     const mod = moduleBySlug(params.slug);
     if (!mod) throw notFound();
     return { label: mod.label };

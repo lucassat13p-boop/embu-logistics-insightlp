@@ -2,7 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
@@ -109,6 +109,62 @@
   --shadow-card: 0 1px 2px oklch(0.2 0.01 50 / 0.05), 0 4px 16px -8px oklch(0.2 0.01 50 / 0.08);
 }
 
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.17 0.004 60);
+  --foreground: oklch(0.94 0.003 60);
+  --card: oklch(0.225 0.005 60);
+  --card-foreground: oklch(0.94 0.003 60);
+  --popover: oklch(0.25 0.005 60);
+  --popover-foreground: oklch(0.94 0.003 60);
+  --primary: oklch(0.72 0.18 38);
+  --primary-foreground: oklch(0.15 0.006 50);
+  --primary-soft: oklch(0.29 0.04 38);
+  --secondary: oklch(0.28 0.005 60);
+  --secondary-foreground: oklch(0.92 0.003 60);
+  --muted: oklch(0.275 0.005 60);
+  --muted-foreground: oklch(0.74 0.006 60);
+  --accent: oklch(0.3 0.035 38);
+  --accent-foreground: oklch(0.81 0.13 38);
+  --destructive: oklch(0.7 0.18 25);
+  --destructive-foreground: oklch(0.15 0.006 50);
+  --success: oklch(0.73 0.14 155);
+  --success-foreground: oklch(0.15 0.006 50);
+  --warning: oklch(0.8 0.14 80);
+  --warning-foreground: oklch(0.2 0.015 70);
+  --ink: oklch(0.14 0.003 60);
+  --ink-foreground: oklch(0.94 0.003 60);
+  --border: oklch(0.33 0.006 60);
+  --input: oklch(0.39 0.006 60);
+  --ring: oklch(0.72 0.18 38);
+  --chart-1: oklch(0.72 0.18 38);
+  --chart-2: oklch(0.8 0.008 60);
+  --chart-3: oklch(0.8 0.14 60);
+  --chart-4: oklch(0.65 0.015 60);
+  --chart-5: oklch(0.69 0.17 30);
+  --pie-1: oklch(0.72 0.18 38);
+  --pie-2: oklch(0.72 0.14 245);
+  --pie-3: oklch(0.73 0.15 155);
+  --pie-4: oklch(0.82 0.15 85);
+  --pie-5: oklch(0.7 0.18 345);
+  --pie-6: oklch(0.65 0.13 285);
+  --pie-7: oklch(0.76 0.12 195);
+  --pie-8: oklch(0.72 0.015 60);
+  --pie-9: oklch(0.71 0.17 20);
+  --pie-10: oklch(0.79 0.16 125);
+  --pie-missing: oklch(0.59 0.008 60);
+  --sidebar: oklch(0.14 0.003 60);
+  --sidebar-foreground: oklch(0.83 0.005 60);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.24 0.005 60);
+  --sidebar-accent-foreground: oklch(0.94 0.003 60);
+  --sidebar-border: oklch(0.29 0.005 60);
+  --sidebar-ring: var(--ring);
+  --gradient-brand: linear-gradient(135deg, oklch(0.76 0.18 42), oklch(0.69 0.19 32));
+  --shadow-card: 0 1px 2px oklch(0.08 0 0 / 0.2), 0 6px 20px -10px oklch(0.08 0 0 / 0.45);
+}
+
 @layer base {
   * { border-color: var(--color-border); }
   body {
@@ -120,6 +176,16 @@
 }
 
 .donut-block { container-type: inline-size; }
+.dark .recharts-tooltip-item { color: var(--popover-foreground); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 .donut-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: center; }
 @container (min-width: 560px) {
   .donut-layout { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }

@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RankingPrivacyProvider } from "@/components/ops/RankingPrivacy";
+import { ThemeProvider, themeBootstrap } from "@/components/ops/ThemeProvider";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -80,8 +81,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <head><HeadContent /></head>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeBootstrap }} /><HeadContent /></head>
       <body>{children}<Scripts /></body>
     </html>
   );
@@ -100,10 +101,12 @@ function RootComponent() {
   }, [router, queryClient]);
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
       <RankingPrivacyProvider>
       <Outlet />
       <Toaster richColors position="top-right" />
       </RankingPrivacyProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { HUB_NAME, MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./ThemeToggle";
 
 const NAV = [
   { title: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -85,10 +86,11 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Shopee Operations Hub</p>
                 <p className="truncate text-xs text-muted-foreground">{HUB_NAME}</p>
               </div>
-              <form className="relative ml-auto w-full max-w-sm" onSubmit={(e) => { e.preventDefault(); if (q.trim()) navigate({ to: "/busca", search: { q: q.trim() } }); }}>
+              <form className="relative ml-auto w-full min-w-0 max-w-sm" onSubmit={(e) => { e.preventDefault(); if (q.trim()) navigate({ to: "/busca", search: { q: q.trim() } }); }}>
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pedido/BR, colaborador, LH..." className="pl-8" />
               </form>
+              <ThemeToggle />
             </div>
             <nav className="flex gap-1 overflow-x-auto border-t px-3 py-1.5 md:px-5">
               {TOP.map((m) => (

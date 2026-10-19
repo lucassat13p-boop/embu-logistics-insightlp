@@ -1,4 +1,5 @@
 # Tasks
+- [x] Add persistent Claro/Escuro/Automático themes to authenticated pages with shared dark tokens, preserving light theme and login.
 - [x] Add shared persistent name concealment to all people rankings and their comparison details without changing source data or calculations.
 - [x] Improve shared dashboard charts, donut legends, rankings and indicator presentation without changing data or filtering.
 - [x] Support legacy and dated TABELAS imports exclusively for Erros Operacionais, preserving original values and rejecting ambiguous layouts.

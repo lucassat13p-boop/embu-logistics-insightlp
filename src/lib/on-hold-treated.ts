@@ -5,11 +5,18 @@ import { fetchTreatments, type TreatmentRow } from "./treatments";
 import { filterByPeriod, type PeriodSelection } from "./period";
 import type { Sheet } from "./parsers";
 
-export const TREATED_SHEET = "Pacotes Tratados / Não MEXER";
+export const TREATED_SHEET = "Pacotes Tratados Não MEXER";
 export type TreatedImportRow = Tables<"on_hold_treated_imports">;
 export type TreatedPreview = { sheetName: string; analyzed: number; matched: number } | { error: string };
 
 const norm = (v: unknown) => (v === null || v === undefined ? "" : String(v).trim());
+
+/** Tolerant sheet-name match: collapses spaces and removes separators like "/", so the real
+ *  sheet "Pacotes Tratados Não MEXER" (and variants with an extra "/" or stray spaces) match. */
+function isTreatedSheet(name: string) {
+  const key = (v: string) => v.normalize("NFC").replace(/\s+/g, " ").replace(/\s*\/\s*/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  return key(name) === key(TREATED_SHEET);
+}
 
 /** Counts rows where OnHoldReason, Status and Calculation Status match exactly; no BR dedupe. */
 export function countTreatedSheet(sheets: Sheet[]): TreatedPreview {

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp, ArrowUpRight, Truck, ScanLine, Tags, PackageX, Boxes, ShieldCheck, PackageCheck, ClipboardCheck, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp, Truck, TriangleAlert, Tags, Package, PackageOpen, ShieldCheck, PackageCheck, ClipboardCheck, Sun, Moon, type LucideIcon } from "lucide-react";
 import { BarBlock, Empty, LineBlock, PageHeader, Panel } from "@/components/ops/blocks";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { recordsQuery } from "@/lib/data";
 import { treatmentsQuery } from "@/lib/treatments";
 import { HUB_NAME, moduleByKey } from "@/lib/modules";
@@ -108,6 +109,7 @@ function Dashboard() {
   const shiftText = shiftFiltered ? shifts.join(" + ") : "Todos os turnos";
 
   const summary = buildSummary(cur, all, shiftFiltered, range);
+  const priorSummary = prev ? buildSummary(before, all, shiftFiltered, prev) : [];
   const toggleShift = (s: DashShift) => setShifts(shifts.includes(s) ? shifts.filter((x) => x !== s) : [...shifts, s].sort());
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-32" /><Skeleton className="h-64" /></div>;
@@ -140,17 +142,23 @@ function Dashboard() {
         <p className="text-xs text-muted-foreground">{periodText} · {shiftText}</p>
       </div>
 
-      <section className="space-y-4" aria-labelledby="shift-summary-title">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-          <h2 id="shift-summary-title" className="flex items-center gap-2 font-display text-lg font-bold"><span className="h-5 w-1 rounded bg-primary" />RESUMO DO TURNO</h2>
-          <p className="text-xs text-muted-foreground">{periodText} · {shiftText}</p>
+      <section className="shift-summary-section" aria-labelledby="shift-summary-title">
+        <div className="summary-section-heading">
+          <div className="flex min-w-0 items-center gap-3">
+            <TrendingUp className="h-7 w-7 shrink-0 text-primary" aria-hidden="true" />
+            <div className="min-w-0"><h2 id="shift-summary-title" className="font-display text-xl font-bold">Resumo do Turno</h2><p className="mt-1 text-xs text-muted-foreground">Principais resultados operacionais do período e turnos selecionados.</p></div>
+          </div>
+          <p className="summary-period text-xs text-muted-foreground">{periodText} · {shiftText}</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-12">{summary.map((s, index) => <SummaryCard key={s.label} {...s} wide={index > 3} />)}</div>
+        <TooltipProvider delayDuration={250}><div className="summary-metrics-grid">{summary.map((s, index) => <SummaryCard key={s.label} {...s} previousValue={priorSummary[index]?.value ?? null} />)}</div></TooltipProvider>
       </section>
 
-      <section className="space-y-3" aria-labelledby="shift-attention-title">
-        <h2 id="shift-attention-title" className="flex items-center gap-2 font-display text-base font-semibold"><ClipboardCheck className="h-5 w-5 text-primary" />Pontos de atenção do turno</h2>
-        <AttentionPoints items={cur.tratativas} />
+      <section className="shift-attention-section" aria-labelledby="shift-attention-title">
+        <div className="mb-3 flex min-w-0 items-center gap-3">
+          <TriangleAlert className="h-7 w-7 shrink-0 text-primary" aria-hidden="true" />
+          <div className="min-w-0"><h2 id="shift-attention-title" className="font-display text-base font-semibold text-primary">Pontos de Atenção do Turno</h2><p className="mt-1 text-xs text-muted-foreground">Resultados operacionais registrados em Tratativas Operacionais.</p></div>
+        </div>
+        <AttentionPoints items={cur.tratativas} shifts={shiftFiltered ? shifts : [...DASH_SHIFTS]} />
       </section>
 
       {!advanced && <>
@@ -180,7 +188,7 @@ function Dashboard() {
   );
 }
 
-type Summary = { label: string; value: number | null; note?: string; source: SourceKey; icon: LucideIcon; tone: "brand" | "neutral" | "warning" | "danger" | "success" };
+type Summary = { label: string; value: number | null; note?: string; source: SourceKey; icon: LucideIcon; tone: "blue" | "red" | "amber" | "orange" | "purple" | "green" | "cyan" };
 function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Item[]>, shiftFiltered: boolean, range: Range | null): Summary[] {
   const errCat = (name: string) => {
     const hasCat = all.erros_operacionais.some((i) => errorCategoryOf(i) === name);
@@ -196,13 +204,13 @@ function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Ite
   if (range && missingDate) fullNotes.push(`${fmt(missingDate)} registro(s) sem data operacional fora do período`);
   if (shiftFiltered && missingShift) fullNotes.push(`${fmt(missingShift)} registro(s) sem turno confiável fora do filtro`);
   return [
-    { label: "PACOTES RETIRADOS DO VEÍCULO", value: all.retidos_veiculos.length ? cur.retidos_veiculos.length : null, note: "Retidos de Veículos · ocorrências, incluindo BRs repetidos", source: "retidos_veiculos", icon: Truck, tone: "brand" },
-    { label: "ERROS DE SORTING", value: errCat("SORTING"), note: errCat("SORTING") === null ? "Classificação SORTING não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: ScanLine, tone: "neutral" },
-    { label: "ERROS DE ETIQUETA", value: errCat("ETIQUETAGEM"), note: errCat("ETIQUETAGEM") === null ? "Classificação ETIQUETAGEM não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: Tags, tone: "warning" },
-    { label: "AVARIAS RECEBIDAS", value: cur.avaria.length || null, note: "AVARIA · total de avarias no período e turno", source: "avaria", icon: PackageX, tone: "danger" },
-    { label: "PACOTES FULL", value: validFull.length && !fullUnavailable ? new Set(cur.full.map((i) => normId(i.row?.order_id)).filter(Boolean)).size : null, note: fullUnavailable ? `Não é possível aplicar o filtro: ${fullNotes.slice(1).join(" · ")}` : fullNotes.join(" · "), source: "full", icon: Boxes, tone: "brand" },
-    { label: "AVARIAS SALVAS", value: tr ? sumT(cur.tratativas, "avarias_saved") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: ShieldCheck, tone: "success" },
-    { label: "PACOTES TRATADOS DO ON HOLD", value: tr ? sumT(cur.tratativas, "on_hold_treated") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: PackageCheck, tone: "success" },
+    { label: "PACOTES RETIRADOS DO VEÍCULO", value: all.retidos_veiculos.length ? cur.retidos_veiculos.length : null, note: "Retidos de Veículos · ocorrências, incluindo BRs repetidos", source: "retidos_veiculos", icon: Truck, tone: "blue" },
+    { label: "ERROS DE SORTING", value: errCat("SORTING"), note: errCat("SORTING") === null ? "Classificação SORTING não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: TriangleAlert, tone: "red" },
+    { label: "ERROS DE ETIQUETA", value: errCat("ETIQUETAGEM"), note: errCat("ETIQUETAGEM") === null ? "Classificação ETIQUETAGEM não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: Tags, tone: "amber" },
+    { label: "AVARIAS RECEBIDAS", value: cur.avaria.length || null, note: "AVARIA · total de avarias no período e turno", source: "avaria", icon: Package, tone: "orange" },
+    { label: "PACOTES FULL", value: validFull.length && !fullUnavailable ? new Set(cur.full.map((i) => normId(i.row?.order_id)).filter(Boolean)).size : null, note: fullUnavailable ? `Não é possível aplicar o filtro: ${fullNotes.slice(1).join(" · ")}` : fullNotes.join(" · "), source: "full", icon: PackageOpen, tone: "purple" },
+    { label: "AVARIAS SALVAS", value: tr ? sumT(cur.tratativas, "avarias_saved") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: ShieldCheck, tone: "green" },
+    { label: "PACOTES TRATADOS DO ON HOLD", value: tr ? sumT(cur.tratativas, "on_hold_treated") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: PackageCheck, tone: "cyan" },
   ];
 }
 
@@ -212,22 +220,23 @@ function SourceLink({ source, children, className }: { source: SourceKey; childr
   return m ? <Link to="/m/$slug" params={{ slug: m.slug }} className={className}>{children}</Link> : <div className={className}>{children}</div>;
 }
 
-function SummaryCard({ label, value, note, source, icon: Icon, tone, wide }: Summary & { wide: boolean }) {
-  return <SourceLink source={source} className={`summary-metric summary-tone-${tone} group block min-w-0 rounded-lg border bg-card p-5 shadow-card ${wide ? "xl:col-span-4" : "xl:col-span-3"}`}>
-    <div className="mb-4 flex items-center justify-between">
-      <span className="summary-metric-icon flex h-10 w-10 items-center justify-center rounded-lg"><Icon className="h-5 w-5" aria-hidden="true" /></span>
-      <ArrowUpRight className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-primary" aria-hidden="true" />
-    </div>
-    <p className="min-h-10 break-words text-xs font-semibold leading-5 text-muted-foreground">{label}</p>
-    <div className="mt-2 flex min-h-14 items-center">
-      {value === null ? <p className="max-w-48 text-sm font-medium leading-5 text-muted-foreground">Nenhum dado disponível</p> : <p className="break-all font-display text-5xl font-bold tabular-nums">{fmt(value)}</p>}
-    </div>
-    {note && <p className="mt-3 border-t pt-3 text-xs leading-5 text-muted-foreground">{note}</p>}
-  </SourceLink>;
+function SummaryCard({ label, value, note, source, icon: Icon, tone, previousValue }: Summary & { previousValue: number | null }) {
+  const delta = value !== null && previousValue !== null && previousValue > 0 ? variation(value, previousValue).pct : null;
+  const positiveOutcome = label === "AVARIAS SALVAS" || label === "PACOTES TRATADOS DO ON HOLD";
+  const negativeOutcome = label === "ERROS DE SORTING" || label === "ERROS DE ETIQUETA" || label === "AVARIAS RECEBIDAS";
+  const changeColor = delta === null || delta === 0 || (!positiveOutcome && !negativeOutcome) ? "text-muted-foreground" : (positiveOutcome ? delta > 0 : delta < 0) ? "text-success" : "text-destructive";
+  return <Tooltip><TooltipTrigger asChild><div className={`summary-tone-${tone} min-w-0 h-full`}>
+    <SourceLink source={source} className="summary-metric group">
+      <div className="summary-metric-heading"><span className="summary-metric-icon"><Icon className="h-6 w-6" aria-hidden="true" /></span><p className="summary-metric-label">{label}</p></div>
+      <div className="summary-metric-result">
+        {value === null ? <p className="summary-metric-empty">{note?.startsWith("Não é possível") ? "Não disponível" : "Nenhum dado disponível"}</p> : <p className="summary-metric-value">{fmt(value)}</p>}
+        {delta !== null && <div className="summary-metric-change"><p className={`flex items-center justify-end gap-0.5 font-semibold tabular-nums ${changeColor}`}>{delta !== 0 && (delta > 0 ? <ArrowUp className="h-3 w-3 shrink-0" /> : <ArrowDown className="h-3 w-3 shrink-0" />)}{delta > 0 ? "+" : ""}{delta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</p><p className="summary-change-caption">vs. período anterior</p></div>}
+      </div>
+    </SourceLink>
+  </div></TooltipTrigger><TooltipContent className="max-w-72 whitespace-normal bg-popover text-popover-foreground border shadow-card">{note ?? label}</TooltipContent></Tooltip>;
 }
 
-function AttentionPoints({ items }: { items: Item[] }) {
-  if (!items.length) return <div className="border-y"><Empty text="Nenhum ponto de atenção registrado para o período." /></div>;
+function AttentionPoints({ items, shifts }: { items: Item[]; shifts: DashShift[] }) {
   const byShift = new Map<string, { av: number; oh: number; notes: { id: string; date: string; text: string }[]; entries: number }>();
   for (const i of items) {
     if (!i.t) continue;
@@ -237,14 +246,18 @@ function AttentionPoints({ items }: { items: Item[] }) {
     if (i.t.notes?.trim()) c.notes.push({ id: i.t.id, date: i.t.operation_date, text: i.t.notes });
     byShift.set(k, c);
   }
-  return <ul className="grid gap-3 lg:grid-cols-3">{[...byShift].sort().map(([shift, c]) => <li key={shift} className="min-w-0 rounded-lg border bg-card p-4 shadow-card">
-    <div className="mb-4 flex items-center justify-between gap-2"><h3 className="font-display text-base font-bold text-primary">{shift}</h3><span className="text-xs text-muted-foreground">{fmt(c.entries)} lançamento(s)</span></div>
-    <dl className="grid grid-cols-2 gap-3">
-      <div className="border-l-2 border-success/40 pl-3"><dt className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0 text-success" />Avarias salvas</dt><dd className="mt-1 break-all font-display text-2xl font-bold tabular-nums">{fmt(c.av)}</dd></div>
-      <div className="border-l-2 border-primary/40 pl-3"><dt className="flex items-center gap-1.5 text-xs text-muted-foreground"><PackageCheck className="h-4 w-4 shrink-0 text-primary" />ON HOLD tratados</dt><dd className="mt-1 break-all font-display text-2xl font-bold tabular-nums">{fmt(c.oh)}</dd></div>
-    </dl>
-    {c.notes.length > 0 && <ul className="mt-4 space-y-2 border-t pt-3">{c.notes.map((note) => <li key={note.id} className="flex items-start gap-2 text-xs leading-5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /><div className="min-w-0"><span className="font-medium text-muted-foreground">{fmtDate(note.date)}</span><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{note.text}</p></div></li>)}</ul>}
-  </li>)}</ul>;
+  return <ul className="shift-attention-grid">{DASH_SHIFTS.filter((shift) => shifts.includes(shift)).map((shift) => {
+    const c = byShift.get(shift);
+    const Icon = shift === "PM1" ? Moon : Sun;
+    const tone = shift === "AM1" ? "orange" : shift === "AM2" ? "blue" : "purple";
+    return <li key={shift} className={`shift-attention-card summary-tone-${tone}`}>
+      <div className="shift-attention-results">
+        <div className="shift-attention-name"><span className="shift-attention-icon"><Icon className="h-6 w-6" aria-hidden="true" /></span><h3 className="font-display text-lg font-bold">{shift}</h3></div>
+        {c ? <><div className="shift-attention-total"><p className="font-display text-xl font-bold tabular-nums">{fmt(c.av)}</p><p className="mt-1 text-xs text-muted-foreground">Avarias salvas</p></div><div className="shift-attention-total"><p className="font-display text-xl font-bold tabular-nums">{fmt(c.oh)}</p><p className="mt-1 text-xs text-muted-foreground">ON HOLD tratados</p></div></> : <p className="col-span-2 border-l pl-4 text-xs text-muted-foreground">Sem lançamento no período</p>}
+      </div>
+      {c && c.notes.length > 0 && <details className="mt-3 border-t pt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">Observações · {c.notes.length}</summary><ul className="mt-2 space-y-2">{c.notes.map((note) => <li key={note.id} className="flex items-start gap-2 leading-5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /><div className="min-w-0"><span className="text-muted-foreground">{fmtDate(note.date)}</span><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{note.text}</p></div></li>)}</ul></details>}
+    </li>;
+  })}</ul>;
 }
 
 function ModuleCard({ source, items, shiftFiltered }: { source: SourceKey; items: Item[]; shiftFiltered: boolean }) {

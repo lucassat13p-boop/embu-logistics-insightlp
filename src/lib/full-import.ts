@@ -93,6 +93,8 @@ export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<
 export function fullFinalStatus(r: { manual_status?: string | null; br_status?: string | null; status_issue?: string | null }) {
   const manual = r.manual_status?.trim();
   if (manual && normStatus(manual) !== normStatus(FULL_LMHUB)) return manual;
+  // LMHub_Received is never final, even for rows imported before this rule (status_issue may be empty).
+  if (r.br_status && normStatus(r.br_status) === normStatus(FULL_LMHUB)) return FULL_PENDING;
   if (!r.status_issue) return autoStatus(r.br_status ?? null) ?? r.br_status ?? FULL_PENDING;
   return FULL_PENDING;
 }

@@ -20,7 +20,7 @@ function isTreatedSheet(name: string) {
 
 /** Counts rows where OnHoldReason, Status and Calculation Status match exactly; no BR dedupe. */
 export function countTreatedSheet(sheets: Sheet[]): TreatedPreview {
-  const sheet = sheets.find((s) => s.name.trim() === TREATED_SHEET);
+  const sheet = sheets.find((s) => isTreatedSheet(s.name));
   if (!sheet) return { error: `Aba "${TREATED_SHEET}" não encontrada no arquivo.` };
   const need = ["OnHoldReason", "Status", "Calculation Status"];
   let hIdx = -1, cols: number[] = [];

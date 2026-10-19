@@ -1,13 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, ChevronsUpDown, Upload } from "lucide-react";
+import { Copy, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarBlock, Empty, Kpi, PageHeader, Panel } from "@/components/ops/blocks";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,23 +14,14 @@ import { formatDateBR } from "@/lib/parsers";
 import type { RecordRow } from "@/lib/data";
 import { FULL_LMHUB, FULL_LMHUB_MSG, FULL_PENDING, fullFinalStatus, normId } from "@/lib/full-import";
 
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { FullStatusPicker } from "./FullStatusPicker";
+import { FullBulkDialog } from "./FullBulkDialog";
+import { fullBrList, fullManualError } from "@/lib/full-selection";
+
 const PAGE = 50;
 const classOf = (r: RecordRow) => r.manual_status?.trim() ? "manual" : fullFinalStatus(r) === FULL_PENDING ? "pending" : "auto";
-
-// Fixed suggestions for manual classification only; the import auto-recognition list is unchanged.
-const FULL_MANUAL_SUGGESTIONS = [
-  "Avarias",
-  "Backlog",
-  "Delivered",
-  "Delivering",
-  "OnHold",
-  "Pacotes de outro HUB",
-  "Pacotes Retirados Do Veiculo",
-  "Possiveis Perdas",
-  "Proxima Janela de Expedição",
-  "RTS - Reversa",
-  "SOC_LHTransported",
-];
 
 export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const qc = useQueryClient();
@@ -44,8 +33,27 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [value, setValue] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerSearch, setPickerSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [copyFallback, setCopyFallback] = useState<string[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingLock = useRef(false);
+  useEffect(() => { setSelected(new Set()); setBulkOpen(false); }, [q, statusF, dateF, shiftF, classF]);
+  useEffect(() => { setSelected((ids) => new Set([...ids].filter((id) => allRows.some((r) => r.id === id)))); }, [allRows]);
+  const refreshFull = async () => {
+    await qc.invalidateQueries({ predicate: (query) =>
+      (query.queryKey[0] === "records" && ["full", "all"].includes(String(query.queryKey[1]))) ||
+      (query.queryKey[0] === "search" && (query.queryKey[2] === "full" || !query.queryKey[2])) });
+  };
+  async function copyBrs(source: RecordRow[]) {
+    const list = fullBrList(source);
+    if (!list.length) { toast.info("Nenhum BR disponível para copiar."); return; }
+    try { await navigator.clipboard.writeText(list.join("\n")); toast.success(`${list.length} BRs copiados`); }
+    catch { setCopyFallback(list); }
+  }
+  const toggleIds = (ids: string[], checked: boolean) => setSelected((previous) => {
+    const next = new Set(previous); ids.forEach((id) => checked ? next.add(id) : next.delete(id)); return next;
+  });
 
   const rows = useMemo(() => allRows.filter((r) =>
     (!dateF || r.record_date === dateF) && (shiftF === "__all" || r.shift === shiftF) &&
@@ -66,16 +74,26 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const manual = [...byBr.values()].filter((r) => r.manual_status).length;
 
   async function save(v: string | null) {
-    if (!editing) return;
-    if (v && v.trim().replace(/\s+/g, "_").toLowerCase() === FULL_LMHUB.toLowerCase()) { toast.error(`“${FULL_LMHUB}” não resolve a pendência. ${FULL_LMHUB_MSG}.`); return; }
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("records").update({ manual_status: v, manual_status_by: v ? u.user?.id ?? null : null, manual_status_at: v ? new Date().toISOString() : null }).eq("id", editing.id).eq("module", "full");
-    if (error) { toast.error(error.message); return; }
-    toast.success(v ? "Classificação salva." : "Classificação removida; regra automática restaurada.");
-    setEditing(null); qc.invalidateQueries({ queryKey: ["records"] });
+    if (!editing || savingLock.current) return;
+    if (v !== null) { const error = fullManualError(v); if (error) { toast.error(error); return; } }
+    savingLock.current = true; setSaving(true);
+    try {
+      const { data: u, error: authError } = await supabase.auth.getUser();
+      if (authError || !u.user) throw new Error("Sessão expirada. Entre novamente.");
+      const { data, error } = await supabase.from("records").update({ manual_status: v, manual_status_by: v ? u.user.id : null, manual_status_at: v ? new Date().toISOString() : null }).eq("id", editing.id).eq("module", "full").select("id");
+      if (error) throw error;
+      if (data?.length !== 1) throw new Error("Registro não encontrado ou sem permissão para editar.");
+      toast.success(v ? "Classificação salva." : "Classificação removida; regra automática restaurada.");
+      setEditing(null); await refreshFull();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar a classificação."); }
+    finally { savingLock.current = false; setSaving(false); }
   }
 
-  const slice = rows.slice(page * PAGE, page * PAGE + PAGE);
+  const safePage = Math.min(page, Math.max(0, Math.ceil(rows.length / PAGE) - 1));
+  const slice = rows.slice(safePage * PAGE, safePage * PAGE + PAGE);
+  const selectedRows = rows.filter((r) => selected.has(r.id));
+  const pageChecked = slice.length > 0 && slice.every((r) => selected.has(r.id));
+  const pagePartial = !pageChecked && slice.some((r) => selected.has(r.id));
   return (
     <div className="space-y-5">
       <PageHeader title="FULL" subtitle={`${HUB_NAME} · Justificativa FULL`} action={<Button asChild><Link to="/importar" search={{ modulo: "full" }}><Upload className="mr-1 h-4 w-4" />Importar relatório FULL</Link></Button>} />
@@ -97,10 +115,21 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
         </div>
         <Panel title="Pacotes por status final"><BarBlock data={statusCounts} horizontal yAxisWidth={170} valueName="Pacotes" /></Panel>
         <Panel title="Registros FULL" subtitle={`${rows.length} resultados`}>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => void copyBrs(rows)}><Copy className="mr-1 h-4 w-4" />Copiar BRs filtrados</Button>
+            <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => setSelected(new Set(rows.map((r) => r.id)))}>Selecionar todos os resultados filtrados ({rows.length})</Button>
+            {selectedRows.length > 0 && <>
+              <span className="text-sm">{selectedRows.length} registros · {fullBrList(selectedRows).length} BRs únicos selecionados</span>
+              <Button size="sm" onClick={() => setBulkOpen(true)}>Classificar selecionados</Button>
+              <Button size="sm" variant="outline" onClick={() => void copyBrs(selectedRows)}><Copy className="mr-1 h-4 w-4" />Copiar BRs selecionados</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Limpar seleção</Button>
+            </>}
+          </div>
           {!rows.length ? <Empty /> : <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm">
-            <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="py-2">TO Number</th><th>Pedido/BR</th><th>Sender Name</th><th>Status final</th><th>Status original</th><th>Pendência</th><th /></tr></thead>
+            <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="w-10 py-2"><Checkbox aria-label="Selecionar página atual" checked={pagePartial ? "indeterminate" : pageChecked} onCheckedChange={(v) => toggleIds(slice.map((r) => r.id), v === true)} /></th><th className="py-2">TO Number</th><th>Pedido/BR</th><th>Sender Name</th><th>Status final</th><th>Status original</th><th>Pendência</th><th /></tr></thead>
             <tbody>{slice.map((r) => { const fs = fullFinalStatus(r); const isLmhub = r.br_status === FULL_LMHUB; const issue = r.status_issue ?? (isLmhub ? FULL_LMHUB_MSG : null); return (
               <tr key={r.id} className="border-t">
+                <td><Checkbox aria-label={`Selecionar ${r.order_id ?? "registro"} TO ${r.to_number ?? "sem TO"}`} checked={selected.has(r.id)} onCheckedChange={(v) => toggleIds([r.id], v === true)} /></td>
                 <td className="py-1.5">{r.to_number ?? "—"}</td><td className="font-medium">{r.order_id}</td><td>{r.sender_name ?? "—"}</td>
                 <td className={fs === FULL_PENDING ? "font-semibold text-destructive" : "font-semibold"}>{fs}{r.manual_status && fs !== FULL_PENDING && <span className="ml-1 text-xs font-normal text-muted-foreground">(manual)</span>}</td>
                 <td className="text-muted-foreground">{r.br_status ?? "Sem informação"}</td>
@@ -108,52 +137,25 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
                 <td>{(issue || r.manual_status || fs === FULL_PENDING) && <Button size="sm" variant="outline" onClick={() => { setEditing(r); setValue(r.manual_status ?? ""); }}>{r.manual_status ? "Editar" : "Classificar"}</Button>}</td>
               </tr>); })}</tbody>
           </table>
-          <div className="mt-3 flex items-center justify-end gap-2 text-xs"><Button size="sm" variant="outline" disabled={!page} onClick={() => setPage(page - 1)}>Anterior</Button><span>{page + 1} / {Math.max(1, Math.ceil(rows.length / PAGE))}</span><Button size="sm" variant="outline" disabled={(page + 1) * PAGE >= rows.length} onClick={() => setPage(page + 1)}>Próxima</Button></div></div>}
+          <div className="mt-3 flex items-center justify-end gap-2 text-xs"><Button size="sm" variant="outline" disabled={!safePage} onClick={() => setPage(safePage - 1)}>Anterior</Button><span>{safePage + 1} / {Math.max(1, Math.ceil(rows.length / PAGE))}</span><Button size="sm" variant="outline" disabled={(safePage + 1) * PAGE >= rows.length} onClick={() => setPage(safePage + 1)}>Próxima</Button></div></div>}
         </Panel>
       </>}
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o && !saving) setEditing(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Classificação manual · {editing?.order_id}</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">Status original: {editing?.br_status ?? "Sem informação"} · {editing?.status_issue ?? (editing?.br_status === FULL_LMHUB ? FULL_LMHUB_MSG : "—")}</p>
           {editing?.br_status === FULL_LMHUB && <p className="rounded-md border border-primary/40 bg-primary/5 p-2 text-sm">{FULL_LMHUB_MSG} (ex.: Avaria, Reversa, Pacote Retirado).</p>}
-          <Popover open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (o) setPickerSearch(""); }}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" role="combobox" aria-expanded={pickerOpen} className="w-full justify-between font-normal">
-                <span className="truncate">{value || "Selecione uma sugestão ou digite um novo status"}</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Digite para filtrar ou criar..." value={pickerSearch} onValueChange={setPickerSearch} />
-                <CommandList>
-                  <CommandEmpty>Nenhuma sugestão encontrada.</CommandEmpty>
-                  <CommandGroup heading="Sugestões">
-                    {FULL_MANUAL_SUGGESTIONS.map((s) => (
-                      <CommandItem key={s} value={s} onSelect={() => { setValue(s); setPickerOpen(false); }}>
-                        <Check className={`mr-2 h-4 w-4 ${value === s ? "opacity-100" : "opacity-0"}`} />{s}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  {pickerSearch.trim() && !FULL_MANUAL_SUGGESTIONS.some((s) => s.toLowerCase() === pickerSearch.trim().toLowerCase()) && (
-                    <CommandGroup heading="Texto livre">
-                      <CommandItem value={`__free__${pickerSearch.trim()}`} onSelect={() => { setValue(pickerSearch.trim()); setPickerOpen(false); }}>
-                        Usar este texto: “{pickerSearch.trim()}”
-                      </CommandItem>
-                    </CommandGroup>
-                  )}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <FullStatusPicker value={value} onChange={setValue} disabled={saving} />
           {editing?.br_status && editing.br_status !== FULL_LMHUB && <Button variant="outline" size="sm" className="self-start" onClick={() => setValue(editing.br_status ?? "")}>Usar status original: {editing.br_status}</Button>}
           <div className="flex justify-between gap-2">
-            {editing?.manual_status ? <Button variant="ghost" onClick={() => save(null)}>Remover classificação</Button> : <span />}
-            <Button disabled={!value.trim()} onClick={() => save(value.trim())}>Salvar</Button>
+            {editing?.manual_status ? <Button disabled={saving} variant="ghost" onClick={() => save(null)}>Remover classificação</Button> : <span />}
+            <Button disabled={saving || !!fullManualError(value)} onClick={() => save(value.trim())}>{saving ? "Salvando…" : "Salvar"}</Button>
           </div>
         </DialogContent>
       </Dialog>
+      {bulkOpen && selectedRows.length > 0 && <FullBulkDialog allRows={allRows} selected={new Set(selectedRows.map((r) => r.id))} onClose={() => setBulkOpen(false)} onSaved={async () => { setSelected(new Set()); await refreshFull(); }} />}
+      <Dialog open={copyFallback !== null} onOpenChange={(open) => { if (!open) setCopyFallback(null); }}><DialogContent><DialogHeader><DialogTitle>Copiar BRs · {copyFallback?.length ?? 0} BRs</DialogTitle></DialogHeader><Textarea aria-label="Lista de BRs para cópia manual" readOnly value={copyFallback?.join("\n") ?? ""} className="h-72 font-mono" onFocus={(e) => e.currentTarget.select()} /><Button variant="outline" onClick={() => setCopyFallback(null)}>Fechar</Button></DialogContent></Dialog>
     </div>
   );
 }

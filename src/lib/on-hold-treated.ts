@@ -7,29 +7,39 @@ import type { Sheet } from "./parsers";
 
 export const TREATED_SHEET = "Pacotes Tratados Não MEXER";
 export type TreatedImportRow = Tables<"on_hold_treated_imports">;
-export type TreatedPreview = { sheetName: string; analyzed: number; matched: number } | { error: string };
+export type TreatedPreview = ({ sheetName: string; analyzed: number; matched: number } | { error: string }) & { sheetNames: string[] };
 
 const norm = (v: unknown) => (v === null || v === undefined ? "" : String(v).trim());
 
-/** Tolerant sheet-name match: collapses spaces and removes separators like "/", so the real
- *  sheet "Pacotes Tratados Não MEXER" (and variants with an extra "/" or stray spaces) match. */
-function isTreatedSheet(name: string) {
-  const key = (v: string) => v.normalize("NFC").replace(/\s+/g, " ").replace(/\s*\/\s*/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-  return key(name) === key(TREATED_SHEET);
+/** Comparison-only key: removes accents, case, spaces and separators like "/", "-", "_". */
+const nameKey = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Finds the treated-packages sheet in the real workbook sheet list: exact key first, then a sheet
+ *  whose key contains "pacotestratados" (e.g. real name "Pacotes Tratados  Não MEXER"). */
+function findTreatedSheet(sheets: Sheet[]) {
+  const target = nameKey(TREATED_SHEET);
+  return sheets.find((s) => nameKey(s.name) === target)
+    ?? sheets.find((s) => nameKey(s.name).includes("pacotestratados"));
 }
 
 /** Counts rows where OnHoldReason, Status and Calculation Status match exactly; no BR dedupe. */
 export function countTreatedSheet(sheets: Sheet[]): TreatedPreview {
-  const sheet = sheets.find((s) => isTreatedSheet(s.name));
+  const sheetNames = sheets.map((s) => s.name);
+  const res = countIn(sheets);
+  return { ...res, sheetNames };
+}
+
+function countIn(sheets: Sheet[]): { sheetName: string; analyzed: number; matched: number } | { error: string } {
+  const sheet = findTreatedSheet(sheets);
   if (!sheet) return { error: `Aba "${TREATED_SHEET}" não encontrada no arquivo.` };
   const need = ["OnHoldReason", "Status", "Calculation Status"];
   let hIdx = -1, cols: number[] = [];
   for (let i = 0; i < Math.min(sheet.rows.length, 20); i++) {
-    const r = (sheet.rows[i] ?? []).map(norm);
-    const idx = need.map((n) => r.indexOf(n));
+    const r = (sheet.rows[i] ?? []).map((c) => nameKey(norm(c)));
+    const idx = need.map((n) => r.indexOf(nameKey(n)));
     if (idx.every((x) => x >= 0)) { hIdx = i; cols = idx; break; }
   }
-  if (hIdx < 0) return { error: `Cabeçalhos obrigatórios ausentes na aba "${TREATED_SHEET}": ${need.join(", ")}.` };
+  if (hIdx < 0) return { error: `Cabeçalhos obrigatórios ausentes na aba "${sheet.name}": ${need.join(", ")}.` };
   let analyzed = 0, matched = 0;
   for (const row of sheet.rows.slice(hIdx + 1)) {
     const r = row ?? [];

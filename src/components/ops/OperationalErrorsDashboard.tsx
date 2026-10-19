@@ -13,16 +13,18 @@ import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "./b
 import { PeriodFilter } from "./PeriodFilter";
 import { RecordsTable } from "./RecordsTable";
 import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
+import { RankingPrivacyToggle, useRankingPrivacy } from "./RankingPrivacy";
 
 type Metric = { name: string; value: number };
-function ComparisonTable({ title, first, second, labels }: { title: string; first: Metric[]; second: Metric[]; labels: string[] }) {
+function ComparisonTable({ title, first, second, labels, people = false }: { title: string; first: Metric[]; second: Metric[]; labels: string[]; people?: boolean }) {
+  const { personName } = useRankingPrivacy();
   const names = [...new Set([...first, ...second].map((item) => item.name))];
   if (!names.length) return null;
   return <div><h3 className="mb-2 text-sm font-semibold">{title}</h3><div className="max-h-96 overflow-auto rounded-md border"><table className="w-full min-w-[760px] text-sm"><thead className="sticky top-0 bg-muted"><tr><th className="px-3 py-2 text-left">Indicador</th><th className="px-3 py-2 text-right">{labels[0]}</th><th className="px-3 py-2 text-right">{labels[1]}</th><th className="px-3 py-2 text-right">Variação</th><th className="px-3 py-2 text-left">Análise</th></tr></thead><tbody>{names.map((name) => {
     const a = first.find((item) => item.name === name)?.value ?? 0;
     const b = second.find((item) => item.name === name)?.value ?? 0;
     const change = variation(a, b);
-    return <tr key={name} className="border-t"><th className="px-3 py-2 text-left font-medium">{name}</th><td className="px-3 py-2 text-right tabular-nums">{a.toLocaleString("pt-BR")}</td><td className="px-3 py-2 text-right tabular-nums">{b.toLocaleString("pt-BR")}</td><td className="px-3 py-2 text-right">{change.label}</td><td className="px-3 py-2">{change.analysis}</td></tr>;
+    return <tr key={name} className="border-t"><th className="px-3 py-2 text-left font-medium">{people ? personName(name) : name}</th><td className="px-3 py-2 text-right tabular-nums">{a.toLocaleString("pt-BR")}</td><td className="px-3 py-2 text-right tabular-nums">{b.toLocaleString("pt-BR")}</td><td className="px-3 py-2 text-right">{change.label}</td><td className="px-3 py-2">{change.analysis}</td></tr>;
   })}</tbody></table></div></div>;
 }
 const columns: FieldKey[] = ["record_date", "reason", "shift", "order_id", "collaborator", "classification"];
@@ -57,7 +59,7 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
     {!rows.length ? <Empty text="Nenhum dado disponível" /> : <>
       <div className="grid gap-3 md:grid-cols-3"><Kpi accent label="Total de erros" value={rows.length} />{categories.map((item) => <Kpi key={item.name} label={item.name} value={item.value} />)}</div>
       {reasonData.length > 0 && <Panel title="Erros por motivo"><BarBlock data={reasonData} horizontal rowHeight={38} yAxisWidth={180} valueName="Ocorrências" /></Panel>}
-      {loginData.length > 0 && <Panel title="Erros por login"><Ranking data={loginData} /></Panel>}
+      {loginData.length > 0 && <Panel title="Erros por login"><Ranking personKind="Colaborador" data={loginData} /></Panel>}
       {shiftData.length > 0 && <Panel title="Erros por turno responsável"><BarBlock data={shiftData} valueName="Ocorrências" /></Panel>}
       {byDate(rows).length > 0 && <Panel title="Evolução dos erros"><LineBlock data={byDate(rows)} /></Panel>}
     </>}
@@ -65,7 +67,7 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
       <ComparisonTable title="Quantidade de erros" labels={periodLabels} first={[{ name: "Total de erros", value: rows.length }]} second={[{ name: "Total de erros", value: second.length }]} />
       <ComparisonTable title="Comparação por Erro/Motivo" labels={periodLabels} first={countBy(rows, "reason")} second={countBy(second, "reason")} />
       <ComparisonTable title="Comparação por turno" labels={periodLabels} first={shiftsCount(rows)} second={shiftsCount(second)} />
-      <ComparisonTable title="Comparação por Login" labels={periodLabels} first={countBy(rows, "collaborator")} second={countBy(second, "collaborator")} />
+      <div className="space-y-2"><RankingPrivacyToggle /><ComparisonTable people title="Comparação por Login" labels={periodLabels} first={countBy(rows, "collaborator")} second={countBy(second, "collaborator")} /></div>
       <ComparisonTable title="Etiquetagem e Sorting" labels={periodLabels} first={countErrorCategories(rows)} second={countErrorCategories(second)} />
     </>}</section>}
     {rows.length > 0 && <Panel title="Registros de Erros Operacionais"><RecordsTable defaultToToday={false} key={`${JSON.stringify(period)}-${shifts.join()}-${includeBacklog}`} rows={rows} columns={columns} columnLabels={labels} wrapColumns={["reason"]} emptyText="Nenhum dado disponível" /></Panel>}

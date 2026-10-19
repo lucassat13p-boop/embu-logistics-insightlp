@@ -5,6 +5,7 @@ import { periodLabel, type PeriodSelection } from "@/lib/period";
 import { countAvariaCollaborators, countAvariaShifts, normalizedAvariaType, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
 import type { RecordRow } from "@/lib/data";
 import { Empty } from "./blocks";
+import { RankingPrivacyToggle, useRankingPrivacy } from "./RankingPrivacy";
 
 type Metric = { name: string; first: number | null; second: number | null };
 type Change = ReturnType<typeof variation>;
@@ -15,7 +16,9 @@ function ChangeText({ change, analysis = false }: { change: Change; analysis?: b
   return <span className={`inline-flex items-center gap-1 ${tone(change)}`}><Icon className="h-4 w-4 shrink-0" />{analysis ? change.analysis : change.label}</span>;
 }
 
-function ComparisonTable({ title, label, metrics, labels }: { title: string; label: string; metrics: Metric[]; labels: [string, string] }) {
+function ComparisonTable({ title, label, metrics: originalMetrics, labels, people = false }: { title: string; label: string; metrics: Metric[]; labels: [string, string]; people?: boolean }) {
+  const { personName } = useRankingPrivacy();
+  const metrics = people ? originalMetrics.map((metric) => ({ ...metric, name: personName(metric.name) })) : originalMetrics;
   return <div className="space-y-2"><h3 className="text-sm font-semibold">{title}</h3>{!metrics.length ? <Empty text={COMPARISON_EMPTY} /> : <div className="max-h-96 overflow-auto rounded-md border"><table className="w-full min-w-[820px] text-sm" aria-label={title}><thead className="sticky top-0 z-10 bg-muted"><tr><th className="px-3 py-3 text-left">{label}</th><th className="px-3 py-3 text-right">{labels[0]}</th><th className="px-3 py-3 text-right">{labels[1]}</th><th className="border-l px-3 py-3 text-right">Variação</th><th className="px-3 py-3 text-left">Análise</th></tr></thead><tbody>{metrics.map((metric) => { const change = variation(metric.first, metric.second); return <tr key={metric.name} className="border-t"><th className="px-3 py-3 text-left font-medium">{metric.name}</th><td className="px-3 py-3 text-right tabular-nums">{metric.first === null ? "Sem informação" : metric.first.toLocaleString("pt-BR")}</td><td className="px-3 py-3 text-right tabular-nums">{metric.second === null ? "Sem informação" : metric.second.toLocaleString("pt-BR")}</td><td className="border-l px-3 py-3 text-right"><ChangeText change={change} /></td><td className="px-3 py-3"><ChangeText change={change} analysis /></td></tr>; })}</tbody></table></div>}</div>;
 }
 
@@ -42,7 +45,7 @@ export function MonthComparison({ firstRows, secondRows, firstPeriod, secondPeri
     <div className="space-y-3" aria-label="Resumo da evolução"><h3 className="font-semibold">Resumo da evolução</h3><dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><div><dt className="text-xs text-muted-foreground">Total período 1</dt><dd className="font-semibold">{firstRows.length.toLocaleString("pt-BR")}</dd></div><div><dt className="text-xs text-muted-foreground">Total período 2</dt><dd className="font-semibold">{secondRows.length.toLocaleString("pt-BR")}</dd></div><div><dt className="text-xs text-muted-foreground">Variação geral</dt><dd className="font-semibold"><ChangeText change={totalChange} analysis /></dd></div><div><dt className="text-xs text-muted-foreground">Maior crescimento</dt><dd className="font-semibold text-destructive">{biggest("up")}</dd></div><div><dt className="text-xs text-muted-foreground">Maior queda</dt><dd className="font-semibold text-success">{biggest("down")}</dd></div></dl></div>
     <ComparisonTable title="Comparação de totais e tipos" label="Indicador" metrics={totals} labels={labels} />
     <ComparisonTable title="Comparação por Turno" label="Turno" metrics={pairedMetrics(countAvariaShifts(firstRows), countAvariaShifts(secondRows), OFFICIAL_SHIFTS)} labels={labels} />
-    <ComparisonTable title="Comparação de colaboradores" label="Colaborador" metrics={pairedMetrics(countAvariaCollaborators(firstRows), countAvariaCollaborators(secondRows))} labels={labels} />
+    <div className="space-y-2"><RankingPrivacyToggle /><ComparisonTable people title="Comparação de colaboradores" label="Colaborador" metrics={pairedMetrics(countAvariaCollaborators(firstRows), countAvariaCollaborators(secondRows))} labels={labels} /></div>
     <ComparisonTable title="Comparação de produtos" label="Família de produto" metrics={pairedMetrics(countProductFamilies(firstRows), countProductFamilies(secondRows))} labels={labels} />
   </section>;
 }

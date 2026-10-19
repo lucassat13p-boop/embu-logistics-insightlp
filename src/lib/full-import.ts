@@ -81,7 +81,7 @@ export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<
       const vals = [...found].filter(Boolean);
       if (vals.length > 1) { issue = `Status conflitantes: ${vals.join(" / ")}`; conflicts++; }
       else if (!vals.length) issue = "Status vazio na fonte de status";
-      else { br_status = vals[0]; if (!autoStatus(br_status)) issue = "Status não reconhecido automaticamente"; }
+      else { br_status = vals[0]; if (normStatus(br_status) === normStatus(FULL_LMHUB)) issue = FULL_LMHUB_MSG; else if (!autoStatus(br_status)) issue = "Status não reconhecido automaticamente"; }
     }
     if (issue) pending++;
     rows.push({ rowNumber: r.rowNumber, to_number: to, order_id: br, sender_name: snCol ? cellText(r.values[snCol]) : null, br_status, status_issue: issue, key, raw: r.values });
@@ -89,9 +89,10 @@ export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<
   return { rows, total, missingBr, dupInFile, pending, conflicts, uniqueBr: new Set(rows.map((x) => normId(x.order_id))).size };
 }
 
-/** Final status: manual classification wins; otherwise recognized automatic status; otherwise pending. */
+/** Final status: manual classification wins (unless it just repeats LMHub_Received); otherwise recognized automatic status; otherwise pending. */
 export function fullFinalStatus(r: { manual_status?: string | null; br_status?: string | null; status_issue?: string | null }) {
-  if (r.manual_status?.trim()) return r.manual_status.trim();
+  const manual = r.manual_status?.trim();
+  if (manual && normStatus(manual) !== normStatus(FULL_LMHUB)) return manual;
   if (!r.status_issue) return autoStatus(r.br_status ?? null) ?? r.br_status ?? FULL_PENDING;
   return FULL_PENDING;
 }

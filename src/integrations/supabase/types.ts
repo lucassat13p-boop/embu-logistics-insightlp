@@ -453,6 +453,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      classify_full_selection: {
+        Args: {
+          p_expected_ids: string[]
+          p_overwrite?: boolean
+          p_selected_ids: string[]
+          p_status: string
+        }
+        Returns: Json
+      }
       delete_import_batch: { Args: { p_batch_id: string }; Returns: Json }
     }
     Enums: {

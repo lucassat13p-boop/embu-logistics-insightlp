@@ -85,6 +85,13 @@
       "when": 1792449055047,
       "tag": "0011_optimize_records_module_date_order",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792449738172,
+      "tag": "0012_full_bulk_manual_classification",
+      "breakpoints": true
     }
   ]
 }

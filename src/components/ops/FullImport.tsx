@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildTable, detectHeaderRow, parseFile, type ParsedFile } from "@/lib/parsers";
 import { headerSignature } from "@/lib/importer";
 import { normalizeHeader } from "@/lib/modules";
+import { invalidateImportQueries } from "@/lib/import-cache";
 import {
   buildFullRows, buildStatusIndex, commitFullImport, countFullExisting, fullDedupeKey, FULL_BASE_LABELS, FULL_STATUS_LABELS,
   suggestFullBase, suggestFullStatus, type FullBaseMapping, type FullStatusMapping,
@@ -136,7 +137,7 @@ export function FullImport() {
     try {
       const sheetName = isXlsx ? `${base.parsed.sheets[baseSheet]?.name} + ${base.parsed.sheets[statusSheet]?.name}` : `${base.file.name} + ${statusSrc?.file.name}`;
       const res = await commitFullImport({ build, date: date || null, shift: shift || null, strategy, fileName: isXlsx ? base.file.name : `${base.file.name} + ${statusSrc?.file.name}`, format: base.parsed.format, sheetName, headers: baseTable.headers, mapping: { base: baseMap, status: statusMap } });
-      setDone(res); await qc.invalidateQueries();
+      setDone(res); await invalidateImportQueries(qc, { module: "full", batchId: res.batchId });
       toast.success(`Importação FULL concluída: ${res.inserted} novos registros.`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar"); } finally { setBusy(null); }
   }

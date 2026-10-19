@@ -20,6 +20,7 @@ import { FullImport } from "@/components/ops/FullImport";
 import { countTreatedSheet, saveTreatedImport, treatedImportsQuery } from "@/lib/on-hold-treated";
 import { useQuery as useTreatedQuery } from "@tanstack/react-query";
 import { buildOperationalImport } from "@/lib/operational-errors";
+import { invalidateImportQueries } from "@/lib/import-cache";
 
 export const Route = createFileRoute("/_authenticated/importar")({
   validateSearch: (s: Record<string, unknown>) => ({ modulo: typeof s.modulo === "string" ? (s.modulo as string) : undefined }),
@@ -159,14 +160,15 @@ function ImportPage() {
       if (!activeSheet) return;
       const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: activeSheet.name, headers: table.headers, mapping, result: r, strategy, avariaOptions: freshPreview ? { shifts: allShifts ? ["Todos"] : selectedShifts, includeSoc, found: freshPreview.found, excluded: freshPreview.excluded } : undefined });
       setDone(res);
+      let treatedChanged = false;
       if (mod.key === "on_hold" && treatedPreview && !("error" in treatedPreview)) {
         if (!treatedDate || !treatedShift) toast.warning("Pacotes tratados do ON HOLD não registrados: informe a data da operação e o turno.");
         else {
-          try { await saveTreatedImport({ date: treatedDate, shift: treatedShift, preview: treatedPreview, fileName: file.name, batchId: res.batchId }); toast.success(`Pacotes tratados do ON HOLD registrados: ${treatedPreview.matched}.`); }
+          try { await saveTreatedImport({ date: treatedDate, shift: treatedShift, preview: treatedPreview, fileName: file.name, batchId: res.batchId }); treatedChanged = true; toast.success(`Pacotes tratados do ON HOLD registrados: ${treatedPreview.matched}.`); }
           catch (e) { toast.error("Pacotes tratados do ON HOLD não salvos: " + (e instanceof Error ? e.message : String(e))); }
         }
       }
-      await qc.invalidateQueries();
+      await invalidateImportQueries(qc, { module: mod.key, batchId: res.batchId, treatedChanged });
       toast.success(`Importação concluída: ${res.inserted} novos registros em ${mod.label}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");

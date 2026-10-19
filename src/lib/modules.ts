@@ -121,7 +121,7 @@ export type ModuleDef = {
 const ALL: FieldKey[] = ["record_date", "order_id", "status", "collaborator", "product", "shift", "route", "lh", "reason", "classification", "quantity"];
 
 export const MODULES: ModuleDef[] = [
-  { key: "full", slug: "full", label: "FULL", short: "FULL", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios FULL do HUB" },
+  { key: "full", slug: "full", label: "FULL", short: "FULL", fields: ["order_id", "status", "record_date", "shift"], required: ["order_id"], dedupe: ["record_date", "shift", "order_id"], description: "Justificativa FULL · abas 2 (TO em lote) e 3 (BR em lote)" },
   {
     key: "avaria", slug: "avaria", label: "AVARIA", short: "AVARIA",
     fields: ["record_date", "month", "order_id", "status", "location", "product", "classification", "collaborator", "shift"],

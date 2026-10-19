@@ -16,6 +16,7 @@ import { buildTable, detectHeaderRow, parseDate, parseFile, type ParsedFile } fr
 import { commitImport, countExisting, headerSignature, validate, type DupStrategy, type Mapping, type ValidationResult } from "@/lib/importer";
 import { cn } from "@/lib/utils";
 import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
+import { FullImport } from "@/components/ops/FullImport";
 import { buildOperationalImport } from "@/lib/operational-errors";
 
 export const Route = createFileRoute("/_authenticated/importar")({
@@ -181,7 +182,7 @@ function ImportPage() {
             </Select>
             {mod && <p className="text-xs text-muted-foreground">{mod.description}. Os registros alimentam somente este módulo.</p>}
           </div>
-          <div className="space-y-1.5">
+          {mod?.key !== "full" && <div className="space-y-1.5">
             <Label>Arquivo do relatório</Label>
             <label className={cn("flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:border-primary", !mod && "pointer-events-none opacity-50")}>
               <FileUp className="h-5 w-5 text-primary" />
@@ -189,13 +190,15 @@ function ImportPage() {
               <input type="file" className="hidden" accept=".xlsx,.xls,.csv,.pdf" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
             </label>
             {parsed && <p className="text-xs text-muted-foreground">Formato: {parsed.format.toUpperCase()} · {parsed.sheets.length} {parsed.format === "pdf" ? "página(s)" : "planilha(s)"}</p>}
-          </div>
+          </div>}
         </div>
         {busy && <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{busy}</p>}
         {preparedTable.error && <p className="mt-3 text-sm text-destructive">{preparedTable.error}</p>}
       </Panel>
 
-      {parsed && table && mod && (
+      {mod?.key === "full" && <FullImport />}
+
+      {mod?.key !== "full" && parsed && table && mod && (
         <Panel title="2. Estrutura e mapeamento" subtitle="Coluna do arquivo → Campo do sistema" action={<Button size="sm" variant="outline" onClick={saveMapping}><Save className="mr-1 h-4 w-4" />Salvar mapeamento</Button>}>
           <div className="mb-4 grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">

@@ -1,4 +1,5 @@
 # Tasks
+- [x] Apply Premium 3.0 reference styling only to shift summary and attention sections, preserving real calculations and all other dashboard areas.
 - [x] Refine the seven shift-summary indicators and treatment attention cards; align AVARIA total and FULL unique-BR counting without changing advanced analytics.
 - [x] Add persistent Claro/Escuro/Automático themes to authenticated pages with shared dark tokens, preserving light theme and login.
 - [x] Add shared persistent name concealment to all people rankings and their comparison details without changing source data or calculations.

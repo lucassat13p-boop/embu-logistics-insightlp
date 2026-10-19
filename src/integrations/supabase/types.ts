@@ -198,6 +198,51 @@ export type Database = {
           },
         ]
       }
+      operational_treatments: {
+        Row: {
+          avarias_saved: number
+          created_at: string
+          created_by: string
+          created_by_email: string | null
+          id: string
+          notes: string | null
+          on_hold_treated: number
+          operation_date: string
+          shift: string
+          source: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          avarias_saved?: number
+          created_at?: string
+          created_by?: string
+          created_by_email?: string | null
+          id?: string
+          notes?: string | null
+          on_hold_treated?: number
+          operation_date: string
+          shift: string
+          source?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          avarias_saved?: number
+          created_at?: string
+          created_by?: string
+          created_by_email?: string | null
+          id?: string
+          notes?: string | null
+          on_hold_treated?: number
+          operation_date?: string
+          shift?: string
+          source?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       records: {
         Row: {
           aging: string | null

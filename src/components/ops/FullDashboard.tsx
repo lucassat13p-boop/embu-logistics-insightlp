@@ -2,10 +2,12 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Upload } from "lucide-react";
+import { Check, ChevronsUpDown, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarBlock, Empty, Kpi, PageHeader, Panel } from "@/components/ops/blocks";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +18,21 @@ import { FULL_AUTO_STATUSES, FULL_LMHUB, FULL_LMHUB_MSG, FULL_PENDING, fullFinal
 
 const PAGE = 50;
 const classOf = (r: RecordRow) => r.manual_status?.trim() ? "manual" : fullFinalStatus(r) === FULL_PENDING ? "pending" : "auto";
+
+// Fixed suggestions for manual classification only; the import auto-recognition list is unchanged.
+const FULL_MANUAL_SUGGESTIONS = [
+  "Avarias",
+  "Backlog",
+  "Delivered",
+  "Delivering",
+  "OnHold",
+  "Pacotes de outro HUB",
+  "Pacotes Retirados Do Veiculo",
+  "Possiveis Perdas",
+  "Proxima Janela de Expedição",
+  "RTS - Reversa",
+  "SOC_LHTransported",
+];
 
 export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const qc = useQueryClient();

@@ -20,6 +20,7 @@ import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
 import { Route as AuthenticatedPendenciasRouteImport } from './routes/_authenticated/pendencias'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedTratativasRouteImport } from './routes/_authenticated/tratativas'
 import { Route as AuthenticatedHistoricoIdRouteImport } from './routes/_authenticated/historico.$id'
 import { Route as AuthenticatedMSlugRouteImport } from './routes/_authenticated/m.$slug'
 
@@ -78,6 +79,11 @@ const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   path: '/relatorios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTratativasRoute = AuthenticatedTratativasRouteImport.update({
+  id: '/tratativas',
+  path: '/tratativas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHistoricoIdRoute =
   AuthenticatedHistoricoIdRouteImport.update({
     id: '/$id',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/pendencias': typeof AuthenticatedPendenciasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/tratativas': typeof AuthenticatedTratativasRoute
   '/historico/$id': typeof AuthenticatedHistoricoIdRoute
   '/m/$slug': typeof AuthenticatedMSlugRoute
 }
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/pendencias': typeof AuthenticatedPendenciasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/tratativas': typeof AuthenticatedTratativasRoute
   '/historico/$id': typeof AuthenticatedHistoricoIdRoute
   '/m/$slug': typeof AuthenticatedMSlugRoute
 }
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
   '/_authenticated/pendencias': typeof AuthenticatedPendenciasRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/tratativas': typeof AuthenticatedTratativasRoute
   '/_authenticated/historico/$id': typeof AuthenticatedHistoricoIdRoute
   '/_authenticated/m/$slug': typeof AuthenticatedMSlugRoute
 }
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/pendencias'
     | '/relatorios'
+    | '/tratativas'
     | '/historico/$id'
     | '/m/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/pendencias'
     | '/relatorios'
+    | '/tratativas'
     | '/historico/$id'
     | '/m/$slug'
   id:
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pedidos'
     | '/_authenticated/pendencias'
     | '/_authenticated/relatorios'
+    | '/_authenticated/tratativas'
     | '/_authenticated/historico/$id'
     | '/_authenticated/m/$slug'
   fileRoutesById: FileRoutesById
@@ -265,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tratativas': {
+      id: '/_authenticated/tratativas'
+      path: '/tratativas'
+      fullPath: '/tratativas'
+      preLoaderRoute: typeof AuthenticatedTratativasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/historico/$id': {
       id: '/_authenticated/historico/$id'
       path: '/$id'
@@ -305,6 +324,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
   AuthenticatedPendenciasRoute: typeof AuthenticatedPendenciasRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedTratativasRoute: typeof AuthenticatedTratativasRoute
   AuthenticatedMSlugRoute: typeof AuthenticatedMSlugRoute
 }
 
@@ -317,6 +337,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPedidosRoute: AuthenticatedPedidosRoute,
   AuthenticatedPendenciasRoute: AuthenticatedPendenciasRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedTratativasRoute: AuthenticatedTratativasRoute,
   AuthenticatedMSlugRoute: AuthenticatedMSlugRoute,
 }
 

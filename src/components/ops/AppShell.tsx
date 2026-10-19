@@ -19,7 +19,11 @@ const NAV = [
   { title: "Configurações", to: "/configuracoes", icon: Settings },
 ] as const;
 
-const TOP = MODULES.filter((m) => m.key !== "rotas" && m.key !== "motivos");
+// DESVIOS and LOST & DAMAGED are hidden from navigation; Tratativas Operacionais takes L&D's place.
+type TopItem = { key: string; label: string; to: "/m/$slug" | "/tratativas"; slug?: string };
+const TOP: TopItem[] = MODULES.filter((m) => !["rotas", "motivos", "desvios"].includes(m.key)).map((m) =>
+  m.key === "lost_damaged" ? { key: "tratativas", label: "TRATATIVAS OPERACIONAIS", to: "/tratativas" } : { key: m.key, label: m.label, to: "/m/$slug", slug: m.slug });
+const topPath = (m: TopItem) => (m.slug ? `/m/${m.slug}` : m.to);
 
 export function AppShell({ children, email }: { children: ReactNode; email?: string | null }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -59,8 +63,8 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
                 <SidebarMenu>
                   {TOP.map((m) => (
                     <SidebarMenuItem key={m.key}>
-                      <SidebarMenuButton asChild isActive={path === `/m/${m.slug}`} tooltip={m.label}>
-                        <Link to="/m/$slug" params={{ slug: m.slug }}><BarChart3 className="h-4 w-4" /><span>{m.label}</span></Link>
+                      <SidebarMenuButton asChild isActive={path === topPath(m)} tooltip={m.label}>
+                        <Link to={m.to} params={{ slug: m.slug ?? "" }}><BarChart3 className="h-4 w-4" /><span>{m.label}</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
@@ -94,8 +98,8 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
             </div>
             <nav className="flex gap-1 overflow-x-auto border-t px-3 py-1.5 md:px-5">
               {TOP.map((m) => (
-                <Link key={m.key} to="/m/$slug" params={{ slug: m.slug }}
-                  className={cn("whitespace-nowrap rounded px-2.5 py-1 text-xs font-semibold tracking-wide transition-colors", path === `/m/${m.slug}` ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground")}>
+                <Link key={m.key} to={m.to} params={{ slug: m.slug ?? "" }}
+                  className={cn("whitespace-nowrap rounded px-2.5 py-1 text-xs font-semibold tracking-wide transition-colors", path === topPath(m) ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground")}>
                   {m.label}
                 </Link>
               ))}

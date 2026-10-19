@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Add shared persistent name concealment to all people rankings and their comparison details without changing source data or calculations.
+- [x] Add shared persistent name concealment to all people rankings and their comparison details without changing source data or calculations.
 - [x] Improve shared dashboard charts, donut legends, rankings and indicator presentation without changing data or filtering.
 - [x] Support legacy and dated TABELAS imports exclusively for Erros Operacionais, preserving original values and rejecting ambiguous layouts.
 - [x] Set automatic current-day initial values on existing date filters without changing manual selection, comparisons or source data.

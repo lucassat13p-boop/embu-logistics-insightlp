@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS records_module_date_desc_id_idx ON public.records (module, record_date DESC NULLS LAST, id ASC);
+COMMENT ON INDEX public.records_module_date_desc_id_idx IS 'Matches module report pagination ordered by record_date DESC NULLS LAST, with id tie-breaker for Retidos; leaves existing source data, policies and indexes unchanged.';

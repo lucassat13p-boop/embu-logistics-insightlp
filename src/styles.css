@@ -176,6 +176,24 @@
 }
 
 .donut-block { container-type: inline-size; }
+.summary-tone-brand { --summary-accent: var(--primary); }
+.summary-tone-neutral { --summary-accent: var(--muted-foreground); }
+.summary-tone-warning { --summary-accent: var(--warning-foreground); }
+.summary-tone-danger { --summary-accent: var(--destructive); }
+.summary-tone-success { --summary-accent: var(--success); }
+.summary-metric {
+  border-top: 2px solid color-mix(in oklab, var(--summary-accent) 55%, var(--border));
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.summary-metric:hover {
+  border-color: color-mix(in oklab, var(--summary-accent) 45%, var(--border));
+  box-shadow: var(--shadow-card);
+}
+.summary-metric-icon {
+  color: var(--summary-accent);
+  background: color-mix(in oklab, var(--summary-accent) 10%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--summary-accent) 18%, var(--card));
+}
 .dark .recharts-tooltip-item { color: var(--popover-foreground); }
 
 @media (prefers-reduced-motion: reduce) {

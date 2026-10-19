@@ -6,10 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HUB_NAME } from "@/lib/modules";
-import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>) => ({ next: oauthReturnPath(search.next) }),
   head: () => ({
     meta: [
       { title: "Entrar — Shopee Operations Hub" },
@@ -25,7 +23,6 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const nav = useNavigate();
-  const { next } = Route.useSearch();
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,10 +35,9 @@ function AuthPage() {
       if (mode === "in") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        if (next === "/") nav({ to: "/dashboard" });
-        else window.location.assign(next);
+        nav({ to: "/dashboard" });
       } else {
-        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: new URL(next, window.location.origin).href } });
+        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
         toast.success("Cadastro criado. Confirme pelo link enviado ao seu e-mail.");
         setMode("in");

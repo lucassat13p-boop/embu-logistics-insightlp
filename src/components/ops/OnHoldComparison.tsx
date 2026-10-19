@@ -4,6 +4,7 @@ import { periodLabel, type PeriodSelection } from "@/lib/period";
 import { countOnHold, driverRanking, uniqueDrivers } from "@/lib/on-hold-analysis";
 import type { RecordRow } from "@/lib/data";
 import { Empty } from "./blocks";
+import { RankingPrivacyToggle, useRankingPrivacy } from "./RankingPrivacy";
 
 type Metric = { name: string; first: number | null; second: number | null };
 const paired = (a: { name: string; value: number }[], b: { name: string; value: number }[]) => {
@@ -25,6 +26,7 @@ function Table({ title, label, metrics, labels }: { title: string; label: string
 }
 
 export function OnHoldComparison({ firstRows, secondRows, firstPeriod, secondPeriod }: { firstRows: RecordRow[]; secondRows: RecordRow[]; firstPeriod: PeriodSelection; secondPeriod: PeriodSelection }) {
+  const { personName } = useRankingPrivacy();
   if (!firstRows.length && !secondRows.length) return <Empty text="Nenhum dado disponível" />;
   const labels: [string, string] = [periodLabel(firstPeriod), periodLabel(secondPeriod)];
   const main: Metric[] = [{ name: "Insucessos", first: firstRows.length, second: secondRows.length }, { name: "Drivers", first: uniqueDrivers(firstRows), second: uniqueDrivers(secondRows) }, { name: "Devoluções", first: null, second: null }];
@@ -35,8 +37,9 @@ export function OnHoldComparison({ firstRows, secondRows, firstPeriod, secondPer
     { title: "Comparação de tratativas", label: "Tratativa", data: paired(countOnHold(firstRows, "treatment"), countOnHold(secondRows, "treatment")) },
     { title: "Comparação de tentativas de entrega", label: "Tentativas", data: paired(countOnHold(firstRows, "delivery_attempts"), countOnHold(secondRows, "delivery_attempts")) },
   ];
-  const changes = groups.flatMap((group) => group.data.map((item) => ({ name: `${group.label}: ${item.name}`, change: variation(item.first, item.second) }))).filter((item) => item.change.percent !== null);
+  const displayGroups = groups.map((group) => group.label === "Motorista" ? { ...group, data: group.data.map((item) => ({ ...item, name: personName(item.name, "Motorista") })) } : group);
+  const changes = displayGroups.flatMap((group) => group.data.map((item) => ({ name: `${group.label}: ${item.name}`, change: variation(item.first, item.second) }))).filter((item) => item.change.percent !== null);
   const growth = [...changes].filter((item) => (item.change.percent ?? 0) > 0).sort((a, b) => (b.change.percent ?? 0) - (a.change.percent ?? 0))[0];
   const drop = [...changes].filter((item) => (item.change.percent ?? 0) < 0).sort((a, b) => (a.change.percent ?? 0) - (b.change.percent ?? 0))[0];
-  return <section className="space-y-6 border-y py-5"><div><h2 className="text-lg font-semibold">Comparação de períodos</h2><p className="text-sm text-muted-foreground">{labels.join(" × ")}</p></div><div><h3 className="mb-2 text-sm font-semibold">Resumo da evolução</h3><dl className="grid gap-3 sm:grid-cols-3"><div><dt className="text-xs text-muted-foreground">Variação geral</dt><dd className="font-semibold"><Change first={firstRows.length} second={secondRows.length} analysis /></dd></div><div><dt className="text-xs text-muted-foreground">Maior crescimento</dt><dd className="font-semibold">{growth ? `${growth.name} — ${growth.change.label}` : "Nenhum dado disponível"}</dd></div><div><dt className="text-xs text-muted-foreground">Maior queda</dt><dd className="font-semibold">{drop ? `${drop.name} — ${drop.change.label}` : "Nenhum dado disponível"}</dd></div></dl></div><Table title="Indicadores principais" label="Indicador" metrics={main} labels={labels} />{groups.map((group) => <Table key={group.title} title={group.title} label={group.label} metrics={group.data} labels={labels} />)}</section>;
+  return <section className="space-y-6 border-y py-5"><div><h2 className="text-lg font-semibold">Comparação de períodos</h2><p className="text-sm text-muted-foreground">{labels.join(" × ")}</p></div><div><h3 className="mb-2 text-sm font-semibold">Resumo da evolução</h3><dl className="grid gap-3 sm:grid-cols-3"><div><dt className="text-xs text-muted-foreground">Variação geral</dt><dd className="font-semibold"><Change first={firstRows.length} second={secondRows.length} analysis /></dd></div><div><dt className="text-xs text-muted-foreground">Maior crescimento</dt><dd className="font-semibold">{growth ? `${growth.name} — ${growth.change.label}` : "Nenhum dado disponível"}</dd></div><div><dt className="text-xs text-muted-foreground">Maior queda</dt><dd className="font-semibold">{drop ? `${drop.name} — ${drop.change.label}` : "Nenhum dado disponível"}</dd></div></dl></div><Table title="Indicadores principais" label="Indicador" metrics={main} labels={labels} />{displayGroups.map((group) => <div key={group.title}>{group.label === "Motorista" && <RankingPrivacyToggle />}<Table title={group.title} label={group.label} metrics={group.data} labels={labels} /></div>)}</section>;
 }

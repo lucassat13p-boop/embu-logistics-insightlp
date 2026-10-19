@@ -10,10 +10,10 @@ const MAX = 50000;
 
 export async function fetchRecords(module?: ModuleKey) {
   const out: RecordRow[] = [];
-  for (let from = 0; module === "retidos_veiculos" || from < MAX; from += 1000) {
+  for (let from = 0; module === "retidos_veiculos" || module === "full" || from < MAX; from += 1000) {
     let q = supabase.from("records").select("*").order("record_date", { ascending: false, nullsFirst: false }).range(from, from + 999);
     if (module) q = q.eq("module", module);
-    if (module === "retidos_veiculos") q = q.order("id", { ascending: true });
+    if (module === "retidos_veiculos" || module === "full") q = q.order("id", { ascending: true });
     const { data, error } = await q;
     if (error) throw error;
     out.push(...(data ?? []));

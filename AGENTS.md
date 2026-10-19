@@ -10,6 +10,8 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
+- Agent integrations use an OAuth-protected SDK-generated MCP endpoint with caller-scoped read-only database queries and separate browser-local navigation tools; preserve RLS and never expose raw imports or credentials.
+- OAuth consent uses the existing auth page with canonical local return paths preserved through login and signup, so authorization requests survive authentication.
 - Visual themes use one root provider and shared CSS tokens, with pre-paint browser preference restoration and a light-only login; this keeps portalled controls, charts and notifications consistent without changing page logic.
 - People-ranking privacy uses one root React provider with browser-only preference persistence and session-stable neutral labels; opt in only ranking and comparison presentation so source identities, calculations and non-person categories remain unchanged.
 - Dashboard visualization styling belongs in shared blocks and PieBlock, with container-responsive donut layouts; keep module data preparation, filtering, ordering and limits unchanged.

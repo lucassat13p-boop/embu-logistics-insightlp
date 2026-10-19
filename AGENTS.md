@@ -28,3 +28,4 @@
 - Retidos reason summaries are pure presentation-only values resolved from the first recognized source phrase; its chart groups these values and opt-in table columns expose summaries alongside unchanged source details, keeping other module tables unchanged.
 - FULL import is a dedicated two-source flow (base TOs + BR status lookup) in src/lib/full-import.ts; manual_status is never sent on upsert so re-imports keep manual classifications.
 - Main dashboard summary calculations are isolated from advanced analytics; FULL summary reuses normId after operational date/shift filtering, while other modules retain occurrence counts and treatment sums, preventing global deduplication or source changes.
+- ON HOLD treated packages come only from the imported "Pacotes Tratados / Não MEXER" sheet stored per date+shift in `on_hold_treated_imports` (upsert replaces, never sums); manual Tratativas keep only Avarias Salvas, so official totals never mix sources.

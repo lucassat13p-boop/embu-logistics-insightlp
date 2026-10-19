@@ -17,6 +17,8 @@ import { commitImport, countExisting, headerSignature, validate, type DupStrateg
 import { cn } from "@/lib/utils";
 import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
 import { FullImport } from "@/components/ops/FullImport";
+import { countTreatedSheet, saveTreatedImport, treatedImportsQuery } from "@/lib/on-hold-treated";
+import { useQuery as useTreatedQuery } from "@tanstack/react-query";
 import { buildOperationalImport } from "@/lib/operational-errors";
 
 export const Route = createFileRoute("/_authenticated/importar")({
@@ -54,6 +56,11 @@ function ImportPage() {
   const [selectedShifts, setSelectedShifts] = useState<string[]>([...OFFICIAL_SHIFTS]);
   const [includeSoc, setIncludeSoc] = useState(true);
   const [allShifts, setAllShifts] = useState(true);
+  const [treatedDate, setTreatedDate] = useState("");
+  const [treatedShift, setTreatedShift] = useState("");
+  const { data: treatedExisting = [] } = useTreatedQuery({ ...treatedImportsQuery(), enabled: mod?.key === "on_hold" });
+  const treatedPreview = useMemo(() => mod?.key === "on_hold" && parsed ? countTreatedSheet(parsed.sheets) : null, [mod?.key, parsed]);
+  const treatedPrevious = treatedExisting.find((r) => r.operation_date === treatedDate && r.shift === treatedShift);
 
   const sheet = parsed?.sheets[sheetIdx];
   const preparedTable = useMemo(() => {
@@ -152,6 +159,13 @@ function ImportPage() {
       if (!activeSheet) return;
       const res = await commitImport({ mod, fileName: file.name, format: parsed.format, sheetName: activeSheet.name, headers: table.headers, mapping, result: r, strategy, avariaOptions: freshPreview ? { shifts: allShifts ? ["Todos"] : selectedShifts, includeSoc, found: freshPreview.found, excluded: freshPreview.excluded } : undefined });
       setDone(res);
+      if (mod.key === "on_hold" && treatedPreview && !("error" in treatedPreview)) {
+        if (!treatedDate || !treatedShift) toast.warning("Pacotes tratados do ON HOLD não registrados: informe a data da operação e o turno.");
+        else {
+          try { await saveTreatedImport({ date: treatedDate, shift: treatedShift, preview: treatedPreview, fileName: file.name, batchId: res.batchId }); toast.success(`Pacotes tratados do ON HOLD registrados: ${treatedPreview.matched}.`); }
+          catch (e) { toast.error("Pacotes tratados do ON HOLD não salvos: " + (e instanceof Error ? e.message : String(e))); }
+        }
+      }
       await qc.invalidateQueries();
       toast.success(`Importação concluída: ${res.inserted} novos registros em ${mod.label}.`);
     } catch (e) {
@@ -272,6 +286,19 @@ function ImportPage() {
 
           {avariaPreview && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[["AM1", avariaPreview.found.AM1], ["AM2", avariaPreview.found.AM2], ["PM1", avariaPreview.found.PM1], ["Sem informação", avariaPreview.found.missing], ["SOC encontrados", avariaPreview.found.soc], ["Serão importados", avariaPreview.kept.length], ["Ignorados pelos filtros", avariaPreview.excluded], ["SOC", includeSoc ? "Incluído" : "Não incluído"]].map(([label, value]) => <div key={label as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{label}</p><p className="font-semibold tabular-nums">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p></div>)}</div>}
           {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {allShifts ? "Todos" : selectedShifts.length ? selectedShifts.join(", ") : "Nenhum"}.</p>}
+
+          {mod.key === "on_hold" && treatedPreview && <div className="mt-4 rounded-md border p-3 text-sm">
+            <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pacotes tratados do ON HOLD</p>
+            {"error" in treatedPreview ? <p className="mt-1 text-destructive">{treatedPreview.error} Esta informação não será gravada; a importação principal continua normalmente.</p> : <>
+              <p className="font-display text-3xl font-bold tabular-nums text-primary">{treatedPreview.matched.toLocaleString("pt-BR")}</p>
+              <p className="text-xs text-muted-foreground">Aba: {treatedPreview.sheetName} · {treatedPreview.analyzed.toLocaleString("pt-BR")} linhas analisadas · {treatedPreview.matched.toLocaleString("pt-BR")} atendem aos três critérios</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 md:max-w-md">
+                <div><Label htmlFor="treated-date">Data da operação *</Label><Input id="treated-date" type="date" value={treatedDate} onChange={(e) => setTreatedDate(e.target.value)} /></div>
+                <div><Label>Turno *</Label><Select value={treatedShift} onValueChange={setTreatedShift}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{["AM1", "AM2", "PM1"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Data selecionada: {treatedDate ? treatedDate.split("-").reverse().join("/") : "não informada"} · Turno: {treatedShift || "não informado"}.{treatedPrevious ? ` Já existe resultado (${treatedPrevious.quantity}) para esta data e turno; ele será substituído.` : ""}</p>
+            </>}
+          </div>}
 
           {errors.length > 0 && (
             <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 p-3">

@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { recordsQuery } from "@/lib/data";
-import { treatmentsQuery } from "@/lib/treatments";
+import { isImport, officialTreatmentsQuery } from "@/lib/on-hold-treated";
 import { HUB_NAME, moduleByKey } from "@/lib/modules";
 import { OFFICIAL_AVARIA_TYPES } from "@/lib/avaria-analysis";
 import { currentSystemDate } from "@/lib/period";
@@ -83,7 +83,7 @@ function usePersisted<T>(key: string, initial: T) {
 
 function Dashboard() {
   const q = { on_hold: useQuery(recordsQuery("on_hold")), avaria: useQuery(recordsQuery("avaria")), retidos_veiculos: useQuery(recordsQuery("retidos_veiculos")), erros_operacionais: useQuery(recordsQuery("erros_operacionais")), auto_add: useQuery(recordsQuery("auto_add")), full: useQuery(recordsQuery("full")) };
-  const treat = useQuery(treatmentsQuery());
+  const treat = useQuery(officialTreatmentsQuery());
   const loading = Object.values(q).some((x) => x.isLoading) || treat.isLoading;
 
   const [today, setToday] = useState("");
@@ -194,7 +194,8 @@ function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Ite
     const hasCat = all.erros_operacionais.some((i) => errorCategoryOf(i) === name);
     return hasCat ? cur.erros_operacionais.filter((i) => errorCategoryOf(i) === name).length : null;
   };
-  const tr = cur.tratativas.length;
+  const tr = cur.tratativas.filter((i) => !isImport(i.t)).length;
+  const trImp = cur.tratativas.filter((i) => isImport(i.t)).length;
   const validFull = all.full.filter((i) => normId(i.row?.order_id));
   const periodFull = filterItems(validFull, range, []);
   const missingDate = validFull.filter((i) => !i.date).length;
@@ -210,7 +211,7 @@ function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Ite
     { label: "AVARIAS RECEBIDAS", value: cur.avaria.length || null, note: "AVARIA · total de avarias no período e turno", source: "avaria", icon: Package, tone: "orange" },
     { label: "PACOTES FULL", value: validFull.length && !fullUnavailable ? new Set(cur.full.map((i) => normId(i.row?.order_id)).filter(Boolean)).size : null, note: fullUnavailable ? `Não é possível aplicar o filtro: ${fullNotes.slice(1).join(" · ")}` : fullNotes.join(" · "), source: "full", icon: PackageOpen, tone: "purple" },
     { label: "AVARIAS SALVAS", value: tr ? sumT(cur.tratativas, "avarias_saved") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: ShieldCheck, tone: "green" },
-    { label: "PACOTES TRATADOS DO ON HOLD", value: tr ? sumT(cur.tratativas, "on_hold_treated") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: PackageCheck, tone: "cyan" },
+    { label: "PACOTES TRATADOS DO ON HOLD", value: trImp ? sumT(cur.tratativas, "on_hold_treated") : null, note: trImp ? `${trImp} importação(ões) da aba Pacotes Tratados do ON HOLD` : "Sem importação no período", source: "tratativas", icon: PackageCheck, tone: "cyan" },
   ];
 }
 

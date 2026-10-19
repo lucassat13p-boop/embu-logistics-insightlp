@@ -202,6 +202,7 @@ export type Database = {
         Row: {
           aging: string | null
           batch_id: string
+          br_status: string | null
           carrier_3pl: string | null
           classification: string | null
           collaborator: string | null
@@ -219,6 +220,9 @@ export type Database = {
           id: string
           lh: string | null
           location: string | null
+          manual_status: string | null
+          manual_status_at: string | null
+          manual_status_by: string | null
           module: string
           month: string | null
           neighborhood: string | null
@@ -233,8 +237,11 @@ export type Database = {
           resolve_time: string | null
           route: string | null
           row_number: number | null
+          sender_name: string | null
           shift: string | null
           status: string | null
+          status_issue: string | null
+          to_number: string | null
           tracking_number: string | null
           treatment: string | null
           updated_at: string
@@ -242,6 +249,7 @@ export type Database = {
         Insert: {
           aging?: string | null
           batch_id: string
+          br_status?: string | null
           carrier_3pl?: string | null
           classification?: string | null
           collaborator?: string | null
@@ -259,6 +267,9 @@ export type Database = {
           id?: string
           lh?: string | null
           location?: string | null
+          manual_status?: string | null
+          manual_status_at?: string | null
+          manual_status_by?: string | null
           module: string
           month?: string | null
           neighborhood?: string | null
@@ -273,8 +284,11 @@ export type Database = {
           resolve_time?: string | null
           route?: string | null
           row_number?: number | null
+          sender_name?: string | null
           shift?: string | null
           status?: string | null
+          status_issue?: string | null
+          to_number?: string | null
           tracking_number?: string | null
           treatment?: string | null
           updated_at?: string
@@ -282,6 +296,7 @@ export type Database = {
         Update: {
           aging?: string | null
           batch_id?: string
+          br_status?: string | null
           carrier_3pl?: string | null
           classification?: string | null
           collaborator?: string | null
@@ -299,6 +314,9 @@ export type Database = {
           id?: string
           lh?: string | null
           location?: string | null
+          manual_status?: string | null
+          manual_status_at?: string | null
+          manual_status_by?: string | null
           module?: string
           month?: string | null
           neighborhood?: string | null
@@ -313,8 +331,11 @@ export type Database = {
           resolve_time?: string | null
           route?: string | null
           row_number?: number | null
+          sender_name?: string | null
           shift?: string | null
           status?: string | null
+          status_issue?: string | null
+          to_number?: string | null
           tracking_number?: string | null
           treatment?: string | null
           updated_at?: string

@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
+- People-ranking privacy uses one root React provider with browser-only preference persistence and session-stable neutral labels; opt in only ranking and comparison presentation so source identities, calculations and non-person categories remain unchanged.
 - Dashboard visualization styling belongs in shared blocks and PieBlock, with container-responsive donut layouts; keep module data preparation, filtering, ordering and limits unchanged.
 - Import deletion uses the owner-authorized atomic `delete_import_batch` database function and one shared confirmation control; exact batch/module/source-row links prevent cross-import deletion, collaborator identities remain intact, and affected query caches refresh after success.
 - Erros Operacionais reads only TABELAS or its CSV using header-evidenced four-column legacy or five-column dated blocks; ambiguous layouts stop before import, the block defines responsible shift, original values remain intact, and the isolated date-only parser feeds existing normalized/raw date columns without changing other modules.

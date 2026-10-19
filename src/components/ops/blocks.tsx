@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RankingPrivacyToggle, useRankingPrivacy, type PersonKind } from "./RankingPrivacy";
 
 export const NO_DATA = "Nenhum dado disponível";
 
@@ -109,21 +110,22 @@ export function LineBlock({ data }: { data: { label: string; value: number }[] }
   );
 }
 
-export function Ranking({ data, limit = 8 }: { data: { name: string; value: number }[]; limit?: number }) {
+export function Ranking({ data, limit = 8, personKind }: { data: { name: string; value: number }[]; limit?: number; personKind?: PersonKind }) {
+  const { personName } = useRankingPrivacy();
   if (!data.length) return <Empty />;
   const max = data[0].value;
   return (
-    <ol className="space-y-4">
+    <div>{personKind && <div className="mb-3 flex justify-end"><RankingPrivacyToggle /></div>}<ol className="space-y-4">
       {data.slice(0, limit).map((d, i) => (
         <li key={d.name} className="flex items-start gap-3 text-base">
           <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded text-sm font-semibold", i === 0 ? "bg-primary-soft text-primary" : "bg-muted text-muted-foreground")}>{i + 1}</span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3"><span className="min-w-0 break-words [overflow-wrap:anywhere]" title={d.name}>{d.name}</span><span className="shrink-0 text-lg font-semibold tabular-nums">{d.value.toLocaleString("pt-BR")}</span></div>
+            <div className="flex items-start justify-between gap-3"><span className="min-w-0 break-words [overflow-wrap:anywhere]" title={personKind ? personName(d.name, personKind) : d.name}>{personKind ? personName(d.name, personKind) : d.name}</span><span className="shrink-0 text-lg font-semibold tabular-nums">{d.value.toLocaleString("pt-BR")}</span></div>
             <div className="mt-2 h-2 rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${(d.value / max) * 100}%` }} /></div>
           </div>
         </li>
       ))}
-    </ol>
+    </ol></div>
   );
 }
 

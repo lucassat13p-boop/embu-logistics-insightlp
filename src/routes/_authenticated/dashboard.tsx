@@ -88,7 +88,7 @@ function Dashboard() {
         <Panel title="Status"><BarBlock data={countBy(all, "status")} horizontal /></Panel>
         <Panel title="Distribuição por turno"><BarBlock data={countBy(all, "shift")} /></Panel>
         <Panel title="Distribuição por rota/LH"><BarBlock data={countBy(all.map((r) => ({ ...r, route: r.route ?? r.lh })), "route")} horizontal /></Panel>
-        <Panel title="Ranking de colaboradores"><Ranking data={countBy(all, "collaborator")} /></Panel>
+        <Panel title="Ranking de colaboradores"><Ranking personKind="Colaborador" data={countBy(all, "collaborator")} /></Panel>
         <Panel title="Motivos mais frequentes"><Ranking data={countBy(all, "reason")} /></Panel>
         <Panel title="Pendências (ON HOLD por status)"><Ranking data={countBy(sets.on_hold, "status")} /></Panel>
       </div>

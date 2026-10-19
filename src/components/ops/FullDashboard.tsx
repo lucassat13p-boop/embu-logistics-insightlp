@@ -43,7 +43,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const refreshFull = async () => {
     await qc.invalidateQueries({ predicate: (query) =>
       (query.queryKey[0] === "records" && ["full", "all"].includes(String(query.queryKey[1]))) ||
-      (query.queryKey[0] === "search" && (query.queryKey[2] === "full" || !query.queryKey[2])) });
+      (query.queryKey[0] === "search" && ["full", "all"].includes(String(query.queryKey[2]))) });
   };
   async function copyBrs(source: RecordRow[]) {
     const list = fullBrList(source);
@@ -71,7 +71,6 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const allStatuses = useMemo(() => [...new Set(allRows.map(fullFinalStatus))].sort(), [allRows]);
   const dates = useMemo(() => [...new Set(allRows.map((r) => r.record_date).filter(Boolean) as string[])].sort().reverse(), [allRows]);
   const pending = [...byBr.values()].filter((r) => fullFinalStatus(r) === FULL_PENDING).length;
-  const manual = [...byBr.values()].filter((r) => r.manual_status).length;
 
   async function save(v: string | null) {
     if (!editing || savingLock.current) return;

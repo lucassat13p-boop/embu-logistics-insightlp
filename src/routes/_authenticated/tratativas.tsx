@@ -59,8 +59,8 @@ function TratativasPage() {
 
   async function save() {
     if (!form || saving) return;
-    if (!form.date || !form.shift) return toast.error("Informe a data e o turno.");
-    if (!validInt(form.avarias) || !validInt(form.onHold)) return toast.error("Informe números inteiros não negativos.");
+    if (!form.date || !form.shift) { toast.error("Informe a data e o turno."); return; }
+    if (!validInt(form.avarias) || !validInt(form.onHold)) { toast.error("Informe números inteiros não negativos."); return; }
     setSaving(true);
     const payload = { operation_date: form.date, shift: form.shift, avarias_saved: Number(form.avarias), on_hold_treated: Number(form.onHold), notes: form.notes.trim() || null };
     let error;
@@ -70,7 +70,7 @@ function TratativasPage() {
       ({ error } = await supabase.from("operational_treatments").insert({ ...payload, created_by: u.user?.id, created_by_email: u.user?.email ?? null, source: "manual" }));
     }
     setSaving(false);
-    if (error) return toast.error("Não foi possível salvar: " + error.message);
+    if (error) { toast.error("Não foi possível salvar: " + error.message); return; }
     toast.success(form.id ? "Lançamento atualizado." : "Lançamento registrado.");
     setForm(null);
     qc.invalidateQueries({ queryKey: ["operational_treatments"] });

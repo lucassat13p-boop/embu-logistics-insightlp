@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
+- Record-read indexes match module equality and descending date with nulls last plus ID ordering; import cache refreshes share one affected-key predicate covering aggregate/history/search readers and successfully saved treated totals, without changing freshness windows or source data.
 - Visual themes use one root provider and shared CSS tokens, with pre-paint browser preference restoration and a light-only login; this keeps portalled controls, charts and notifications consistent without changing page logic.
 - People-ranking privacy uses one root React provider with browser-only preference persistence and session-stable neutral labels; opt in only ranking and comparison presentation so source identities, calculations and non-person categories remain unchanged.
 - Dashboard visualization styling belongs in shared blocks and PieBlock, with container-responsive donut layouts; keep module data preparation, filtering, ordering and limits unchanged.

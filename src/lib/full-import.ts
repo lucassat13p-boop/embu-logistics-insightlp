@@ -35,7 +35,7 @@ export function autoStatus(raw: string | null): string | null {
 }
 
 type Body = { rowNumber: number; values: Record<string, unknown>; empty: boolean }[];
-const colOf = <T extends string>(m: Record<string, T | "">, f: T) => Object.entries(m).find(([, v]) => v === f)?.[0];
+const colOf = (m: Record<string, string>, f: string) => Object.entries(m).find(([, v]) => v === f)?.[0];
 
 export function buildStatusIndex(body: Body, mapping: FullStatusMapping) {
   const br = colOf(mapping, "match_br"), st = colOf(mapping, "br_status");

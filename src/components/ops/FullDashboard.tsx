@@ -44,6 +44,8 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [value, setValue] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
 
   const rows = useMemo(() => allRows.filter((r) =>
     (!dateF || r.record_date === dateF) && (shiftF === "__all" || r.shift === shiftF) &&
@@ -116,8 +118,36 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
           <DialogHeader><DialogTitle>Classificação manual · {editing?.order_id}</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">Status original: {editing?.br_status ?? "Sem informação"} · {editing?.status_issue ?? (editing?.br_status === FULL_LMHUB ? FULL_LMHUB_MSG : "—")}</p>
           {editing?.br_status === FULL_LMHUB && <p className="rounded-md border border-primary/40 bg-primary/5 p-2 text-sm">{FULL_LMHUB_MSG} (ex.: Avaria, Reversa, Pacote Retirado).</p>}
-          <Input autoFocus list="full-status-suggestions" placeholder="Digite qualquer status (ex.: PERDA, Pacote Retirado, Avaria)" value={value} onChange={(e) => setValue(e.target.value)} />
-          <datalist id="full-status-suggestions">{[...new Set([...FULL_AUTO_STATUSES, ...allStatuses.filter((s) => s !== FULL_PENDING)])].map((s) => <option key={s} value={s} />)}</datalist>
+          <Popover open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (o) setPickerSearch(""); }}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" aria-expanded={pickerOpen} className="w-full justify-between font-normal">
+                <span className="truncate">{value || "Selecione uma sugestão ou digite um novo status"}</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Digite para filtrar ou criar..." value={pickerSearch} onValueChange={setPickerSearch} />
+                <CommandList>
+                  <CommandEmpty>Nenhuma sugestão encontrada.</CommandEmpty>
+                  <CommandGroup heading="Sugestões">
+                    {FULL_MANUAL_SUGGESTIONS.map((s) => (
+                      <CommandItem key={s} value={s} onSelect={() => { setValue(s); setPickerOpen(false); }}>
+                        <Check className={`mr-2 h-4 w-4 ${value === s ? "opacity-100" : "opacity-0"}`} />{s}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  {pickerSearch.trim() && !FULL_MANUAL_SUGGESTIONS.some((s) => s.toLowerCase() === pickerSearch.trim().toLowerCase()) && (
+                    <CommandGroup heading="Texto livre">
+                      <CommandItem value={`__free__${pickerSearch.trim()}`} onSelect={() => { setValue(pickerSearch.trim()); setPickerOpen(false); }}>
+                        Usar este texto: “{pickerSearch.trim()}”
+                      </CommandItem>
+                    </CommandGroup>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           {editing?.br_status && editing.br_status !== FULL_LMHUB && <Button variant="outline" size="sm" className="self-start" onClick={() => setValue(editing.br_status ?? "")}>Usar status original: {editing.br_status}</Button>}
           <div className="flex justify-between gap-2">
             {editing?.manual_status ? <Button variant="ghost" onClick={() => save(null)}>Remover classificação</Button> : <span />}

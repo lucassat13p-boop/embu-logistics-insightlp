@@ -1,19 +1,34 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
-import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking, StatusBadge } from "@/components/ops/blocks";
-import { RecordsTable } from "@/components/ops/RecordsTable";
-import { batchesQuery, byDate, countBy, hasField, recordsQuery, type RecordRow } from "@/lib/data";
-import { HUB_NAME, moduleByKey, type ModuleKey } from "@/lib/modules";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp } from "lucide-react";
+import { BarBlock, Empty, LineBlock, PageHeader, Panel } from "@/components/ops/blocks";
+import { PieBlock } from "@/components/ops/PieBlock";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { recordsQuery } from "@/lib/data";
+import { treatmentsQuery } from "@/lib/treatments";
+import { HUB_NAME, moduleByKey } from "@/lib/modules";
+import { OFFICIAL_AVARIA_TYPES } from "@/lib/avaria-analysis";
+import { currentSystemDate } from "@/lib/period";
+import {
+  DASH_SHIFTS, SHIFT_SUPPORT, avariaTypeKey, countBy, errorCategoryOf, errorTypeKey, evolution, filterItems, fullStatusKey, onHoldReasonKey,
+  presetRange, previousRange, retidosReasonKey, shiftKey, sumBy, sumT, toItems, variation, type DashShift, type Item, type Preset, type Range, type SourceKey,
+} from "@/lib/main-dashboard";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Shopee Operations Hub" },
-      { name: "description", content: "Visão consolidada FULL, AUTO ADD e ON HOLD do HUB LSP-36." },
-      { property: "og:title", content: "Dashboard — Shopee Operations Hub" },
-      { property: "og:description", content: "Visão consolidada FULL, AUTO ADD e ON HOLD do HUB LSP-36." },
+      { title: "Dashboard Operacional — Shopee Operations Hub" },
+      { name: "description", content: "Resumo do turno, pontos de atenção e análises dos módulos do HUB LSP-36." },
+      { property: "og:title", content: "Dashboard Operacional — Shopee Operations Hub" },
+      { property: "og:description", content: "Resumo do turno, pontos de atenção e análises dos módulos do HUB LSP-36." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -21,81 +36,309 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-const DASH: ModuleKey[] = ["full", "auto_add", "on_hold"];
+const PRESETS: { value: Preset; label: string }[] = [
+  { value: "today", label: "Hoje" }, { value: "yesterday", label: "Ontem" }, { value: "7d", label: "Últimos 7 dias" }, { value: "30d", label: "Últimos 30 dias" },
+  { value: "day", label: "Dia específico" }, { value: "week", label: "Semana" }, { value: "month", label: "Mês" }, { value: "custom", label: "Personalizado" },
+];
+const SOURCE_LABEL: Record<SourceKey, string> = { on_hold: "ON HOLD", avaria: "AVARIA", retidos_veiculos: "RETIDOS DE VEÍCULOS", erros_operacionais: "ERROS OPERACIONAIS", auto_add: "AUTO ADD", full: "FULL", tratativas: "TRATATIVAS OPERACIONAIS" };
+const SOURCES: SourceKey[] = ["on_hold", "avaria", "retidos_veiculos", "erros_operacionais", "auto_add", "full", "tratativas"];
+
+type ChartKind = "pie" | "bar" | "line";
+type ChartDef = { id: string; source: SourceKey; title: string; kind: ChartKind; data: (items: Item[]) => { name?: string; label?: string; value: number }[]; categories?: string[] };
+const tVal = (k: "avarias_saved" | "on_hold_treated") => (i: Item) => i.t?.[k] ?? 0;
+const CHARTS: ChartDef[] = [
+  { id: "oh-reasons", source: "on_hold", title: "ON HOLD · Top 5 motivos", kind: "bar", data: (i) => countBy(i, onHoldReasonKey).slice(0, 5) },
+  { id: "oh-evo", source: "on_hold", title: "ON HOLD · Evolução diária", kind: "line", data: (i) => evolution(i) },
+  { id: "oh-shift", source: "on_hold", title: "ON HOLD · Distribuição por turno", kind: "pie", data: (i) => countBy(i, shiftKey), categories: [...DASH_SHIFTS] },
+  { id: "av-type", source: "avaria", title: "AVARIA · Tipo de avaria", kind: "pie", data: (i) => countBy(i, avariaTypeKey), categories: [...OFFICIAL_AVARIA_TYPES] },
+  { id: "av-shift", source: "avaria", title: "AVARIA · Distribuição por turno", kind: "pie", data: (i) => countBy(i, shiftKey), categories: [...DASH_SHIFTS] },
+  { id: "av-evo", source: "avaria", title: "AVARIA · Evolução diária", kind: "line", data: (i) => evolution(i) },
+  { id: "rt-shift", source: "retidos_veiculos", title: "RETIDOS · Ocorrências por turno", kind: "pie", data: (i) => countBy(i, shiftKey), categories: [...DASH_SHIFTS] },
+  { id: "rt-evo", source: "retidos_veiculos", title: "RETIDOS · Evolução diária", kind: "line", data: (i) => evolution(i) },
+  { id: "rt-reasons", source: "retidos_veiculos", title: "RETIDOS · Motivos de retenção", kind: "bar", data: (i) => countBy(i, retidosReasonKey) },
+  { id: "er-types", source: "erros_operacionais", title: "ERROS · Top tipos de erro", kind: "bar", data: (i) => countBy(i, errorTypeKey).slice(0, 8) },
+  { id: "er-evo", source: "erros_operacionais", title: "ERROS · Evolução diária", kind: "line", data: (i) => evolution(i) },
+  { id: "er-shift", source: "erros_operacionais", title: "ERROS · Distribuição por turno", kind: "pie", data: (i) => countBy(i, shiftKey), categories: [...DASH_SHIFTS] },
+  { id: "aa-evo", source: "auto_add", title: "AUTO ADD · Evolução por período", kind: "line", data: (i) => evolution(i) },
+  { id: "fu-status", source: "full", title: "FULL · Pacotes por status final", kind: "bar", data: (i) => countBy(i, fullStatusKey) },
+  { id: "tr-av", source: "tratativas", title: "TRATATIVAS · Avarias salvas por turno", kind: "bar", data: (i) => sumBy(i, shiftKey, tVal("avarias_saved")) },
+  { id: "tr-oh", source: "tratativas", title: "TRATATIVAS · ON HOLD tratados por turno", kind: "bar", data: (i) => sumBy(i, shiftKey, tVal("on_hold_treated")) },
+  { id: "tr-evo", source: "tratativas", title: "TRATATIVAS · Avarias salvas por dia", kind: "line", data: (i) => evolution(i, tVal("avarias_saved")) },
+];
+const DEFAULT_LAYOUT = CHARTS.map((c) => ({ id: c.id, visible: ["oh-reasons", "av-type", "rt-evo", "er-types", "tr-av", "tr-oh"].includes(c.id) }));
+const LAYOUT_KEY = "ops-dashboard-layout-v1";
+const ADV_KEY = "ops-dashboard-advanced-v1";
+
+const fmt = (n: number) => n.toLocaleString("pt-BR");
+const fmtDate = (d: string) => d.split("-").reverse().join("/");
+
+function usePersisted<T>(key: string, initial: T) {
+  const [v, setV] = useState<T>(initial);
+  useEffect(() => { try { const s = localStorage.getItem(key); if (s) setV({ ...initial, ...JSON.parse(s) }); } catch { /* ignore */ } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const set = (n: T) => { setV(n); try { localStorage.setItem(key, JSON.stringify(n)); } catch { /* ignore */ } };
+  return [v, set] as const;
+}
 
 function Dashboard() {
-  const full = useQuery(recordsQuery("full"));
-  const auto = useQuery(recordsQuery("auto_add"));
-  const hold = useQuery(recordsQuery("on_hold"));
-  const batches = useQuery(batchesQuery());
-  const sets: Record<string, RecordRow[]> = { full: full.data ?? [], auto_add: auto.data ?? [], on_hold: hold.data ?? [] };
-  const all = [...sets.full, ...sets.auto_add, ...sets.on_hold];
-  const loading = full.isLoading || auto.isLoading || hold.isLoading;
+  const q = { on_hold: useQuery(recordsQuery("on_hold")), avaria: useQuery(recordsQuery("avaria")), retidos_veiculos: useQuery(recordsQuery("retidos_veiculos")), erros_operacionais: useQuery(recordsQuery("erros_operacionais")), auto_add: useQuery(recordsQuery("auto_add")), full: useQuery(recordsQuery("full")) };
+  const treat = useQuery(treatmentsQuery());
+  const loading = Object.values(q).some((x) => x.isLoading) || treat.isLoading;
 
-  // combined evolution: one series per module on same dates
-  const dates = [...new Set(all.map((r) => r.record_date).filter(Boolean) as string[])].sort();
-  const evo = byDate(all);
-  const alerts = (batches.data ?? []).filter((b) => DASH.includes(b.module as ModuleKey) && (b.status === "Erro" || b.status === "Concluído com avisos")).slice(0, 5);
+  const [today, setToday] = useState("");
+  useEffect(() => setToday(currentSystemDate()), []);
+  const [preset, setPreset] = useState<Preset>("today");
+  const [pv, setPv] = useState({ date: "", week: "", month: "", start: "", end: "" });
+  const [shifts, setShifts] = useState<DashShift[]>([]);
+  const [advanced, setAdvanced] = useState(false);
+  const [adv, setAdv] = usePersisted(ADV_KEY, { compare: true, radar: true, shifts: true, evo: true });
+  const [layoutState, setLayout] = usePersisted<{ items: { id: string; visible: boolean }[] }>(LAYOUT_KEY, { items: DEFAULT_LAYOUT });
+  const layout = useMemo(() => { const known = layoutState.items.filter((i) => CHARTS.some((c) => c.id === i.id)); return [...known, ...DEFAULT_LAYOUT.filter((d) => !known.some((k) => k.id === d.id))]; }, [layoutState]);
+  const [customize, setCustomize] = useState(false);
+  const [report, setReport] = useState(false);
+
+  const range = today ? presetRange(preset, pv, today) : null;
+  const prev = range ? previousRange(range) : null;
+  const all = useMemo(() => Object.fromEntries(SOURCES.map((s) => [s, s === "tratativas" ? toItems(s, [], treat.data ?? []) : toItems(s, q[s].data ?? [])])) as Record<SourceKey, Item[]>, // eslint-disable-next-line react-hooks/exhaustive-deps
+    [treat.data, q.on_hold.data, q.avaria.data, q.retidos_veiculos.data, q.erros_operacionais.data, q.auto_add.data, q.full.data]);
+  const cur = useMemo(() => Object.fromEntries(SOURCES.map((s) => [s, filterItems(all[s], range, shifts)])) as Record<SourceKey, Item[]>, [all, range?.start, range?.end, shifts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const before = useMemo(() => Object.fromEntries(SOURCES.map((s) => [s, filterItems(all[s], prev, shifts)])) as Record<SourceKey, Item[]>, [all, prev?.start, prev?.end, shifts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shiftFiltered = shifts.length > 0 && shifts.length < DASH_SHIFTS.length;
+  const periodText = range ? (range.start === range.end ? fmtDate(range.start) : `${fmtDate(range.start)} – ${fmtDate(range.end)}`) : "Período incompleto";
+  const shiftText = shiftFiltered ? shifts.join(" + ") : "Todos os turnos";
+
+  const summary = buildSummary(cur, all, shiftFiltered);
+  const toggleShift = (s: DashShift) => setShifts(shifts.includes(s) ? shifts.filter((x) => x !== s) : [...shifts, s].sort());
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-32" /><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Dashboard" subtitle={`${HUB_NAME} · FULL · AUTO ADD · ON HOLD`} />
+      <PageHeader title="Dashboard Operacional" subtitle={`${HUB_NAME} · Visão consolidada dos módulos`} action={<Button onClick={() => setReport(true)}><Download className="h-4 w-4" />Gerar relatório</Button>} />
 
-      <div className="grid gap-3 md:grid-cols-3">
-        {DASH.map((k) => {
-          const m = moduleByKey(k)!;
-          const rows = sets[k];
-          return (
-            <Link key={k} to="/m/$slug" params={{ slug: m.slug }} className="rounded-lg border bg-card p-4 shadow-card transition hover:border-primary/40">
-              <div className="flex items-center justify-between"><span className="text-xs font-bold tracking-widest text-primary">{m.label}</span><span className="text-[11px] text-muted-foreground">ver módulo →</span></div>
-              {rows.length ? (
-                <>
-                  <p className="mt-2 font-display text-3xl font-bold tabular-nums">{rows.length.toLocaleString("pt-BR")}</p>
-                  <p className="text-xs text-muted-foreground">registros importados{hasField(rows, "order_id") ? ` · ${new Set(rows.map((r) => r.order_id).filter(Boolean)).size.toLocaleString("pt-BR")} pedidos` : ""}</p>
-                </>
-              ) : <p className="mt-3 text-sm text-muted-foreground">Nenhum dado disponível</p>}
-            </Link>
-          );
-        })}
+      <div className="inline-flex rounded-md border bg-card p-1">
+        <Button size="sm" variant={!advanced ? "default" : "ghost"} onClick={() => setAdvanced(false)}>Modo Simples</Button>
+        <Button size="sm" variant={advanced ? "default" : "ghost"} onClick={() => setAdvanced(true)}>Modo Avançado</Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi accent label="Total consolidado" value={all.length || null} />
-        <Kpi label="Pedidos distintos" value={hasField(all, "order_id") ? new Set(all.map((r) => r.order_id).filter(Boolean)).size : null} />
-        <Kpi label="Dias com registros" value={dates.length || null} />
-        <Kpi label="Rotas/LHs distintas" value={hasField(all, "route") || hasField(all, "lh") ? new Set(all.map((r) => r.route ?? r.lh).filter(Boolean)).size : null} />
+      <div className="space-y-3 rounded-lg border bg-card p-3 shadow-card">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1"><Label>Período</Label>
+            <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent>{PRESETS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent></Select>
+          </div>
+          {preset === "day" && <Input type="date" className="w-auto" value={pv.date} onChange={(e) => setPv({ ...pv, date: e.target.value })} aria-label="Dia" />}
+          {preset === "week" && <Input type="week" className="w-auto" value={pv.week} onChange={(e) => setPv({ ...pv, week: e.target.value })} aria-label="Semana" />}
+          {preset === "month" && <Input type="month" className="w-auto" value={pv.month} onChange={(e) => setPv({ ...pv, month: e.target.value })} aria-label="Mês" />}
+          {preset === "custom" && <><Input type="date" className="w-auto" value={pv.start} onChange={(e) => setPv({ ...pv, start: e.target.value })} aria-label="Data inicial" /><Input type="date" className="w-auto" value={pv.end} onChange={(e) => setPv({ ...pv, end: e.target.value })} aria-label="Data final" /></>}
+          <div className="space-y-1"><Label>Turnos</Label>
+            <div className="flex gap-1">
+              <Button size="sm" variant={!shiftFiltered ? "default" : "outline"} onClick={() => setShifts([])}>Todos</Button>
+              {DASH_SHIFTS.map((s) => <Button key={s} size="sm" variant={shiftFiltered && shifts.includes(s) ? "default" : "outline"} onClick={() => toggleShift(s)}>{s}</Button>)}
+            </div>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">{periodText} · {shiftText}</p>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Panel className="xl:col-span-2" title="Evolução temporal" subtitle="Registros por data (FULL + AUTO ADD + ON HOLD)"><LineBlock data={evo} /></Panel>
-        <Panel title="Alertas de importação">
-          {alerts.length ? (
-            <ul className="space-y-2 text-sm">
-              {alerts.map((b) => (
-                <li key={b.id} className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                  <Link to="/historico/$id" params={{ id: b.id }} className="min-w-0 hover:text-primary">
-                    <p className="truncate font-medium">{b.file_name}</p>
-                    <p className="text-xs text-muted-foreground">{moduleByKey(b.module)?.label} · {b.error_rows} erros · <StatusBadge status={b.status} /></p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : <Empty />}
-        </Panel>
-        <Panel title="Status"><BarBlock data={countBy(all, "status")} horizontal /></Panel>
-        <Panel title="Distribuição por turno"><BarBlock data={countBy(all, "shift")} /></Panel>
-        <Panel title="Distribuição por rota/LH"><BarBlock data={countBy(all.map((r) => ({ ...r, route: r.route ?? r.lh })), "route")} horizontal /></Panel>
-        <Panel title="Ranking de colaboradores"><Ranking personKind="Colaborador" data={countBy(all, "collaborator")} /></Panel>
-        <Panel title="Motivos mais frequentes"><Ranking data={countBy(all, "reason")} /></Panel>
-        <Panel title="Pendências (ON HOLD por status)"><Ranking data={countBy(sets.on_hold, "status")} /></Panel>
-      </div>
+      <section className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-card">
+        <h2 className="font-display text-sm font-bold tracking-widest text-primary">RESUMO DO TURNO</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Principais resultados operacionais do período e turnos selecionados.</p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{summary.map((s) => <SummaryCard key={s.label} {...s} />)}</div>
+      </section>
 
-      <Panel title="Últimos registros">
-        <RecordsTable showModule rows={all.slice(0, 500)} columns={["record_date", "order_id", "status", "route", "lh", "shift", "collaborator"]} forceColumns={["record_date", "order_id", "status"]} />
+      <Panel title="Pontos de atenção do turno" subtitle="Resultados registrados manualmente em Tratativas Operacionais">
+        <AttentionPoints items={cur.tratativas} />
       </Panel>
+
+      {!advanced && <>
+        <div className="flex items-center justify-between"><h2 className="font-display text-lg font-semibold">Análises dos módulos</h2><Button variant="outline" size="sm" onClick={() => setCustomize(true)}><Settings2 className="h-4 w-4" />Personalizar gráficos</Button></div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{SOURCES.map((s) => <ModuleCard key={s} source={s} items={cur[s]} shiftFiltered={shiftFiltered} />)}</div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          {layout.filter((l) => l.visible).map((l) => { const c = CHARTS.find((x) => x.id === l.id)!; return <ChartPanel key={c.id} def={c} items={cur[c.source]} shiftFiltered={shiftFiltered} />; })}
+        </div>
+      </>}
+
+      {advanced && <>
+        <div className="flex flex-wrap gap-4 rounded-lg border bg-card p-3">
+          {([["compare", "Comparação de períodos"], ["radar", "Radar operacional"], ["shifts", "Comparativo entre turnos"], ["evo", "Evolução operacional"]] as const).map(([k, label]) =>
+            <label key={k} className="flex items-center gap-2 text-sm"><Switch checked={adv[k]} onCheckedChange={(v) => setAdv({ ...adv, [k]: v })} />{label}</label>)}
+        </div>
+        {adv.compare && <Panel title="Comparação de períodos" subtitle={prev ? `Atual: ${periodText} · Anterior equivalente: ${fmtDate(prev.start)} – ${fmtDate(prev.end)}` : "Selecione um período completo"}>
+          {prev ? <CompareTable cur={cur} prev={before} shiftFiltered={shiftFiltered} /> : <Empty />}
+        </Panel>}
+        {adv.radar && prev && <Panel title="Radar operacional" subtitle="Maiores variações entre o período atual e o anterior equivalente"><Radar cur={cur} prev={before} shiftFiltered={shiftFiltered} /></Panel>}
+        {adv.shifts && <Panel title="Comparativo entre turnos" subtitle="Somente registros com turno identificado no próprio módulo"><ShiftCompare all={all} range={range} /></Panel>}
+        {adv.evo && <div className="grid gap-4 xl:grid-cols-2">{CHARTS.filter((c) => c.kind === "line").map((c) => <ChartPanel key={c.id} def={c} items={cur[c.source]} shiftFiltered={shiftFiltered} />)}</div>}
+      </>}
+
+      <CustomizeDialog open={customize} onOpenChange={setCustomize} layout={layout} onSave={(items) => setLayout({ items })} />
+      <ReportDialog open={report} onOpenChange={setReport} periodText={periodText} shiftText={shiftText} summary={summary} cur={cur} />
     </div>
   );
+}
+
+type Summary = { label: string; value: number | null; note?: string; source?: SourceKey };
+function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Item[]>, shiftFiltered: boolean): Summary[] {
+  const errCat = (name: string) => {
+    const hasCat = all.erros_operacionais.some((i) => errorCategoryOf(i) === name);
+    return hasCat ? cur.erros_operacionais.filter((i) => errorCategoryOf(i) === name).length : null;
+  };
+  const tr = cur.tratativas.length;
+  return [
+    { label: "Pacotes retirados do veículo", value: all.retidos_veiculos.length ? cur.retidos_veiculos.length : null, note: "Ocorrências de Retidos de Veículos (repetições de BR mantidas)", source: "retidos_veiculos" },
+    { label: "Erros de sorting", value: errCat("SORTING"), note: errCat("SORTING") === null ? "Classificação SORTING não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais" },
+    { label: "Erros de etiqueta", value: errCat("ETIQUETAGEM"), note: errCat("ETIQUETAGEM") === null ? "Classificação ETIQUETAGEM não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais" },
+    { label: "Avarias recebidas", value: null, note: "Não disponível: não há classificação real que identifique avarias recebidas", source: "avaria" },
+    { label: "Avarias salvas", value: tr ? sumT(cur.tratativas, "avarias_saved") : null, note: tr ? `${tr} lançamento(s) em Tratativas` : "Sem lançamentos no período", source: "tratativas" },
+    { label: "Pacotes tratados do ON HOLD", value: tr ? sumT(cur.tratativas, "on_hold_treated") : null, note: tr ? `${tr} lançamento(s) em Tratativas` : "Sem lançamentos no período", source: "tratativas" },
+  ].map((s) => ({ ...s, note: shiftFiltered && s.source && !SHIFT_SUPPORT[s.source as SourceKey] ? "Sem turno no módulo" : s.note })) as Summary[];
+}
+
+function SourceLink({ source, children, className }: { source: SourceKey; children: ReactNode; className?: string }) {
+  if (source === "tratativas") return <Link to="/tratativas" className={className}>{children}</Link>;
+  const m = moduleByKey(source);
+  return m ? <Link to="/m/$slug" params={{ slug: m.slug }} className={className}>{children}</Link> : <div className={className}>{children}</div>;
+}
+
+function SummaryCard({ label, value, note, source }: Summary) {
+  const body = <><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    {value === null ? <p className="mt-2 text-lg font-semibold text-muted-foreground">{note?.startsWith("Não disponível") ? "Não disponível" : "Sem dados"}</p> : <p className="mt-1 font-display text-3xl font-bold tabular-nums">{fmt(value)}</p>}
+    {note && <p className="mt-1 text-[11px] text-muted-foreground">{note}</p>}</>;
+  const cls = "block rounded-lg border bg-card p-4 transition hover:border-primary/50";
+  return source ? <SourceLink source={source} className={cls}>{body}</SourceLink> : <div className={cls}>{body}</div>;
+}
+
+function AttentionPoints({ items }: { items: Item[] }) {
+  if (!items.length) return <Empty text="Nenhum ponto de atenção registrado para o período." />;
+  const byShift = new Map<string, { av: number; oh: number }>();
+  for (const i of items) { const k = i.shift ?? "Sem turno"; const c = byShift.get(k) ?? { av: 0, oh: 0 }; c.av += i.t?.avarias_saved ?? 0; c.oh += i.t?.on_hold_treated ?? 0; byShift.set(k, c); }
+  const notes = items.filter((i) => i.t?.notes?.trim());
+  return <div className="space-y-3">
+    <ul className="grid gap-2 sm:grid-cols-3">{[...byShift].sort().map(([s, c]) => <li key={s} className="rounded-md border bg-muted/30 p-3 text-sm"><span className="font-semibold text-primary">{s}</span><p>{fmt(c.av)} avarias salvas</p><p>{fmt(c.oh)} pacotes do ON HOLD tratados</p></li>)}</ul>
+    {notes.length > 0 && <ul className="space-y-1 text-sm">{notes.map((i) => <li key={i.t!.id} className="flex gap-2"><Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span><b>{fmtDate(i.t!.operation_date)} · {i.t!.shift}:</b> {i.t!.notes}</span></li>)}</ul>}
+  </div>;
+}
+
+function ModuleCard({ source, items, shiftFiltered }: { source: SourceKey; items: Item[]; shiftFiltered: boolean }) {
+  const limited = shiftFiltered && !SHIFT_SUPPORT[source];
+  const isT = source === "tratativas";
+  return <SourceLink source={source} className="block rounded-lg border bg-card p-4 shadow-card transition hover:border-primary/40">
+    <div className="flex items-center justify-between"><span className="text-xs font-bold tracking-widest text-primary">{SOURCE_LABEL[source]}</span><span className="text-[11px] text-muted-foreground">abrir →</span></div>
+    {limited ? <p className="mt-3 text-sm text-muted-foreground">Sem turno no módulo — não filtrável por turno</p>
+      : items.length ? <><p className="mt-2 font-display text-2xl font-bold tabular-nums">{fmt(isT ? sumT(items, "avarias_saved") + 0 : items.length)}</p>
+        <p className="text-xs text-muted-foreground">{isT ? `avarias salvas · ${fmt(sumT(items, "on_hold_treated"))} ON HOLD tratados` : source === "full" ? `pacotes · ${fmt(new Set(items.map((i) => i.row?.order_id).filter(Boolean)).size)} BRs únicos` : "ocorrências no período"}</p></>
+        : <p className="mt-3 text-sm text-muted-foreground">Nenhum dado disponível</p>}
+  </SourceLink>;
+}
+
+function ChartPanel({ def, items, shiftFiltered }: { def: ChartDef; items: Item[]; shiftFiltered: boolean }) {
+  if (shiftFiltered && !SHIFT_SUPPORT[def.source]) return <Panel title={def.title}><Empty text="Este módulo não possui turno; o gráfico não pode ser filtrado por turno." /></Panel>;
+  const data = def.data(items);
+  const named = data as { name: string; value: number }[];
+  return <Panel title={def.title}>
+    {def.kind === "line" ? (data.length ? <LineBlock data={data as { label: string; value: number }[]} /> : <Empty />)
+      : def.kind === "pie" ? <PieBlock data={named} total={named.reduce((a, b) => a + b.value, 0)} categories={def.categories ?? []} label={def.title} includeMissing={false} />
+        : <BarBlock data={named} horizontal valueName={def.source === "tratativas" ? "Quantidade" : "Ocorrências"} />}
+  </Panel>;
+}
+
+function metricRows(cur: Record<SourceKey, Item[]>, prev: Record<SourceKey, Item[]>, shiftFiltered: boolean) {
+  const rows: { label: string; source: SourceKey; c: number; p: number; positive: boolean }[] = [];
+  for (const s of SOURCES) {
+    if (shiftFiltered && !SHIFT_SUPPORT[s]) continue;
+    if (s === "tratativas") {
+      rows.push({ label: "Avarias salvas", source: s, c: sumT(cur[s], "avarias_saved"), p: sumT(prev[s], "avarias_saved"), positive: true });
+      rows.push({ label: "ON HOLD tratados", source: s, c: sumT(cur[s], "on_hold_treated"), p: sumT(prev[s], "on_hold_treated"), positive: true });
+    } else rows.push({ label: `${SOURCE_LABEL[s]} · ocorrências`, source: s, c: cur[s].length, p: prev[s].length, positive: false });
+  }
+  return rows;
+}
+
+function CompareTable({ cur, prev, shiftFiltered }: { cur: Record<SourceKey, Item[]>; prev: Record<SourceKey, Item[]>; shiftFiltered: boolean }) {
+  const rows = metricRows(cur, prev, shiftFiltered);
+  return <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="py-2">Indicador</th><th className="text-right">Atual</th><th className="text-right">Anterior</th><th className="text-right">Diferença</th><th className="text-right">Variação</th></tr></thead>
+    <tbody>{rows.map((r) => { const v = variation(r.c, r.p); return <tr key={r.label} className="border-b last:border-0"><td className="py-2">{r.label}</td><td className="text-right tabular-nums">{fmt(r.c)}</td><td className="text-right tabular-nums">{fmt(r.p)}</td><td className="text-right tabular-nums">{v.diff > 0 ? "+" : ""}{fmt(v.diff)}</td><td className="text-right tabular-nums">{v.pct === null ? <span className="text-muted-foreground">—</span> : `${v.pct > 0 ? "+" : ""}${v.pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}</td></tr>; })}</tbody></table>
+    <p className="mt-2 text-[11px] text-muted-foreground">"—" indica base anterior zero (percentual não aplicável).{shiftFiltered ? " Módulos sem turno foram omitidos." : ""}</p></div>;
+}
+
+function Radar({ cur, prev, shiftFiltered }: { cur: Record<SourceKey, Item[]>; prev: Record<SourceKey, Item[]>; shiftFiltered: boolean }) {
+  const rows = metricRows(cur, prev, shiftFiltered).map((r) => ({ ...r, diff: r.c - r.p })).filter((r) => r.diff !== 0);
+  if (!rows.length) return <Empty text="Sem variações entre os períodos." />;
+  const up = rows.filter((r) => r.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, 4);
+  const down = rows.filter((r) => r.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, 4);
+  const item = (r: (typeof rows)[number]) => { const good = r.positive ? r.diff > 0 : r.diff < 0; return <li key={r.label} className="flex items-center justify-between rounded-md border p-2 text-sm"><span>{r.label}</span><span className={`font-semibold tabular-nums ${good ? "text-success" : "text-destructive"}`}>{r.diff > 0 ? "+" : ""}{fmt(r.diff)}</span></li>; };
+  return <div className="grid gap-4 md:grid-cols-2">
+    <div><p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground"><TrendingUp className="h-4 w-4" />Maiores aumentos</p><ul className="space-y-2">{up.length ? up.map(item) : <Empty />}</ul></div>
+    <div><p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground"><TrendingDown className="h-4 w-4" />Maiores reduções</p><ul className="space-y-2">{down.length ? down.map(item) : <Empty />}</ul></div>
+    <p className="text-[11px] text-muted-foreground md:col-span-2">Cor verde = evolução favorável conforme o significado do indicador (aumento de avarias salvas/ON HOLD tratados é positivo; aumento de ocorrências é desfavorável).</p>
+  </div>;
+}
+
+function ShiftCompare({ all, range }: { all: Record<SourceKey, Item[]>; range: Range | null }) {
+  const srcs = SOURCES.filter((s) => SHIFT_SUPPORT[s]);
+  return <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="py-2">Indicador</th>{DASH_SHIFTS.map((s) => <th key={s} className="text-right">{s}</th>)}<th className="text-right">Sem turno</th></tr></thead>
+    <tbody>{srcs.flatMap((s) => {
+      const items = filterItems(all[s], range, []);
+      const val = (sh: DashShift | null, k?: "avarias_saved" | "on_hold_treated") => { const f = items.filter((i) => i.shift === sh); return k ? sumT(f, k) : f.length; };
+      const lines: [string, (k: DashShift | null) => number][] = s === "tratativas" ? [["Avarias salvas", (k) => val(k, "avarias_saved")], ["ON HOLD tratados", (k) => val(k, "on_hold_treated")]] : [[`${SOURCE_LABEL[s]} · ocorrências`, (k) => val(k)]];
+      return lines.map(([label, f]) => <tr key={label} className="border-b last:border-0"><td className="py-2">{label}</td>{DASH_SHIFTS.map((sh) => <td key={sh} className="text-right tabular-nums">{fmt(f(sh))}</td>)}<td className="text-right tabular-nums text-muted-foreground">{fmt(f(null))}</td></tr>);
+    })}</tbody></table><p className="mt-2 text-[11px] text-muted-foreground">Registros sem turno identificado aparecem separados e nunca são distribuídos entre AM1, AM2 e PM1. AUTO ADD não possui turno.</p></div>;
+}
+
+function CustomizeDialog({ open, onOpenChange, layout, onSave }: { open: boolean; onOpenChange: (o: boolean) => void; layout: { id: string; visible: boolean }[]; onSave: (l: { id: string; visible: boolean }[]) => void }) {
+  const [draft, setDraft] = useState(layout);
+  useEffect(() => { if (open) setDraft(layout); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const move = (i: number, d: number) => { const n = [...draft]; const j = i + d; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; setDraft(n); };
+  const setModule = (s: SourceKey, visible: boolean) => setDraft(draft.map((l) => CHARTS.find((c) => c.id === l.id)?.source === s ? { ...l, visible } : l));
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+    <DialogHeader><DialogTitle>Personalizar gráficos</DialogTitle></DialogHeader>
+    <div className="flex flex-wrap gap-2">{SOURCES.map((s) => { const on = draft.some((l) => l.visible && CHARTS.find((c) => c.id === l.id)?.source === s); return <Button key={s} size="sm" variant={on ? "default" : "outline"} onClick={() => setModule(s, !on)}>{SOURCE_LABEL[s]}</Button>; })}</div>
+    <ul className="space-y-1">{draft.map((l, i) => { const c = CHARTS.find((x) => x.id === l.id)!; return <li key={l.id} className="flex items-center gap-2 rounded-md border p-2 text-sm">
+      <Checkbox checked={l.visible} onCheckedChange={(v) => setDraft(draft.map((x) => x.id === l.id ? { ...x, visible: !!v } : x))} aria-label={c.title} />
+      {l.visible ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+      <span className="flex-1">{c.title}</span>
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, -1)} aria-label="Subir"><ArrowUp className="h-4 w-4" /></Button>
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, 1)} aria-label="Descer"><ArrowDown className="h-4 w-4" /></Button>
+    </li>; })}</ul>
+    <div className="flex justify-between gap-2"><Button variant="ghost" onClick={() => setDraft(DEFAULT_LAYOUT)}>Restaurar padrão</Button><Button onClick={() => { onSave(draft); onOpenChange(false); }}>Salvar preferências</Button></div>
+  </DialogContent></Dialog>;
+}
+
+function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur }: { open: boolean; onOpenChange: (o: boolean) => void; periodText: string; shiftText: string; summary: Summary[]; cur: Record<SourceKey, Item[]> }) {
+  const lines = summary.map((s) => [s.label, s.value === null ? (s.note?.startsWith("Não disponível") ? "Não disponível" : "Sem dados") : fmt(s.value)] as const);
+  const tr = cur.tratativas;
+  const points = tr.length ? [`Avarias salvas: ${fmt(sumT(tr, "avarias_saved"))}`, `Pacotes do ON HOLD tratados: ${fmt(sumT(tr, "on_hold_treated"))}`] : ["Nenhum ponto de atenção registrado."];
+  const download = () => {
+    const W = 1200, H = 260 + Math.ceil(lines.length / 3) * 150 + 60 + points.length * 34 + 60;
+    const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d")!;
+    const css = getComputedStyle(document.documentElement);
+    const col = (v: string, f: string) => css.getPropertyValue(v).trim() || f;
+    g.fillStyle = "#ffffff"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#ee4d2d"; g.fillRect(0, 0, W, 120);
+    g.fillStyle = "#ffffff"; g.font = "bold 34px sans-serif"; g.fillText("Resumo do Turno", 48, 58); g.font = "20px sans-serif"; g.fillText(`${HUB_NAME}`, 48, 94);
+    g.fillStyle = "#222"; g.font = "18px sans-serif"; g.fillText(`Período: ${periodText}   ·   Turnos: ${shiftText}`, 48, 165);
+    lines.forEach(([label, value], i) => {
+      const x = 48 + (i % 3) * 372, y = 200 + Math.floor(i / 3) * 150;
+      g.strokeStyle = "#e5e5e5"; g.lineWidth = 2; g.strokeRect(x, y, 350, 128);
+      g.fillStyle = "#666"; g.font = "15px sans-serif"; g.fillText(label.toUpperCase(), x + 18, y + 34);
+      const empty = value === "Sem dados" || value === "Não disponível";
+      g.fillStyle = empty ? "#999" : "#111"; g.font = empty ? "bold 24px sans-serif" : "bold 44px sans-serif"; g.fillText(value, x + 18, y + 92);
+    });
+    let y = 200 + Math.ceil(lines.length / 3) * 150 + 20;
+    g.fillStyle = "#ee4d2d"; g.font = "bold 20px sans-serif"; g.fillText("PONTOS DE ATENÇÃO", 48, y); y += 36;
+    g.fillStyle = "#222"; g.font = "18px sans-serif"; points.forEach((p) => { g.fillText(`• ${p}`, 48, y); y += 34; });
+    g.fillStyle = "#999"; g.font = "13px sans-serif"; g.fillText(`Gerado em ${new Date().toLocaleString("pt-BR")} · somente dados reais registrados`, 48, H - 24);
+    void col;
+    const a = document.createElement("a"); a.download = `resumo-turno-${periodText.replace(/[^\d]+/g, "-")}.png`; a.href = c.toDataURL("image/png"); a.click();
+  };
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-2xl">
+    <DialogHeader><DialogTitle>Relatório do turno</DialogTitle></DialogHeader>
+    <div className="rounded-lg border p-4">
+      <p className="font-display text-lg font-bold text-primary">{HUB_NAME}</p>
+      <p className="text-sm text-muted-foreground">{periodText} · {shiftText}</p>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{lines.map(([l, v]) => <div key={l} className="rounded-md border p-2"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-semibold">{v}</p></div>)}</div>
+      <p className="mt-3 text-xs font-semibold uppercase text-primary">Pontos de atenção</p>
+      <ul className="text-sm">{points.map((p) => <li key={p}>• {p}</li>)}</ul>
+    </div>
+    <Button onClick={download}><Download className="h-4 w-4" />Baixar como PNG</Button>
+  </DialogContent></Dialog>;
 }

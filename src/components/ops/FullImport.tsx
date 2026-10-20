@@ -15,7 +15,7 @@ import { headerSignature } from "@/lib/importer";
 import { normalizeHeader } from "@/lib/modules";
 import { invalidateImportQueries } from "@/lib/import-cache";
 import {
-  buildFullRows, buildStatusIndex, commitFullImport, countFullExisting, fullDedupeKey, FULL_BASE_LABELS, FULL_STATUS_LABELS,
+  buildFullRows, buildLhIndex, buildStatusIndex, commitFullImport, countFullExisting, fullDedupeKey, parseLhSheet, FULL_BASE_LABELS, FULL_STATUS_LABELS,
   suggestFullBase, suggestFullStatus, type FullBaseMapping, type FullStatusMapping,
 } from "@/lib/full-import";
 
@@ -59,6 +59,8 @@ export function FullImport() {
   const [statusSrc, setStatusSrc] = useState<Src | null>(null);
   const [baseSheet, setBaseSheet] = useState(0);
   const [statusSheet, setStatusSheet] = useState(-1);
+  const [lhSheet, setLhSheet] = useState(-1);
+  const [lhSrc, setLhSrc] = useState<Src | null>(null);
   const [baseMap, setBaseMap] = useState<FullBaseMapping>({});
   const [statusMap, setStatusMap] = useState<FullStatusMapping>({});
   const [date, setDate] = useState("");
@@ -76,7 +78,13 @@ export function FullImport() {
     return s ? buildTable(s.rows, detectHeaderRow(s.rows)) : null;
   }, [base, statusSrc, statusSheet, isXlsx]);
 
-  const build = useMemo(() => baseTable && statusTable ? buildFullRows(baseTable.body, baseMap, buildStatusIndex(statusTable.body, statusMap)) : null, [baseTable, statusTable, baseMap, statusMap]);
+  const lhParse = useMemo(() => {
+    const src = isXlsx ? base : lhSrc;
+    const s = src?.parsed.sheets[isXlsx ? lhSheet : 0];
+    return s ? parseLhSheet(s.rows) : null;
+  }, [base, lhSrc, lhSheet, isXlsx]);
+  const lhIndex = useMemo(() => buildLhIndex(lhParse), [lhParse]);
+  const build = useMemo(() => baseTable && statusTable ? buildFullRows(baseTable.body, baseMap, buildStatusIndex(statusTable.body, statusMap), lhParse ? lhIndex.map : undefined) : null, [baseTable, statusTable, baseMap, statusMap, lhParse, lhIndex]);
   const mappedOk = Object.values(baseMap).includes("order_id") && Object.values(statusMap).includes("match_br") && Object.values(statusMap).includes("br_status");
 
   async function loadSaved(kind: "base" | "status", headers: string[]) {
@@ -100,13 +108,19 @@ export function FullImport() {
       const p = await parseFile(f);
       if (p.format === "pdf") throw new Error("FULL aceita XLSX completo ou CSVs das abas 2 e 3.");
       setBase({ file: f, parsed: p });
+      setLhSrc(null); setLhSheet(-1);
       if (p.format === "csv") { setBaseSheet(0); await applyBase(p, 0); }
       else {
         const b = Math.max(0, findSheet(p, "2", "to number")); const s = findSheet(p, "3", "order id");
-        setBaseSheet(b); setStatusSheet(s); setStatusSrc(null);
+        setBaseSheet(b); setStatusSheet(s); setStatusSrc(null); setLhSheet(findSheet(p, "1", "lh"));
         await applyBase(p, b); if (s >= 0) await applyStatus(p, s);
       }
     } catch (e) { toast.error(e instanceof Error ? e.message : "Falha ao ler arquivo"); } finally { setBusy(null); }
+  }
+  async function onLh(f: File) {
+    setBusy("Lendo arquivo de LHs...");
+    try { const p = await parseFile(f); if (p.format !== "csv") throw new Error("Envie o CSV da aba 1 - TO's."); setLhSrc({ file: f, parsed: p }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Falha ao ler arquivo"); } finally { setBusy(null); }
   }
   async function onStatus(f: File) {
     setBusy("Lendo arquivo de status...");
@@ -135,8 +149,9 @@ export function FullImport() {
     if (!build.rows.length) { toast.error("Nenhum pacote válido para salvar."); return; }
     setBusy("Salvando registros...");
     try {
-      const sheetName = isXlsx ? `${base.parsed.sheets[baseSheet]?.name} + ${base.parsed.sheets[statusSheet]?.name}` : `${base.file.name} + ${statusSrc?.file.name}`;
-      const res = await commitFullImport({ build, date: date || null, shift: shift || null, strategy, fileName: isXlsx ? base.file.name : `${base.file.name} + ${statusSrc?.file.name}`, format: base.parsed.format, sheetName, headers: baseTable.headers, mapping: { base: baseMap, status: statusMap } });
+      const lhName = isXlsx ? (lhSheet >= 0 ? base.parsed.sheets[lhSheet]?.name : null) : lhSrc?.file.name ?? null;
+      const sheetName = [isXlsx ? `${base.parsed.sheets[baseSheet]?.name} + ${base.parsed.sheets[statusSheet]?.name}` : `${base.file.name} + ${statusSrc?.file.name}`, lhName].filter(Boolean).join(" + ");
+      const res = await commitFullImport({ build, date: date || null, shift: shift || null, strategy, fileName: [isXlsx ? base.file.name : `${base.file.name} + ${statusSrc?.file.name}`, !isXlsx && lhSrc ? lhSrc.file.name : null].filter(Boolean).join(" + "), format: base.parsed.format, sheetName, headers: baseTable.headers, mapping: { base: baseMap, status: statusMap, lh: lhParse ? { sheet: lhName, code: lhParse.lh, tos: lhParse.tos.length } : null } });
       setDone(res); await invalidateImportQueries(qc, { module: "full", batchId: res.batchId });
       toast.success(`Importação FULL concluída: ${res.inserted} novos registros.`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar"); } finally { setBusy(null); }
@@ -162,6 +177,15 @@ export function FullImport() {
               </label>
             </div>
           )}
+          {base && !isXlsx && (
+            <div className="space-y-1.5">
+              <Label>CSV da aba “1 - TO's” (LHs, opcional)</Label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:border-primary">
+                <FileUp className="h-5 w-5 text-primary" /><span className="truncate">{lhSrc ? lhSrc.file.name : "Adicionar arquivo de LHs (.csv)"}</span>
+                <input type="file" className="hidden" accept=".csv" onChange={(e) => e.target.files?.[0] && onLh(e.target.files[0])} />
+              </label>
+            </div>
+          )}
           {base && isXlsx && (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>Aba base</Label>
@@ -173,6 +197,11 @@ export function FullImport() {
                 <Select value={statusSheet >= 0 ? String(statusSheet) : undefined} onValueChange={(v) => { setStatusSheet(Number(v)); applyStatus(base.parsed, Number(v)); }}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name}</SelectItem>)}</SelectContent>
+                </Select></div>
+              <div className="space-y-1.5"><Label>Aba de LHs (opcional)</Label>
+                <Select value={String(lhSheet)} onValueChange={(v) => setLhSheet(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="-1">Nenhuma — importar sem LH</SelectItem>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name}</SelectItem>)}</SelectContent>
                 </Select></div>
             </div>
           )}
@@ -198,6 +227,16 @@ export function FullImport() {
               <div key={l as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-display text-2xl font-bold tabular-nums">{v}</p></div>
             ))}
           </div>
+          {lhParse ? (
+            <div className="mt-3 space-y-1 rounded-md border p-3 text-sm">
+              {!lhParse.lh
+                ? <p className="text-destructive">Aba de LHs selecionada, mas a célula A2 está vazia: nenhuma LH será vinculada. Verifique o arquivo.</p>
+                : <p>LH <span className="font-semibold">{lhParse.lh}</span> · {lhParse.tos.length.toLocaleString("pt-BR")} TOs na aba · {build.withoutLh.toLocaleString("pt-BR")} {build.withoutLh === 1 ? "pacote sem LH vinculada" : "pacotes sem LH vinculada"} (TO ausente na aba 1).</p>}
+              {lhIndex.conflicts > 0 && <p className="text-destructive">{lhIndex.conflicts} TO(s) com conflito de associação entre LHs; a primeira LH foi mantida.</p>}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-md border border-dashed p-3 text-sm text-muted-foreground">Sem fonte de LHs: os pacotes serão importados como “Sem LH vinculada”.</p>
+          )}
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <div className="space-y-1.5"><Label>Data da operação (opcional)</Label><Input type="date" value={date} onChange={(e) => { setDate(e.target.value); setExisting(null); }} /></div>
             <div className="space-y-1.5"><Label>Turno (opcional)</Label>

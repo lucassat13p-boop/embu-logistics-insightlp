@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Upload } from "lucide-react";
+import { Copy, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarBlock, Empty, Kpi, PageHeader, Panel } from "@/components/ops/blocks";
+import { Empty, Kpi, PageHeader, Panel } from "@/components/ops/blocks";
+import { PieBlock } from "@/components/ops/PieBlock";
+import { FullLhBoard, LH_NONE } from "./FullLhBoard";
 import { supabase } from "@/integrations/supabase/client";
 import { HUB_NAME } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
@@ -30,6 +32,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const [dateF, setDateF] = useState("");
   const [shiftF, setShiftF] = useState("__all");
   const [classF, setClassF] = useState("__all");
+  const [lhF, setLhF] = useState("__all");
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [value, setValue] = useState("");
@@ -38,7 +41,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const [copyFallback, setCopyFallback] = useState<string[] | null>(null);
   const [saving, setSaving] = useState(false);
   const savingLock = useRef(false);
-  useEffect(() => { setSelected(new Set()); setBulkOpen(false); }, [q, statusF, dateF, shiftF, classF]);
+  useEffect(() => { setSelected(new Set()); setBulkOpen(false); }, [q, statusF, dateF, shiftF, classF, lhF]);
   useEffect(() => { setSelected((ids) => new Set([...ids].filter((id) => allRows.some((r) => r.id === id)))); }, [allRows]);
   const refreshFull = async () => {
     await qc.invalidateQueries({ predicate: (query) =>
@@ -57,13 +60,14 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
 
   const rows = useMemo(() => allRows.filter((r) =>
     (!dateF || r.record_date === dateF) && (shiftF === "__all" || r.shift === shiftF) &&
+    (lhF === "__all" || (lhF === LH_NONE ? !r.lh?.trim() : r.lh === lhF)) &&
     (statusF === "__all" || fullFinalStatus(r) === statusF) &&
     (classF === "__all" || classOf(r) === classF) &&
     (!q || [r.order_id, r.to_number, r.sender_name].some((v) => v?.toLowerCase().includes(q.toLowerCase())))
-  ), [allRows, q, statusF, dateF, shiftF, classF]);
+  ), [allRows, q, statusF, dateF, shiftF, classF, lhF]);
   const scoped = useMemo(() => allRows.filter((r) => (!dateF || r.record_date === dateF) && (shiftF === "__all" || r.shift === shiftF)), [allRows, dateF, shiftF]);
   const pendingRows = scoped.filter((r) => classOf(r) === "pending").length;
-  const clearFilters = () => { setQ(""); setStatusF("__all"); setClassF("__all"); setPage(0); };
+  const clearFilters = () => { setQ(""); setStatusF("__all"); setClassF("__all"); setLhF("__all"); setPage(0); };
 
   // Packages counted by unique BR; status per BR uses its first linked row's final status.
   const byBr = useMemo(() => { const m = new Map<string, RecordRow>(); rows.forEach((r) => { const k = normId(r.order_id); if (k && !m.has(k)) m.set(k, r); }); return m; }, [rows]);
@@ -112,8 +116,17 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
           <Kpi label="TOs distintas" value={new Set(rows.map((r) => r.to_number).filter(Boolean)).size} />
           <Kpi label="Pendentes de classificação" value={pending} />
         </div>
-        <Panel title="Pacotes por status final"><BarBlock data={statusCounts} horizontal yAxisWidth={170} valueName="Pacotes" /></Panel>
+        <Panel title="Distribuição por Status" subtitle="Status final consolidado dos pacotes (BR único)"><PieBlock data={statusCounts} total={byBr.size} categories={allStatuses} label="Distribuição por status final" includeMissing={false} /></Panel>
+        <FullLhBoard rows={scoped} onView={(k) => { setLhF(k); setPage(0); }} />
         <Panel title="Registros FULL" subtitle={`${rows.length} resultados`}>
+          {lhF !== "__all" && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-1.5 text-sm">
+                Filtro de LH: <span className="font-semibold">{lhF === LH_NONE ? "Sem LH vinculada" : lhF}</span>
+                <button type="button" aria-label="Remover filtro de LH" className="text-muted-foreground hover:text-foreground" onClick={() => { setLhF("__all"); setPage(0); }}><X className="h-4 w-4" /></button>
+              </span>
+            </div>
+          )}
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => void copyBrs(rows)}><Copy className="mr-1 h-4 w-4" />Copiar BRs filtrados</Button>
             <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => setSelected(new Set(rows.map((r) => r.id)))}>Selecionar todos os resultados filtrados ({rows.length})</Button>
@@ -126,13 +139,13 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
           </div>
           {!rows.length ? <Empty /> : <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm">
             <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="w-10 py-2"><Checkbox aria-label="Selecionar página atual" checked={pagePartial ? "indeterminate" : pageChecked} onCheckedChange={(v) => toggleIds(slice.map((r) => r.id), v === true)} /></th><th className="py-2">TO Number</th><th>Pedido/BR</th><th>Sender Name</th><th>Status final</th><th>Status original</th><th>Pendência</th><th /></tr></thead>
-            <tbody>{slice.map((r) => { const fs = fullFinalStatus(r); const isLmhub = r.br_status === FULL_LMHUB; const issue = r.status_issue ?? (isLmhub ? FULL_LMHUB_MSG : null); return (
+            <tbody>{slice.map((r) => { const fs = fullFinalStatus(r); const issue = fs === FULL_PENDING ? (r.status_issue ?? (r.br_status === FULL_LMHUB ? FULL_LMHUB_MSG : null)) : null; return (
               <tr key={r.id} className="border-t">
                 <td><Checkbox aria-label={`Selecionar ${r.order_id ?? "registro"} TO ${r.to_number ?? "sem TO"}`} checked={selected.has(r.id)} onCheckedChange={(v) => toggleIds([r.id], v === true)} /></td>
                 <td className="py-1.5">{r.to_number ?? "—"}</td><td className="font-medium">{r.order_id}</td><td>{r.sender_name ?? "—"}</td>
                 <td className={fs === FULL_PENDING ? "font-semibold text-destructive" : "font-semibold"}>{fs}{r.manual_status && fs !== FULL_PENDING && <span className="ml-1 text-xs font-normal text-muted-foreground">(manual)</span>}</td>
                 <td className="text-muted-foreground">{r.br_status ?? "Sem informação"}</td>
-                <td className="text-xs text-muted-foreground">{issue ?? "—"}</td>
+                <td className="text-xs text-muted-foreground">{issue ?? (r.manual_status?.trim() ? "Resolvida" : "—")}</td>
                 <td>{(issue || r.manual_status || fs === FULL_PENDING) && <Button size="sm" variant="outline" onClick={() => { setEditing(r); setValue(r.manual_status ?? ""); }}>{r.manual_status ? "Editar" : "Classificar"}</Button>}</td>
               </tr>); })}</tbody>
           </table>

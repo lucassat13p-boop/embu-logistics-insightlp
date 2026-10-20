@@ -57,14 +57,41 @@ export function buildStatusIndex(body: Body, mapping: FullStatusMapping) {
 
 export type FullRow = {
   rowNumber: number; to_number: string | null; order_id: string; sender_name: string | null;
-  br_status: string | null; status_issue: string | null; key: string; raw: Record<string, unknown>;
+  br_status: string | null; status_issue: string | null; key: string; lh: string | null; raw: Record<string, unknown>;
 };
-export type FullBuild = { rows: FullRow[]; total: number; missingBr: number; dupInFile: number; pending: number; conflicts: number; uniqueBr: number };
+export type FullBuild = { rows: FullRow[]; total: number; missingBr: number; dupInFile: number; pending: number; conflicts: number; uniqueBr: number; withoutLh: number };
 
-export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<string, Set<string>>): FullBuild {
+export type LhParse = { lh: string | null; tos: string[] };
+/** Aba "1 - TO's": A1 = título "LH", A2 = código da LH, coluna C (desde C1) = TOs. Não há linha de cabeçalho; a cópia de TO em B1 é ignorada. */
+export function parseLhSheet(rows: unknown[][]): LhParse {
+  const lh = cellText(rows[1]?.[0]);
+  const seen = new Set<string>(); const tos: string[] = [];
+  for (const r of rows) {
+    const to = cellText(r?.[2]);
+    if (!to) continue;
+    const k = normId(to);
+    if (!k || seen.has(k)) continue;
+    seen.add(k); tos.push(to);
+  }
+  return { lh, tos };
+}
+
+/** Índice TO normalizada → LH. Conflito (mesma TO em LHs diferentes) mantém a primeira e é reportado. */
+export function buildLhIndex(parse: LhParse | null): { map: Map<string, string>; conflicts: number } {
+  const map = new Map<string, string>(); let conflicts = 0;
+  if (!parse?.lh) return { map, conflicts };
+  for (const to of parse.tos) {
+    const k = normId(to);
+    if (map.has(k) && map.get(k) !== parse.lh) { conflicts++; continue; }
+    map.set(k, parse.lh);
+  }
+  return { map, conflicts };
+}
+
+export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<string, Set<string>>, lhByTo?: Map<string, string>): FullBuild {
   const brCol = colOf(mapping, "order_id"), toCol = colOf(mapping, "to_number"), snCol = colOf(mapping, "sender_name");
   const rows: FullRow[] = []; const seen = new Set<string>();
-  let total = 0, missingBr = 0, dupInFile = 0, pending = 0, conflicts = 0;
+  let total = 0, missingBr = 0, dupInFile = 0, pending = 0, conflicts = 0, withoutLh = 0;
   for (const r of base) {
     if (r.empty) continue;
     total++;
@@ -84,9 +111,11 @@ export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<
       else { br_status = vals[0]; if (normStatus(br_status) === normStatus(FULL_LMHUB)) issue = FULL_LMHUB_MSG; else if (!autoStatus(br_status)) issue = "Status não reconhecido automaticamente"; }
     }
     if (issue) pending++;
-    rows.push({ rowNumber: r.rowNumber, to_number: to, order_id: br, sender_name: snCol ? cellText(r.values[snCol]) : null, br_status, status_issue: issue, key, raw: r.values });
+    const lh = to && lhByTo ? lhByTo.get(normId(to)) ?? null : null;
+    if (lhByTo && !lh) withoutLh++;
+    rows.push({ rowNumber: r.rowNumber, to_number: to, order_id: br, sender_name: snCol ? cellText(r.values[snCol]) : null, br_status, status_issue: issue, key, lh, raw: r.values });
   }
-  return { rows, total, missingBr, dupInFile, pending, conflicts, uniqueBr: new Set(rows.map((x) => normId(x.order_id))).size };
+  return { rows, total, missingBr, dupInFile, pending, conflicts, withoutLh, uniqueBr: new Set(rows.map((x) => normId(x.order_id))).size };
 }
 
 /** Final status: manual classification wins (unless it just repeats LMHub_Received); otherwise recognized automatic status; otherwise pending. */
@@ -132,7 +161,7 @@ export async function commitFullImport(o: {
     const rows = o.build.rows.map((r) => ({
       module: "full", batch_id: batch.id, row_number: r.rowNumber, created_by: u.user!.id,
       record_date: o.date, record_date_raw: o.date, shift: o.shift, order_id: r.order_id, to_number: r.to_number, sender_name: r.sender_name,
-      status: r.br_status, br_status: r.br_status, status_issue: r.status_issue, raw: r.raw as never, extra: {} as never,
+      status: r.br_status, br_status: r.br_status, status_issue: r.status_issue, lh: r.lh, raw: r.raw as never, extra: {} as never,
       dedupe_key: fullDedupeKey(o.date, o.shift, r.key), updated_at: new Date().toISOString(),
     }));
     for (let i = 0; i < rows.length; i += 500) {

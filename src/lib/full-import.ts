@@ -11,7 +11,7 @@ export type FullStatusMapping = Record<string, FullStatusField | "">;
 export const FULL_BASE_LABELS: Record<FullBaseField, string> = { to_number: "TO Number", order_id: "Pedido/BR", sender_name: "Sender Name" };
 export const FULL_STATUS_LABELS: Record<FullStatusField, string> = { match_br: "BR para cruzamento", br_status: "Status do BR" };
 // "LMHub_Received" is never a final status: the package arrived at the HUB and needs a justification for not leaving.
-export const FULL_AUTO_STATUSES = ["Delivered", "Delivering", "OnHold", "Return_LMHub_Received", "SOC_LHTransported"] as const;
+export const FULL_AUTO_STATUSES = ["Delivered", "Delivering", "OnHold", "LMHub_Assigning", "Return_LMHub_Received", "SOC_LHTransported"] as const;
 export const FULL_PENDING = "Pendente de classificação";
 export const FULL_LMHUB = "LMHub_Received";
 export const FULL_LMHUB_MSG = "Informe por que este pacote recebido no HUB não saiu";
@@ -124,7 +124,10 @@ export function fullFinalStatus(r: { manual_status?: string | null; br_status?: 
   if (manual && normStatus(manual) !== normStatus(FULL_LMHUB)) return manual;
   // LMHub_Received is never final, even for rows imported before this rule (status_issue may be empty).
   if (r.br_status && normStatus(r.br_status) === normStatus(FULL_LMHUB)) return FULL_PENDING;
-  if (!r.status_issue) return autoStatus(r.br_status ?? null) ?? r.br_status ?? FULL_PENDING;
+  // A recognized status wins even over "Status não reconhecido automaticamente" stored by older imports.
+  const auto = autoStatus(r.br_status ?? null);
+  if (auto) return auto;
+  if (!r.status_issue) return r.br_status ?? FULL_PENDING;
   return FULL_PENDING;
 }
 

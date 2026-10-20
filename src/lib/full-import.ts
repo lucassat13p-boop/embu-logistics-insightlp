@@ -111,9 +111,11 @@ export function buildFullRows(base: Body, mapping: FullBaseMapping, status: Map<
       else { br_status = vals[0]; if (normStatus(br_status) === normStatus(FULL_LMHUB)) issue = FULL_LMHUB_MSG; else if (!autoStatus(br_status)) issue = "Status não reconhecido automaticamente"; }
     }
     if (issue) pending++;
-    rows.push({ rowNumber: r.rowNumber, to_number: to, order_id: br, sender_name: snCol ? cellText(r.values[snCol]) : null, br_status, status_issue: issue, key, raw: r.values });
+    const lh = to && lhByTo ? lhByTo.get(normId(to)) ?? null : null;
+    if (lhByTo && !lh) withoutLh++;
+    rows.push({ rowNumber: r.rowNumber, to_number: to, order_id: br, sender_name: snCol ? cellText(r.values[snCol]) : null, br_status, status_issue: issue, key, lh, raw: r.values });
   }
-  return { rows, total, missingBr, dupInFile, pending, conflicts, uniqueBr: new Set(rows.map((x) => normId(x.order_id))).size };
+  return { rows, total, missingBr, dupInFile, pending, conflicts, withoutLh, uniqueBr: new Set(rows.map((x) => normId(x.order_id))).size };
 }
 
 /** Final status: manual classification wins (unless it just repeats LMHub_Received); otherwise recognized automatic status; otherwise pending. */
@@ -159,7 +161,7 @@ export async function commitFullImport(o: {
     const rows = o.build.rows.map((r) => ({
       module: "full", batch_id: batch.id, row_number: r.rowNumber, created_by: u.user!.id,
       record_date: o.date, record_date_raw: o.date, shift: o.shift, order_id: r.order_id, to_number: r.to_number, sender_name: r.sender_name,
-      status: r.br_status, br_status: r.br_status, status_issue: r.status_issue, raw: r.raw as never, extra: {} as never,
+      status: r.br_status, br_status: r.br_status, status_issue: r.status_issue, lh: r.lh, raw: r.raw as never, extra: {} as never,
       dedupe_key: fullDedupeKey(o.date, o.shift, r.key), updated_at: new Date().toISOString(),
     }));
     for (let i = 0; i < rows.length; i += 500) {

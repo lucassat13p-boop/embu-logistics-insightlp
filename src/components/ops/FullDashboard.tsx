@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Upload } from "lucide-react";
+import { Copy, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarBlock, Empty, Kpi, PageHeader, Panel } from "@/components/ops/blocks";
+import { Empty, Kpi, PageHeader, Panel } from "@/components/ops/blocks";
+import { PieBlock } from "@/components/ops/PieBlock";
+import { FullLhBoard, LH_NONE } from "./FullLhBoard";
 import { supabase } from "@/integrations/supabase/client";
 import { HUB_NAME } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
@@ -30,6 +32,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const [dateF, setDateF] = useState("");
   const [shiftF, setShiftF] = useState("__all");
   const [classF, setClassF] = useState("__all");
+  const [lhF, setLhF] = useState("__all");
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [value, setValue] = useState("");
@@ -38,7 +41,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const [copyFallback, setCopyFallback] = useState<string[] | null>(null);
   const [saving, setSaving] = useState(false);
   const savingLock = useRef(false);
-  useEffect(() => { setSelected(new Set()); setBulkOpen(false); }, [q, statusF, dateF, shiftF, classF]);
+  useEffect(() => { setSelected(new Set()); setBulkOpen(false); }, [q, statusF, dateF, shiftF, classF, lhF]);
   useEffect(() => { setSelected((ids) => new Set([...ids].filter((id) => allRows.some((r) => r.id === id)))); }, [allRows]);
   const refreshFull = async () => {
     await qc.invalidateQueries({ predicate: (query) =>

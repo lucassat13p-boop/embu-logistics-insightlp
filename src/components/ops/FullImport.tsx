@@ -15,7 +15,7 @@ import { headerSignature } from "@/lib/importer";
 import { normalizeHeader } from "@/lib/modules";
 import { invalidateImportQueries } from "@/lib/import-cache";
 import {
-  buildFullRows, buildStatusIndex, commitFullImport, countFullExisting, fullDedupeKey, FULL_BASE_LABELS, FULL_STATUS_LABELS,
+  buildFullRows, buildLhIndex, buildStatusIndex, commitFullImport, countFullExisting, fullDedupeKey, parseLhSheet, FULL_BASE_LABELS, FULL_STATUS_LABELS,
   suggestFullBase, suggestFullStatus, type FullBaseMapping, type FullStatusMapping,
 } from "@/lib/full-import";
 
@@ -59,6 +59,8 @@ export function FullImport() {
   const [statusSrc, setStatusSrc] = useState<Src | null>(null);
   const [baseSheet, setBaseSheet] = useState(0);
   const [statusSheet, setStatusSheet] = useState(-1);
+  const [lhSheet, setLhSheet] = useState(-1);
+  const [lhSrc, setLhSrc] = useState<Src | null>(null);
   const [baseMap, setBaseMap] = useState<FullBaseMapping>({});
   const [statusMap, setStatusMap] = useState<FullStatusMapping>({});
   const [date, setDate] = useState("");

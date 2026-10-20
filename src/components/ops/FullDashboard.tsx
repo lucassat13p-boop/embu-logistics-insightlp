@@ -60,13 +60,14 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
 
   const rows = useMemo(() => allRows.filter((r) =>
     (!dateF || r.record_date === dateF) && (shiftF === "__all" || r.shift === shiftF) &&
+    (lhF === "__all" || (lhF === LH_NONE ? !r.lh?.trim() : r.lh === lhF)) &&
     (statusF === "__all" || fullFinalStatus(r) === statusF) &&
     (classF === "__all" || classOf(r) === classF) &&
     (!q || [r.order_id, r.to_number, r.sender_name].some((v) => v?.toLowerCase().includes(q.toLowerCase())))
-  ), [allRows, q, statusF, dateF, shiftF, classF]);
+  ), [allRows, q, statusF, dateF, shiftF, classF, lhF]);
   const scoped = useMemo(() => allRows.filter((r) => (!dateF || r.record_date === dateF) && (shiftF === "__all" || r.shift === shiftF)), [allRows, dateF, shiftF]);
   const pendingRows = scoped.filter((r) => classOf(r) === "pending").length;
-  const clearFilters = () => { setQ(""); setStatusF("__all"); setClassF("__all"); setPage(0); };
+  const clearFilters = () => { setQ(""); setStatusF("__all"); setClassF("__all"); setLhF("__all"); setPage(0); };
 
   // Packages counted by unique BR; status per BR uses its first linked row's final status.
   const byBr = useMemo(() => { const m = new Map<string, RecordRow>(); rows.forEach((r) => { const k = normId(r.order_id); if (k && !m.has(k)) m.set(k, r); }); return m; }, [rows]);
@@ -115,7 +116,8 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
           <Kpi label="TOs distintas" value={new Set(rows.map((r) => r.to_number).filter(Boolean)).size} />
           <Kpi label="Pendentes de classificação" value={pending} />
         </div>
-        <Panel title="Pacotes por status final"><BarBlock data={statusCounts} horizontal yAxisWidth={170} valueName="Pacotes" /></Panel>
+        <Panel title="Distribuição por Status" subtitle="Status final consolidado dos pacotes (BR único)"><PieBlock data={statusCounts} total={byBr.size} categories={allStatuses} label="Distribuição por status final" includeMissing={false} /></Panel>
+        <FullLhBoard rows={scoped} onView={(k) => { setLhF(k); setPage(0); }} />
         <Panel title="Registros FULL" subtitle={`${rows.length} resultados`}>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => void copyBrs(rows)}><Copy className="mr-1 h-4 w-4" />Copiar BRs filtrados</Button>

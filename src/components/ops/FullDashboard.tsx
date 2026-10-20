@@ -119,6 +119,14 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
         <Panel title="Distribuição por Status" subtitle="Status final consolidado dos pacotes (BR único)"><PieBlock data={statusCounts} total={byBr.size} categories={allStatuses} label="Distribuição por status final" includeMissing={false} /></Panel>
         <FullLhBoard rows={scoped} onView={(k) => { setLhF(k); setPage(0); }} />
         <Panel title="Registros FULL" subtitle={`${rows.length} resultados`}>
+          {lhF !== "__all" && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-1.5 text-sm">
+                Filtro de LH: <span className="font-semibold">{lhF === LH_NONE ? "Sem LH vinculada" : lhF}</span>
+                <button type="button" aria-label="Remover filtro de LH" className="text-muted-foreground hover:text-foreground" onClick={() => { setLhF("__all"); setPage(0); }}><X className="h-4 w-4" /></button>
+              </span>
+            </div>
+          )}
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => void copyBrs(rows)}><Copy className="mr-1 h-4 w-4" />Copiar BRs filtrados</Button>
             <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => setSelected(new Set(rows.map((r) => r.id)))}>Selecionar todos os resultados filtrados ({rows.length})</Button>
@@ -131,13 +139,13 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
           </div>
           {!rows.length ? <Empty /> : <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm">
             <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="w-10 py-2"><Checkbox aria-label="Selecionar página atual" checked={pagePartial ? "indeterminate" : pageChecked} onCheckedChange={(v) => toggleIds(slice.map((r) => r.id), v === true)} /></th><th className="py-2">TO Number</th><th>Pedido/BR</th><th>Sender Name</th><th>Status final</th><th>Status original</th><th>Pendência</th><th /></tr></thead>
-            <tbody>{slice.map((r) => { const fs = fullFinalStatus(r); const isLmhub = r.br_status === FULL_LMHUB; const issue = r.status_issue ?? (isLmhub ? FULL_LMHUB_MSG : null); return (
+            <tbody>{slice.map((r) => { const fs = fullFinalStatus(r); const issue = fs === FULL_PENDING ? (r.status_issue ?? (r.br_status === FULL_LMHUB ? FULL_LMHUB_MSG : null)) : null; return (
               <tr key={r.id} className="border-t">
                 <td><Checkbox aria-label={`Selecionar ${r.order_id ?? "registro"} TO ${r.to_number ?? "sem TO"}`} checked={selected.has(r.id)} onCheckedChange={(v) => toggleIds([r.id], v === true)} /></td>
                 <td className="py-1.5">{r.to_number ?? "—"}</td><td className="font-medium">{r.order_id}</td><td>{r.sender_name ?? "—"}</td>
                 <td className={fs === FULL_PENDING ? "font-semibold text-destructive" : "font-semibold"}>{fs}{r.manual_status && fs !== FULL_PENDING && <span className="ml-1 text-xs font-normal text-muted-foreground">(manual)</span>}</td>
                 <td className="text-muted-foreground">{r.br_status ?? "Sem informação"}</td>
-                <td className="text-xs text-muted-foreground">{issue ?? "—"}</td>
+                <td className="text-xs text-muted-foreground">{issue ?? (r.manual_status?.trim() ? "Resolvida" : "—")}</td>
                 <td>{(issue || r.manual_status || fs === FULL_PENDING) && <Button size="sm" variant="outline" onClick={() => { setEditing(r); setValue(r.manual_status ?? ""); }}>{r.manual_status ? "Editar" : "Classificar"}</Button>}</td>
               </tr>); })}</tbody>
           </table>

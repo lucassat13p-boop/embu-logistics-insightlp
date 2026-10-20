@@ -176,6 +176,15 @@ export function FullImport() {
               </label>
             </div>
           )}
+          {base && !isXlsx && (
+            <div className="space-y-1.5">
+              <Label>CSV da aba “1 - TO's” (LHs, opcional)</Label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:border-primary">
+                <FileUp className="h-5 w-5 text-primary" /><span className="truncate">{lhSrc ? lhSrc.file.name : "Adicionar arquivo de LHs (.csv)"}</span>
+                <input type="file" className="hidden" accept=".csv" onChange={(e) => e.target.files?.[0] && onLh(e.target.files[0])} />
+              </label>
+            </div>
+          )}
           {base && isXlsx && (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>Aba base</Label>
@@ -187,6 +196,11 @@ export function FullImport() {
                 <Select value={statusSheet >= 0 ? String(statusSheet) : undefined} onValueChange={(v) => { setStatusSheet(Number(v)); applyStatus(base.parsed, Number(v)); }}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name}</SelectItem>)}</SelectContent>
+                </Select></div>
+              <div className="space-y-1.5"><Label>Aba de LHs (opcional)</Label>
+                <Select value={String(lhSheet)} onValueChange={(v) => setLhSheet(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="-1">Nenhuma — importar sem LH</SelectItem>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name}</SelectItem>)}</SelectContent>
                 </Select></div>
             </div>
           )}

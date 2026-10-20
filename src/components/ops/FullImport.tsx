@@ -149,8 +149,9 @@ export function FullImport() {
     if (!build.rows.length) { toast.error("Nenhum pacote válido para salvar."); return; }
     setBusy("Salvando registros...");
     try {
-      const sheetName = isXlsx ? `${base.parsed.sheets[baseSheet]?.name} + ${base.parsed.sheets[statusSheet]?.name}` : `${base.file.name} + ${statusSrc?.file.name}`;
-      const res = await commitFullImport({ build, date: date || null, shift: shift || null, strategy, fileName: isXlsx ? base.file.name : `${base.file.name} + ${statusSrc?.file.name}`, format: base.parsed.format, sheetName, headers: baseTable.headers, mapping: { base: baseMap, status: statusMap } });
+      const lhName = isXlsx ? (lhSheet >= 0 ? base.parsed.sheets[lhSheet]?.name : null) : lhSrc?.file.name ?? null;
+      const sheetName = [isXlsx ? `${base.parsed.sheets[baseSheet]?.name} + ${base.parsed.sheets[statusSheet]?.name}` : `${base.file.name} + ${statusSrc?.file.name}`, lhName].filter(Boolean).join(" + ");
+      const res = await commitFullImport({ build, date: date || null, shift: shift || null, strategy, fileName: [isXlsx ? base.file.name : `${base.file.name} + ${statusSrc?.file.name}`, !isXlsx && lhSrc ? lhSrc.file.name : null].filter(Boolean).join(" + "), format: base.parsed.format, sheetName, headers: baseTable.headers, mapping: { base: baseMap, status: statusMap, lh: lhParse ? { sheet: lhName, code: lhParse.lh, tos: lhParse.tos.length } : null } });
       setDone(res); await invalidateImportQueries(qc, { module: "full", batchId: res.batchId });
       toast.success(`Importação FULL concluída: ${res.inserted} novos registros.`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar"); } finally { setBusy(null); }
@@ -226,6 +227,16 @@ export function FullImport() {
               <div key={l as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-display text-2xl font-bold tabular-nums">{v}</p></div>
             ))}
           </div>
+          {lhParse ? (
+            <div className="mt-3 space-y-1 rounded-md border p-3 text-sm">
+              {!lhParse.lh
+                ? <p className="text-destructive">Aba de LHs selecionada, mas a célula A2 está vazia: nenhuma LH será vinculada. Verifique o arquivo.</p>
+                : <p>LH <span className="font-semibold">{lhParse.lh}</span> · {lhParse.tos.length.toLocaleString("pt-BR")} TOs na aba · {build.withoutLh.toLocaleString("pt-BR")} {build.withoutLh === 1 ? "pacote sem LH vinculada" : "pacotes sem LH vinculada"} (TO ausente na aba 1).</p>}
+              {lhIndex.conflicts > 0 && <p className="text-destructive">{lhIndex.conflicts} TO(s) com conflito de associação entre LHs; a primeira LH foi mantida.</p>}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-md border border-dashed p-3 text-sm text-muted-foreground">Sem fonte de LHs: os pacotes serão importados como “Sem LH vinculada”.</p>
+          )}
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <div className="space-y-1.5"><Label>Data da operação (opcional)</Label><Input type="date" value={date} onChange={(e) => { setDate(e.target.value); setExisting(null); }} /></div>
             <div className="space-y-1.5"><Label>Turno (opcional)</Label>

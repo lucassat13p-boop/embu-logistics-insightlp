@@ -78,7 +78,13 @@ export function FullImport() {
     return s ? buildTable(s.rows, detectHeaderRow(s.rows)) : null;
   }, [base, statusSrc, statusSheet, isXlsx]);
 
-  const build = useMemo(() => baseTable && statusTable ? buildFullRows(baseTable.body, baseMap, buildStatusIndex(statusTable.body, statusMap)) : null, [baseTable, statusTable, baseMap, statusMap]);
+  const lhParse = useMemo(() => {
+    const src = isXlsx ? base : lhSrc;
+    const s = src?.parsed.sheets[isXlsx ? lhSheet : 0];
+    return s ? parseLhSheet(s.rows) : null;
+  }, [base, lhSrc, lhSheet, isXlsx]);
+  const lhIndex = useMemo(() => buildLhIndex(lhParse), [lhParse]);
+  const build = useMemo(() => baseTable && statusTable ? buildFullRows(baseTable.body, baseMap, buildStatusIndex(statusTable.body, statusMap), lhParse ? lhIndex.map : undefined) : null, [baseTable, statusTable, baseMap, statusMap, lhParse, lhIndex]);
   const mappedOk = Object.values(baseMap).includes("order_id") && Object.values(statusMap).includes("match_br") && Object.values(statusMap).includes("br_status");
 
   async function loadSaved(kind: "base" | "status", headers: string[]) {
@@ -102,13 +108,19 @@ export function FullImport() {
       const p = await parseFile(f);
       if (p.format === "pdf") throw new Error("FULL aceita XLSX completo ou CSVs das abas 2 e 3.");
       setBase({ file: f, parsed: p });
+      setLhSrc(null); setLhSheet(-1);
       if (p.format === "csv") { setBaseSheet(0); await applyBase(p, 0); }
       else {
         const b = Math.max(0, findSheet(p, "2", "to number")); const s = findSheet(p, "3", "order id");
-        setBaseSheet(b); setStatusSheet(s); setStatusSrc(null);
+        setBaseSheet(b); setStatusSheet(s); setStatusSrc(null); setLhSheet(findSheet(p, "1", "lh"));
         await applyBase(p, b); if (s >= 0) await applyStatus(p, s);
       }
     } catch (e) { toast.error(e instanceof Error ? e.message : "Falha ao ler arquivo"); } finally { setBusy(null); }
+  }
+  async function onLh(f: File) {
+    setBusy("Lendo arquivo de LHs...");
+    try { const p = await parseFile(f); if (p.format !== "csv") throw new Error("Envie o CSV da aba 1 - TO's."); setLhSrc({ file: f, parsed: p }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Falha ao ler arquivo"); } finally { setBusy(null); }
   }
   async function onStatus(f: File) {
     setBusy("Lendo arquivo de status...");

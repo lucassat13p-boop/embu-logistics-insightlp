@@ -35,7 +35,7 @@ function divergenceOf(stat: ClusterStat): Divergence {
 }
 
 function VehicleIcon({ name }: { name: string }) {
-  const key = retidosVehicleKey(name);
+  const key = retidosVehicleKey(name.split(" / ")[0]);
   const props = { className: "h-4 w-4 shrink-0", "aria-hidden": true as const, strokeWidth: 2 };
   if (key === "FIORINO") return <Van {...props} />;
   if (key === "PASSEIO") return <Car {...props} />;

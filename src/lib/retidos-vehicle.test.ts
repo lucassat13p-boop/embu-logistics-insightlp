@@ -5,7 +5,7 @@ describe("Retidos vehicle comparison", () => {
   it("treats FIORINO and FIORINO ADESIVADA as equivalent, including mixed original spellings", () => {
     expect(retidosVehicleDivergence([{ perfil: "FIORINO", modelo: "FIORINO ADESIVADA" }])).toBe("nao");
     expect(retidosVehicleDivergence([{ perfil: "FIORINO ADESIVADA", modelo: "FIORINO" }])).toBe("nao");
-    expect(retidosVehicleDivergence([{ perfil: "FIORINO", modelo: "FIORINO" }, { perfil: "FIORINO", modelo: "FIORINO ADESIVADA" }])).toBe("na");
+    expect(retidosVehicleDivergence([{ perfil: "FIORINO", modelo: "FIORINO" }, { perfil: "FIORINO", modelo: "FIORINO ADESIVADA" }])).toBe("nao");
   });
   it("does not add unconfirmed equivalences", () => {
     expect(retidosVehicleDivergence([{ perfil: "HR", modelo: "VUC" }])).toBe("sim");

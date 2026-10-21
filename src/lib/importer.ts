@@ -66,7 +66,13 @@ export function validate(mod: ModuleDef, body: { rowNumber: number; values: Reco
       fields.record_date = parseRetidosTime(fields.create_time).date;
     }
     const keyParts = mod.dedupe.map((f) => String(fields[f] ?? ""));
-    const dedupe_key = mod.appendOnly ? crypto.randomUUID() : keyParts.every((p) => p === "") ? JSON.stringify(row.values) : keyParts.join("|");
+    // Retidos: stable per-source-row key — a reimport of the same file is ignored, while
+    // legitimate repeated occurrences (different rows/moments) are always kept.
+    const dedupe_key = mod.appendOnly
+      ? mod.key === "retidos_veiculos"
+        ? ["tracking_number", "exception_order_id", "reason", "follow_up_action", "status", "create_time"].map((f) => String(fields[f] ?? "")).join("|") + `|${row.rowNumber}`
+        : crypto.randomUUID()
+      : keyParts.every((p) => p === "") ? JSON.stringify(row.values) : keyParts.join("|");
     if (!mod.appendOnly && seen.has(dedupe_key)) {
       dupInFile++;
       issues.push({ rowNumber: row.rowNumber, column: null, message: "Registro duplicado dentro do próprio arquivo", kind: "duplicado", raw: row.values });

@@ -4,7 +4,7 @@ import type { RecordRow } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Empty, Panel } from "./blocks";
 import { PieBlock } from "./PieBlock";
-import { retidosVehicleDivergence, retidosVehicleKey } from "@/lib/retidos-vehicle";
+import { countRetidosRealizedVehicles, retidosVehicleDivergence, retidosVehicleKey } from "@/lib/retidos-vehicle";
 
 /** Route analysis for RETIDOS DE VEÍCULOS. Reads only the route_* fields stored in
  *  records.extra at import time (romaneio + Plano de expedição cross-reference).
@@ -58,20 +58,21 @@ function DivergenceBadge({ value }: { value: Divergence }) {
   return <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">Não identificado</span>;
 }
 
-function RouteKpi({ icon: Icon, label, value, hint, chipClass, chipStyle }: { icon: typeof Package; label: string; value: number; hint: string; chipClass?: string; chipStyle?: CSSProperties }) {
+function RouteKpi({ icon: Icon = Package, vehicle, label, value, hint, chipClass, chipStyle }: { icon?: typeof Package; vehicle?: string; label: string; value: number | null; hint: string; chipClass?: string; chipStyle?: CSSProperties }) {
   return (
     <div className="min-w-0 rounded-lg border bg-card p-4 shadow-card">
       <div className="flex items-center gap-3">
-        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", chipClass)} style={chipStyle}><Icon className="h-5 w-5" /></span>
+        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", chipClass)} style={chipStyle}>{vehicle ? <VehicleIcon name={vehicle} /> : <Icon className="h-5 w-5" />}</span>
         <p className="min-w-0 text-xs font-medium uppercase leading-tight text-muted-foreground">{label}</p>
       </div>
-      <p className="mt-3 font-display text-3xl font-bold tabular-nums">{value.toLocaleString("pt-BR")}</p>
+      <p className={cn("mt-3 font-display font-bold tabular-nums", value === null ? "text-sm text-muted-foreground" : "text-3xl")}>{value === null ? "Nenhum dado disponível" : value.toLocaleString("pt-BR")}</p>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }
 
 export function RetidosRoutesPanel({ rows }: { rows: RecordRow[] }) {
+  const vehicles = useMemo(() => countRetidosRealizedVehicles(rows), [rows]);
   const analysis = useMemo(() => {
     const clusters = new Map<string, ClusterStat>();
     let withRoute = 0;
@@ -106,16 +107,23 @@ export function RetidosRoutesPanel({ rows }: { rows: RecordRow[] }) {
 
   return (
     <Panel title="Análise de Rotas" subtitle="Cruzamento BR → AT planejada → Cluster → Perfil (veículo programado) → Modelo (veículo que veio).">
+      <div className="mb-5 space-y-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <RouteKpi icon={Package} label="Total de Retirados" value={analysis.total || null} hint="Todas as ocorrências (inclui repetições)" chipClass="bg-destructive/10 text-destructive" />
+          <RouteKpi vehicle="MOTO" label="Retirados de Moto" value={vehicles.identified ? vehicles.counts.MOTO : null} hint="Modelo realizado: MOTO" chipClass="bg-primary-soft text-primary" />
+          <RouteKpi vehicle="FIORINO" label="Retirados de Fiorino" value={vehicles.identified ? vehicles.counts.FIORINO : null} hint="FIORINO e FIORINO ADESIVADA" chipClass="bg-success/15 text-success" />
+          <RouteKpi vehicle="PASSEIO" label="Retirados de Passeio" value={vehicles.identified ? vehicles.counts.PASSEIO : null} hint="Modelo realizado: PASSEIO" chipClass="bg-muted text-muted-foreground" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <RouteKpi icon={RouteIcon} label="Rotas Impactadas" value={analysis.hasData ? analysis.impacted : null} hint="Rotas com pelo menos 1 retirado" chipClass="bg-primary-soft text-primary" />
+          <RouteKpi icon={Truck} label="Rotas com Divergência de Veículo" value={analysis.hasData ? analysis.divergentRoutes : null} hint="PERFIL diferente do MODELO" chipStyle={{ background: "color-mix(in oklab, var(--chart-2) 14%, transparent)", color: "var(--chart-2)" }} />
+          <RouteKpi icon={AlertTriangle} label="Retirados em Rotas com Divergência" value={analysis.hasData ? analysis.divergentPackages : null} hint="Pacotes retirados nessas rotas" chipClass="bg-destructive/10 text-destructive" />
+        </div>
+      </div>
       {!analysis.hasData ? (
         <Empty text="Ainda não há dados suficientes para a análise de rotas." hint="Importe o relatório Excel completo com as abas PACOTES RETIRADOS, romaneio e Plano de expedição." />
       ) : (
         <div className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <RouteKpi icon={Package} label="Total de Retirados" value={analysis.total} hint="Todas as ocorrências (inclui repetições)" chipClass="bg-destructive/10 text-destructive" />
-            <RouteKpi icon={RouteIcon} label="Rotas Impactadas" value={analysis.impacted} hint="Rotas com pelo menos 1 retirado" chipClass="bg-primary-soft text-primary" />
-            <RouteKpi icon={Truck} label="Rotas com Divergência de Veículo" value={analysis.divergentRoutes} hint="PERFIL diferente do MODELO" chipStyle={{ background: "color-mix(in oklab, var(--chart-2) 14%, transparent)", color: "var(--chart-2)" }} />
-            <RouteKpi icon={AlertTriangle} label="Retirados em Rotas com Divergência" value={analysis.divergentPackages} hint="Pacotes retirados nessas rotas" chipClass="bg-destructive/10 text-destructive" />
-          </div>
           <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div className="min-w-0">
               <h4 className="text-sm font-semibold">Top 10 Rotas com Mais Retirados</h4>

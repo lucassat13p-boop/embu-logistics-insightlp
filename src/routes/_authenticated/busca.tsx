@@ -40,6 +40,11 @@ function Page() {
       if (moduleFilter !== "all") query = query.eq("module", moduleFilter);
       const { data, error } = await query.limit(1000);
       if (error) throw error;
+      if (moduleFilter === "all") {
+        const active = await fetchFloatingActive();
+        const matched = active.rows.filter((row) => [row.order_id, row.driver_name, row.route, row.to_number, row.product, row.collaborator].some((value) => value?.toLocaleLowerCase("pt-BR").includes(s.toLocaleLowerCase("pt-BR"))));
+        return [...(data ?? []), ...matched];
+      }
       return data ?? [];
     },
   });

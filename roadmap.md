@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Reorganize Retidos route indicators into four occurrence cards and three route cards; count only identified realized models and remove the duplicated standalone total.
+- [x] Reorganize Retidos route indicators into four occurrence cards and three route cards; count only identified realized models and remove the duplicated standalone total. Eight focused rule tests passed; no browser audit or publication performed.
 - [x] Refine Retidos vehicle badges and divergence donut; confirmed vehicle equivalence is analysis-only, preserving imports and source records. Three focused rule tests passed; build OK; no browser audit performed.
 - [x] Retidos de Veículos: single-workbook import (PACOTES RETIRADOS + romaneio + Plano de expedição), route cross-reference in records.extra, reimport-safe stable keys, and routes panel (4 KPIs, Top 10, divergence donut). Automated tests intentionally not run as requested.
 - [x] Add FULL stable-ID selection, protected operational bulk classification and complete filtered/selected BR copying; automated/browser/import tests intentionally not run as requested.

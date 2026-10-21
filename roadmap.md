@@ -1,4 +1,5 @@
 # Tasks
+- [x] Refine Retidos vehicle badges and divergence donut; confirmed vehicle equivalence is analysis-only, preserving imports and source records. Three focused rule tests passed; build OK; no browser audit performed.
 - [x] Retidos de Veículos: single-workbook import (PACOTES RETIRADOS + romaneio + Plano de expedição), route cross-reference in records.extra, reimport-safe stable keys, and routes panel (4 KPIs, Top 10, divergence donut). Automated tests intentionally not run as requested.
 - [x] Add FULL stable-ID selection, protected operational bulk classification and complete filtered/selected BR copying; automated/browser/import tests intentionally not run as requested.
 - [x] Apply database read-index and import-scoped cache refresh optimizations; five cache tests passed and index validity confirmed. Representative database gains and real-file end-to-end verification remain unavailable because current records are empty.

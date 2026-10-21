@@ -1,9 +1,10 @@
 import { useMemo, type CSSProperties } from "react";
-import { AlertTriangle, Package, Route as RouteIcon, Truck } from "lucide-react";
+import { AlertTriangle, Car, Check, Package, Route as RouteIcon, Truck, Van } from "lucide-react";
 import type { RecordRow } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Empty, Panel } from "./blocks";
 import { PieBlock } from "./PieBlock";
+import { retidosVehicleDivergence, retidosVehicleKey } from "@/lib/retidos-vehicle";
 
 /** Route analysis for RETIDOS DE VEÍCULOS. Reads only the route_* fields stored in
  *  records.extra at import time (romaneio + Plano de expedição cross-reference).
@@ -30,33 +31,30 @@ function routeDataOf(row: RecordRow): RouteData | null {
 }
 
 function divergenceOf(stat: ClusterStat): Divergence {
-  // Mixed vehicle data within the same cluster is not forced into a single answer.
-  if (stat.pairs.size !== 1) return "nao_identificado";
-  const pair = [...stat.pairs.values()][0];
-  if (!pair.perfil || !pair.modelo) return "nao_identificado";
-  return normVehicle(pair.perfil) === normVehicle(pair.modelo) ? "nao" : "sim";
+  return retidosVehicleDivergence([...stat.pairs.values()]);
 }
 
-const VEHICLE_TONES = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
-function vehicleTone(name: string) {
-  let h = 0;
-  for (const c of normVehicle(name)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return VEHICLE_TONES[h % VEHICLE_TONES.length];
+function VehicleIcon({ name }: { name: string }) {
+  const key = retidosVehicleKey(name.split(" / ")[0]);
+  const props = { className: "h-4 w-4 shrink-0", "aria-hidden": true as const, strokeWidth: 2 };
+  if (key === "FIORINO") return <Van {...props} />;
+  if (key === "PASSEIO") return <Car {...props} />;
+  if (key === "MOTO") return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="17" r="3" /><circle cx="19" cy="17" r="3" /><path d="m5 17 5-8 5 8H5m5-8H7m8 8 4-4-3-9h-3m4 4h3" /></svg>;
+  return <Truck {...props} />;
 }
 
 function VehicleBadge({ name }: { name: string | null }) {
   if (!name) return <span className="text-xs text-muted-foreground">Não identificado</span>;
-  const tone = vehicleTone(name);
   return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: `color-mix(in oklab, ${tone} 14%, transparent)`, color: tone }}>
-      {name}
+    <span className="retidos-vehicle-badge inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold">
+      <VehicleIcon name={name} />{name}
     </span>
   );
 }
 
 function DivergenceBadge({ value }: { value: Divergence }) {
-  if (value === "sim") return <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive"><AlertTriangle className="h-3 w-3" />Sim</span>;
-  if (value === "nao") return <span className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">Não</span>;
+  if (value === "sim") return <span className="retidos-divergence-yes inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"><AlertTriangle className="h-3 w-3" />Sim</span>;
+  if (value === "nao") return <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success"><Check className="h-3 w-3" />Não</span>;
   return <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">Não identificado</span>;
 }
 
@@ -82,11 +80,13 @@ export function RetidosRoutesPanel({ rows }: { rows: RecordRow[] }) {
       if (!data) continue;
       withRoute++;
       if (!clusters.has(data.cluster)) clusters.set(data.cluster, { cluster: data.cluster, count: 0, pairs: new Map() });
-      const stat = clusters.get(data.cluster)!;
+      const stat = clusters.get(data.cluster);
+      if (!stat) continue;
       stat.count++;
       const key = `${normVehicle(data.perfil)}|${normVehicle(data.modelo)}`;
       if (!stat.pairs.has(key)) stat.pairs.set(key, { perfil: data.perfil, modelo: data.modelo, n: 0 });
-      stat.pairs.get(key)!.n++;
+      const pair = stat.pairs.get(key);
+      if (pair) pair.n++;
     }
     const stats = [...clusters.values()].sort((a, b) => b.count - a.count || a.cluster.localeCompare(b.cluster, "pt-BR"));
     const divergent = stats.filter((s) => divergenceOf(s) === "sim");
@@ -127,7 +127,9 @@ export function RetidosRoutesPanel({ rows }: { rows: RecordRow[] }) {
                   </thead>
                   <tbody>
                     {analysis.top.map((stat, i) => {
-                      const pair = stat.pairs.size === 1 ? [...stat.pairs.values()][0] : { perfil: null, modelo: null };
+                      const pairs = [...stat.pairs.values()];
+                      const uniform = new Set(pairs.map((pair) => `${retidosVehicleKey(pair.perfil)}|${retidosVehicleKey(pair.modelo)}`)).size === 1;
+                      const pair = uniform ? { perfil: [...new Set(pairs.map((p) => p.perfil).filter(Boolean))].join(" / ") || null, modelo: [...new Set(pairs.map((p) => p.modelo).filter(Boolean))].join(" / ") || null } : { perfil: null, modelo: null };
                       return (
                         <tr key={stat.cluster} className="border-t">
                           <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
@@ -144,10 +146,10 @@ export function RetidosRoutesPanel({ rows }: { rows: RecordRow[] }) {
               </div>
             </div>
             <div className="min-w-0">
-              <h4 className="text-sm font-semibold">Divergência de Veículo</h4>
+              <h4 className="text-sm font-semibold">Veículo Programado x Veículo Realizado</h4>
               <p className="mt-0.5 text-xs text-muted-foreground">Rotas identificadas no período e turno selecionados.</p>
               <div className="mt-3">
-                <PieBlock data={analysis.donut} total={analysis.divergentRoutes + (analysis.impacted - analysis.divergentRoutes - analysis.unidentifiedRoutes)} categories={["Com divergência", "Sem divergência"]} label="Divergência de Veículo" includeMissing={false} />
+                <PieBlock data={analysis.donut} total={analysis.impacted - analysis.unidentifiedRoutes} categories={["Com divergência", "Sem divergência"]} categoryColors={{ "Com divergência": "var(--retidos-divergent)", "Sem divergência": "var(--retidos-matched)" }} label="Veículo Programado x Veículo Realizado" includeMissing={false} />
               </div>
               {analysis.unidentifiedRoutes > 0 && (
                 <p className="mt-2 text-xs text-muted-foreground">{analysis.unidentifiedRoutes.toLocaleString("pt-BR")} rota(s) sem classificação (veículo programado ou modelo ausente/divergente entre registros) — não entram no gráfico.</p>

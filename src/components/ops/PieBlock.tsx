@@ -4,19 +4,20 @@ import { Empty } from "./blocks";
 const colors = ["var(--pie-1)", "var(--pie-2)", "var(--pie-3)", "var(--pie-4)", "var(--pie-5)", "var(--pie-6)", "var(--pie-7)", "var(--pie-8)", "var(--pie-9)", "var(--pie-10)"];
 const percent = (value: number, total: number) => `${(value / total * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 
-export function PieBlock({ data, total, categories, label, includeMissing = true }: {
+export function PieBlock({ data, total, categories, label, includeMissing = true, categoryColors }: {
   data: { name: string; value: number }[];
   total: number;
   categories: string[];
   label: string;
   includeMissing?: boolean;
+  categoryColors?: Record<string, string>;
 }) {
   if (!data.length || !total) return <Empty text="Nenhum dado disponível." />;
   const known = data.reduce((sum, item) => sum + item.value, 0);
   const slices = [...data, ...(includeMissing && known < total ? [{ name: "Sem informação", value: total - known }] : [])];
   const representedTotal = slices.reduce((sum, item) => sum + item.value, 0);
   const extraNames = data.map((item) => item.name).filter((name) => !categories.includes(name)).sort();
-  const color = (name: string) => name === "Sem informação" ? "var(--pie-missing)" : colors[(categories.indexOf(name) < 0 ? categories.length + extraNames.indexOf(name) : categories.indexOf(name)) % colors.length];
+  const color = (name: string) => categoryColors?.[name] ?? (name === "Sem informação" ? "var(--pie-missing)" : colors[(categories.indexOf(name) < 0 ? categories.length + extraNames.indexOf(name) : categories.indexOf(name)) % colors.length]);
   return <div className="donut-block min-w-0" role="group" aria-label={label}>
     <div className="donut-layout">
     <div className="relative mx-auto aspect-square w-full max-w-96 min-w-0">

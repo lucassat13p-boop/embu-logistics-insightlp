@@ -491,6 +491,10 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_floating_import_batch: {
+        Args: { p_batch_id: string; p_confirm_active?: boolean }
+        Returns: Json
+      }
       delete_import_batch: { Args: { p_batch_id: string }; Returns: Json }
       replace_floating_snapshot: {
         Args: {

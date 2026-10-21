@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { AlertTriangle, Package, Route as RouteIcon, Truck } from "lucide-react";
 import type { RecordRow } from "@/lib/data";
 import { cn } from "@/lib/utils";

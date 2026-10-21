@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp, Truck, TriangleAlert, Tags, Package, PackageOpen, ShieldCheck, PackageCheck, ClipboardCheck, Sun, Moon, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp, Truck, TriangleAlert, Tags, Package, PackageOpen, ShieldCheck, PackageCheck, ClipboardCheck, type LucideIcon } from "lucide-react";
+import { ShiftIcon } from "@/components/ops/ShiftIcon";
 import { BarBlock, Empty, LineBlock, PageHeader, Panel } from "@/components/ops/blocks";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { Button } from "@/components/ui/button";
@@ -249,11 +250,10 @@ function AttentionPoints({ items, shifts }: { items: Item[]; shifts: DashShift[]
   }
   return <ul className="shift-attention-grid">{DASH_SHIFTS.filter((shift) => shifts.includes(shift)).map((shift) => {
     const c = byShift.get(shift);
-    const Icon = shift === "PM1" ? Moon : Sun;
     const tone = shift === "AM1" ? "orange" : shift === "AM2" ? "blue" : "purple";
     return <li key={shift} className={`shift-attention-card summary-tone-${tone}`}>
       <div className="shift-attention-results">
-        <div className="shift-attention-name"><span className="shift-attention-icon"><Icon className="h-6 w-6" aria-hidden="true" /></span><h3 className="font-display text-lg font-bold">{shift}</h3></div>
+        <div className="shift-attention-name"><span className="shift-attention-icon"><ShiftIcon shift={shift} className="h-6 w-6" /></span><h3 className="font-display text-lg font-bold">{shift}</h3></div>
         {c ? <><div className="shift-attention-total"><p className="font-display text-xl font-bold tabular-nums">{fmt(c.av)}</p><p className="mt-1 text-xs text-muted-foreground">Avarias salvas</p></div><div className="shift-attention-total"><p className="font-display text-xl font-bold tabular-nums">{fmt(c.oh)}</p><p className="mt-1 text-xs text-muted-foreground">ON HOLD tratados</p></div></> : <p className="col-span-2 border-l pl-4 text-xs text-muted-foreground">Sem lançamento no período</p>}
       </div>
       {c && c.notes.length > 0 && <details className="mt-3 border-t pt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">Observações · {c.notes.length}</summary><ul className="mt-2 space-y-2">{c.notes.map((note) => <li key={note.id} className="flex items-start gap-2 leading-5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /><div className="min-w-0"><span className="text-muted-foreground">{fmtDate(note.date)}</span><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{note.text}</p></div></li>)}</ul></details>}

@@ -38,7 +38,8 @@ export type ModuleKey =
   | "lost_damaged"
   | "rotas"
   | "retidos_veiculos"
-  | "erros_operacionais";
+  | "erros_operacionais"
+  | "pacotes_flutuantes";
 
 export const FIELD_LABELS: Record<FieldKey, string> = {
   record_date: "Data",
@@ -159,6 +160,7 @@ export const MODULES: ModuleDef[] = [
     description: "Relatório operacional ON HOLD (somente 1ª planilha)",
   },
   { key: "lost_damaged", slug: "lost-damaged", label: "LOST & DAMAGED", short: "L&D", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Lost & Damaged" },
+  { key: "pacotes_flutuantes", slug: "pacotes-flutuantes", label: "PACOTES FLUTUANTES", short: "FLUTUANTES", fields: ["record_date", "order_id", "aging", "route", "driver_id", "driver_name", "carrier_3pl", "product", "collaborator", "quantity", "shift"], required: ["order_id"], dedupe: ["order_id"], description: "Lista ativa completa da aba Perdidos · Excel (.xlsx)" },
   { key: "rotas", slug: "rotas", label: "LHs / Rotas", short: "LH/ROTAS", fields: ALL, required: [], dedupe: ["lh", "route", "record_date", "order_id"], description: "LHs e rotas do HUB" },
 ];
 

@@ -23,13 +23,17 @@ import { RetidosDashboard } from "@/components/ops/RetidosDashboard";
 import { FullDashboard } from "@/components/ops/FullDashboard";
 import { OperationalErrorsDashboard } from "@/components/ops/OperationalErrorsDashboard";
 import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
+import { Suspense } from "react";
+import { FloatingDashboard } from "@/components/ops/FloatingDashboard";
+import { floatingActiveQuery } from "@/lib/floating-packages";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
-  loader: ({ params }) => {
+  loader: async ({ params, context }) => {
     if (params.slug === "lost-damaged") throw redirect({ to: "/tratativas" });
     if (params.slug === "desvios") throw redirect({ to: "/dashboard" });
     const mod = moduleBySlug(params.slug);
     if (!mod) throw notFound();
+    if (mod.key === "pacotes_flutuantes") await context.queryClient.ensureQueryData(floatingActiveQuery());
     return { label: mod.label };
   },
   head: ({ loaderData }) => ({
@@ -49,6 +53,7 @@ function ModulePage() {
   const { slug } = Route.useParams();
   const mod = moduleBySlug(slug);
   if (!mod) throw notFound();
+  if (mod.key === "pacotes_flutuantes") return <Suspense fallback={<Skeleton className="h-64" />}><FloatingDashboard /></Suspense>;
   return <ModuleContent key={mod.key} mod={mod} />;
 }
 

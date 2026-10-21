@@ -92,6 +92,13 @@
       "when": 1792449738172,
       "tag": "0012_full_bulk_manual_classification",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792615090553,
+      "tag": "0013_floating_packages_active_snapshot",
+      "breakpoints": true
     }
   ]
 }

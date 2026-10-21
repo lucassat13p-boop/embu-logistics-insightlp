@@ -64,7 +64,7 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
                   {TOP.map((m) => (
                     <SidebarMenuItem key={m.key}>
                       <SidebarMenuButton asChild isActive={path === topPath(m)} tooltip={m.label}>
-                        <Link to={m.to} params={{ slug: m.slug ?? "" }}><BarChart3 className="h-4 w-4" /><span>{m.label}</span></Link>
+                        <Link to={m.to} params={{ slug: m.slug ?? "" }}>{m.key === "pacotes_flutuantes" ? <Package className="h-4 w-4" /> : <BarChart3 className="h-4 w-4" />}<span>{m.label}</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}

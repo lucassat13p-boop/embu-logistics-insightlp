@@ -73,6 +73,35 @@ export type Database = {
         }
         Relationships: []
       }
+      floating_active_snapshot: {
+        Row: {
+          batch_id: string
+          id: boolean
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          batch_id: string
+          id?: boolean
+          updated_at?: string
+          updated_by?: string
+        }
+        Update: {
+          batch_id?: string
+          id?: boolean
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floating_active_snapshot_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_batches: {
         Row: {
           created_at: string
@@ -463,6 +492,16 @@ export type Database = {
         Returns: Json
       }
       delete_import_batch: { Args: { p_batch_id: string }; Returns: Json }
+      replace_floating_snapshot: {
+        Args: {
+          p_expected_batch: string
+          p_file_name: string
+          p_headers: Json
+          p_rows: Json
+          p_sheet_name: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

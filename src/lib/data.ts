@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import type { FieldKey, ModuleKey } from "./modules";
+import { fetchFloatingActive } from "./floating-packages";
 
 export type RecordRow = Tables<"records">;
 export type BatchRow = Tables<"import_batches">;
@@ -9,10 +10,12 @@ export type BatchRow = Tables<"import_batches">;
 const MAX = 50000;
 
 export async function fetchRecords(module?: ModuleKey) {
+  if (module === "pacotes_flutuantes") return (await fetchFloatingActive()).rows;
   const out: RecordRow[] = [];
   for (let from = 0; module === "retidos_veiculos" || module === "full" || from < MAX; from += 1000) {
     let q = supabase.from("records").select("*").order("record_date", { ascending: false, nullsFirst: false }).range(from, from + 999);
     if (module) q = q.eq("module", module);
+    else q = q.neq("module", "pacotes_flutuantes");
     if (module === "retidos_veiculos" || module === "full") q = q.order("id", { ascending: true });
     const { data, error } = await q;
     if (error) throw error;

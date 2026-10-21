@@ -70,7 +70,7 @@ export function validate(mod: ModuleDef, body: { rowNumber: number; values: Reco
     // legitimate repeated occurrences (different rows/moments) are always kept.
     const dedupe_key = mod.appendOnly
       ? mod.key === "retidos_veiculos"
-        ? ["tracking_number", "exception_order_id", "reason", "follow_up_action", "status", "create_time"].map((f) => String(fields[f] ?? "")).join("|") + `|${row.rowNumber}`
+        ? (["tracking_number", "exception_order_id", "reason", "follow_up_action", "status", "create_time"] as const).map((f) => String(fields[f] ?? "")).join("|") + `|${row.rowNumber}`
         : crypto.randomUUID()
       : keyParts.every((p) => p === "") ? JSON.stringify(row.values) : keyParts.join("|");
     if (!mod.appendOnly && seen.has(dedupe_key)) {

@@ -12,7 +12,8 @@ import { ShiftIcon } from "./ShiftIcon";
 import { RankingPrivacyToggle } from "./RankingPrivacy";
 import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 import { EMPTY_PERIOD, filterByPeriod } from "@/lib/period";
-import { byDate, countBy } from "@/lib/data";
+import { byDate } from "@/lib/data";
+import { floatingRankings } from "@/lib/floating-ranking";
 import { FLOATING_COLUMNS, floatingActiveQuery, floatingMapping, floatingShift, floatingValue } from "@/lib/floating-packages";
 
 const currency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -36,6 +37,7 @@ export function FloatingDashboard() {
     });
   }, [rows, search, sort]);
   const pages = Math.max(1, Math.ceil(tableRows.length / 25));
+  const rankings = useMemo(() => floatingRankings(rows, rankingMode, shift), [rows, rankingMode, shift]);
   const shownPage = Math.min(page, pages - 1);
   const breakdown = (resolver: (row: typeof rows[number]) => string) => {
     const counts = new Map<string, number>();
@@ -61,7 +63,7 @@ export function FloatingDashboard() {
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{kpis.map((item) => <div key={item.label} className="min-w-0 rounded-md border bg-card p-4 shadow-card"><div className={`mb-2 flex items-center justify-between gap-2 ${item.color}`}><p className="text-xs font-semibold uppercase">{item.label}</p>{item.icon}</div><p className="break-words text-2xl font-bold tabular-nums">{active.batchId ? typeof item.value === "number" ? item.value.toLocaleString("pt-BR") : item.value : "Nenhum dado disponível"}</p></div>)}</div>
     {rows.length > 0 && <div className="floating-charts grid items-stretch gap-4 xl:grid-cols-3"><Panel title="Evolução de Pacotes Flutuantes"><BarBlock data={byDate(rows).map((d) => ({ name: d.date.split("-").reverse().join("/"), value: d.value }))} limit={rows.length} height={352} /></Panel><Panel title="Distribuição por turno"><PieBlock data={breakdown((r) => floatingShift(r.shift))} categories={["AM1", "AM2", "PM1", "Não identificado"]} total={rows.length} label="Distribuição por turno" /></Panel><Panel title="Mapeamento"><PieBlock data={breakdown(floatingMapping)} categories={["Expedição", "Recebimento", "Não identificado"]} total={rows.length} label="Mapeamento" /></Panel></div>}
     <Panel title="Top 10 colaboradores com mais pacotes" action={<div className="flex flex-wrap items-center gap-2"><div className="flex rounded-md border bg-muted p-1" role="group" aria-label="Modo do ranking"><Button size="sm" variant={rankingMode === "general" ? "default" : "ghost"} aria-pressed={rankingMode === "general"} onClick={() => setRankingMode("general")}>Ranking geral</Button><Button size="sm" variant={rankingMode === "shift" ? "default" : "ghost"} aria-pressed={rankingMode === "shift"} onClick={() => setRankingMode("shift")}>Por turno</Button></div><RankingPrivacyToggle /></div>}>
-      {rankingMode === "general" ? <Ranking data={countBy(rows, "collaborator")} limit={10} personKind="Colaborador" showPrivacyToggle={false} /> : <div className={shift === "all" ? "grid gap-6 lg:grid-cols-3" : "grid gap-6"}>{(shift === "all" ? ["AM1", "AM2", "PM1"] : [shift]).map((rankingShift) => <div key={rankingShift} className="min-w-0"><h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-primary"><ShiftIcon shift={rankingShift} className="h-4 w-4" />{rankingShift} — TOP 5</h4><Ranking data={countBy(rows.filter((row) => floatingShift(row.shift) === rankingShift), "collaborator")} limit={5} personKind="Colaborador" showPrivacyToggle={false} /></div>)}</div>}
+      {rankingMode === "general" ? <Ranking data={rankings[0]?.data ?? []} limit={10} personKind="Colaborador" showPrivacyToggle={false} /> : <div className={shift === "all" ? "grid gap-6 lg:grid-cols-3" : "grid gap-6"}>{rankings.map((ranking) => <div key={ranking.shift} className="min-w-0"><h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-primary"><ShiftIcon shift={ranking.shift} className="h-4 w-4" />{ranking.shift} — TOP 5</h4><Ranking data={ranking.data} limit={5} personKind="Colaborador" showPrivacyToggle={false} /></div>)}</div>}
     </Panel>
     <Panel title="Lista de Pacotes Flutuantes"><div className="relative mb-3"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Buscar BR, motorista, cluster, AT, produto ou colaborador" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} /></div>
       <div className="overflow-x-auto rounded-md border"><table className="w-full min-w-[1600px] text-sm"><thead className="bg-muted text-left text-xs uppercase text-muted-foreground"><tr>{FLOATING_COLUMNS.map(([key, name]) => <th key={key} className="px-3 py-2"><Button variant="ghost" size="sm" className="h-auto px-0 text-xs" onClick={() => { setSort({ key, ascending: sort.key === key ? !sort.ascending : true }); setPage(0); }}>{name}{sort.key === key && (sort.ascending ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}</Button></th>)}</tr></thead><tbody>{tableRows.slice(shownPage * 25, (shownPage + 1) * 25).map((row) => <tr key={row.id} className="border-t hover:bg-accent/40">{FLOATING_COLUMNS.map(([key]) => {

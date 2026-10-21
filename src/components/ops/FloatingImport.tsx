@@ -35,7 +35,8 @@ export function FloatingImport() {
     if (!preview || !previous || busy) return;
     setBusy(true); setError("");
     try {
-      const { data, error: saveError } = await supabase.rpc("replace_floating_snapshot", { p_rows: preview.rows, p_file_name: fileName, p_sheet_name: preview.sheetName, p_expected_batch: previous.batchId ?? undefined, p_headers: preview.headers });
+      // Generated RPC types omit SQL parameter nullability; null means no prior snapshot.
+      const { data, error: saveError } = await supabase.rpc("replace_floating_snapshot", { p_rows: preview.rows, p_file_name: fileName, p_sheet_name: preview.sheetName, p_expected_batch: previous.batchId as string, p_headers: preview.headers });
       if (saveError) throw saveError;
       const batchId = data && typeof data === "object" && !Array.isArray(data) && typeof data.batchId === "string" ? data.batchId : null;
       if (!batchId) throw new Error("Não foi possível confirmar a atualização.");

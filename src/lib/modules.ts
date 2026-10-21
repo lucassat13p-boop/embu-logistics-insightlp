@@ -122,7 +122,6 @@ export type ModuleDef = {
 const ALL: FieldKey[] = ["record_date", "order_id", "status", "collaborator", "product", "shift", "route", "lh", "reason", "classification", "quantity"];
 
 export const MODULES: ModuleDef[] = [
-  { key: "pacotes_flutuantes", slug: "pacotes-flutuantes", label: "PACOTES FLUTUANTES", short: "FLUTUANTES", fields: ["record_date", "order_id", "aging", "route", "driver_id", "driver_name", "carrier_3pl", "product", "collaborator", "quantity", "shift"], required: ["order_id"], dedupe: ["order_id"], description: "Lista ativa completa da aba Perdidos · Excel (.xlsx)" },
   { key: "full", slug: "full", label: "FULL", short: "FULL", fields: ["order_id", "status", "record_date", "shift"], required: ["order_id"], dedupe: ["record_date", "shift", "order_id"], description: "Justificativa FULL · abas 2 (TO em lote) e 3 (BR em lote)" },
   {
     key: "avaria", slug: "avaria", label: "AVARIA", short: "AVARIA",
@@ -161,6 +160,7 @@ export const MODULES: ModuleDef[] = [
     description: "Relatório operacional ON HOLD (somente 1ª planilha)",
   },
   { key: "lost_damaged", slug: "lost-damaged", label: "LOST & DAMAGED", short: "L&D", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Lost & Damaged" },
+  { key: "pacotes_flutuantes", slug: "pacotes-flutuantes", label: "PACOTES FLUTUANTES", short: "FLUTUANTES", fields: ["record_date", "order_id", "aging", "route", "driver_id", "driver_name", "carrier_3pl", "product", "collaborator", "quantity", "shift"], required: ["order_id"], dedupe: ["order_id"], description: "Lista ativa completa da aba Perdidos · Excel (.xlsx)" },
   { key: "rotas", slug: "rotas", label: "LHs / Rotas", short: "LH/ROTAS", fields: ALL, required: [], dedupe: ["lh", "route", "record_date", "order_id"], description: "LHs e rotas do HUB" },
 ];
 

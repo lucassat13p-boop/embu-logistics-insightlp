@@ -31,7 +31,7 @@ export type RetidosAux = {
 };
 
 /** Comparison-only key: removes accents, case, spaces and separators. */
-const nameKey = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const nameKey = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const norm = (v: unknown) => cellText(v) ?? "";
 /** Identifier key for BRs and ATs: uppercase, no whitespace. */
 const normId = (v: unknown) => norm(v).toUpperCase().replace(/\s+/g, "");

@@ -186,7 +186,13 @@
 .floating-charts > section > div { flex: 1; display: flex; align-items: center; }
 .floating-charts .donut-block { width: 100%; }
 .floating-charts .donut-layout { gap: 1rem; }
-.floating-charts .donut-layout > div { max-width: 176px; }
+.floating-charts .donut-layout > div { max-width: 284px; }
+@container (min-width: 320px) {
+  .floating-charts .donut-layout { grid-template-columns: minmax(0, 1.8fr) minmax(104px, 1fr); }
+}
+@container (min-width: 420px) {
+  .floating-charts .donut-layout { grid-template-columns: minmax(0, 284px) minmax(104px, 1fr); }
+}
 .floating-charts .donut-layout > ul { font-size: 14px; }
 .floating-charts .donut-layout > ul > li { padding-bottom: 8px; }
 .floating-charts .donut-layout > ul > li + li { margin-top: 8px; }

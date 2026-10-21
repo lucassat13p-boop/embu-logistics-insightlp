@@ -64,7 +64,7 @@ export function FloatingImport() {
     </p>
     <label className={cn("flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:border-primary", busy && "pointer-events-none opacity-50")}>
       <FileUp className="h-5 w-5 text-primary" />
-      <span className="truncate">{fileName && !error && busy || preview ? fileName : "Selecionar arquivo (.xlsx)"}</span>
+      <span className="truncate">{preview || (busy && fileName) ? fileName : "Selecionar arquivo (.xlsx)"}</span>
       <input type="file" className="hidden" accept=".xlsx" disabled={busy} aria-label="Arquivo de Pacotes Flutuantes" onChange={(event) => { const file = event.target.files?.[0]; if (file) void load(file); event.target.value = ""; }} />
     </label>
     {busy && <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Processando…</p>}

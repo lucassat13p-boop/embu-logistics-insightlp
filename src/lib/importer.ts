@@ -66,7 +66,13 @@ export function validate(mod: ModuleDef, body: { rowNumber: number; values: Reco
       fields.record_date = parseRetidosTime(fields.create_time).date;
     }
     const keyParts = mod.dedupe.map((f) => String(fields[f] ?? ""));
-    const dedupe_key = mod.appendOnly ? crypto.randomUUID() : keyParts.every((p) => p === "") ? JSON.stringify(row.values) : keyParts.join("|");
+    // Retidos: stable per-source-row key — a reimport of the same file is ignored, while
+    // legitimate repeated occurrences (different rows/moments) are always kept.
+    const dedupe_key = mod.appendOnly
+      ? mod.key === "retidos_veiculos"
+        ? (["tracking_number", "exception_order_id", "reason", "follow_up_action", "status", "create_time"] as const).map((f) => String(fields[f] ?? "")).join("|") + `|${row.rowNumber}`
+        : crypto.randomUUID()
+      : keyParts.every((p) => p === "") ? JSON.stringify(row.values) : keyParts.join("|");
     if (!mod.appendOnly && seen.has(dedupe_key)) {
       dupInFile++;
       issues.push({ rowNumber: row.rowNumber, column: null, message: "Registro duplicado dentro do próprio arquivo", kind: "duplicado", raw: row.values });
@@ -83,7 +89,7 @@ export type DupStrategy = "ignore" | "update";
 export type AvariaImportOptions = { shifts: string[]; includeSoc: boolean; found: { AM1: number; AM2: number; PM1: number; missing: number; soc: number }; excluded: number };
 
 export async function countExisting(mod: ModuleDef, keys: string[]) {
-  if (mod.appendOnly) return 0;
+  if (mod.appendOnly && mod.key !== "retidos_veiculos") return 0;
   let n = 0;
   for (let i = 0; i < keys.length; i += 200) {
     const { count } = await supabase.from("records").select("id", { count: "exact", head: true }).eq("module", mod.key).in("dedupe_key", keys.slice(i, i + 200));
@@ -135,11 +141,11 @@ export async function commitImport(opts: {
       create_time: (v.fields.create_time as string) ?? null,
       eha_inbound_time: (v.fields.eha_inbound_time as string) ?? null,
       resolve_time: (v.fields.resolve_time as string) ?? null,
-      dedupe_key: mod.appendOnly ? `${batch.id}:${v.rowNumber}:${v.dedupe_key}` : v.dedupe_key, updated_at: new Date().toISOString(),
+      dedupe_key: mod.appendOnly ? (mod.key === "retidos_veiculos" ? v.dedupe_key : `${batch.id}:${v.rowNumber}:${v.dedupe_key}`) : v.dedupe_key, updated_at: new Date().toISOString(),
     }));
     for (let i = 0; i < rows.length; i += 500) {
-      const { error } = mod.appendOnly ? await supabase.from("records").insert(rows.slice(i, i + 500)) : await supabase.from("records").upsert(rows.slice(i, i + 500), {
-        onConflict: "module,dedupe_key", ignoreDuplicates: opts.strategy === "ignore",
+      const { error } = mod.appendOnly && mod.key !== "retidos_veiculos" ? await supabase.from("records").insert(rows.slice(i, i + 500)) : await supabase.from("records").upsert(rows.slice(i, i + 500), {
+        onConflict: "module,dedupe_key", ignoreDuplicates: opts.strategy === "ignore" || mod.key === "retidos_veiculos",
       });
       if (error) throw error;
     }

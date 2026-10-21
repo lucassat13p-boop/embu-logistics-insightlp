@@ -139,7 +139,7 @@ export const MODULES: ModuleDef[] = [
     required: [], dedupe: [], firstSheetOnly: true, appendOnly: true,
     defaultMapping: { "SPX TRACKING NUMBER": "tracking_number", "EXCEPTION ORDER ID": "exception_order_id", "EXCEPTION REASON": "reason", "FOLLOW UP ACTION": "follow_up_action", "EO STATUS": "status", "CREATE TIME": "create_time", "EHA INBOUND TIME": "eha_inbound_time", "RESOLVE TIME": "resolve_time" },
     fieldLabels: { tracking_number: "BR / SPX Tracking Number", reason: "Motivo da Retirada", status: "EO Status" },
-    description: "Retidos de Veículos (somente 1ª planilha)",
+    description: "Retidos de Veículos · XLSX: aba PACOTES RETIRADOS + romaneio + Plano de expedição; CSV simples também aceito",
   },
   {
     key: "erros_operacionais", slug: "erros-operacionais", label: "ERROS OPERACIONAIS", short: "ERROS",

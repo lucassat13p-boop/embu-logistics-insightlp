@@ -1,4 +1,5 @@
 # Tasks
+- [x] Retidos de Veículos: single-workbook import (PACOTES RETIRADOS + romaneio + Plano de expedição), route cross-reference in records.extra, reimport-safe stable keys, and routes panel (4 KPIs, Top 10, divergence donut). Automated tests intentionally not run as requested.
 - [x] Add FULL stable-ID selection, protected operational bulk classification and complete filtered/selected BR copying; automated/browser/import tests intentionally not run as requested.
 - [x] Apply database read-index and import-scoped cache refresh optimizations; five cache tests passed and index validity confirmed. Representative database gains and real-file end-to-end verification remain unavailable because current records are empty.
 - [x] Apply Premium 3.0 reference styling only to shift summary and attention sections, preserving real calculations and all other dashboard areas.

@@ -181,6 +181,16 @@
 }
 
 .donut-block { container-type: inline-size; }
+.floating-charts > section { display: flex; flex-direction: column; }
+.floating-charts > section > header { min-height: 80px; align-items: center; }
+.floating-charts > section > div { flex: 1; display: flex; align-items: center; }
+.floating-charts .donut-block { width: 100%; }
+.floating-charts .donut-layout { gap: 1rem; }
+.floating-charts .donut-layout > div { max-width: 176px; }
+.floating-charts .donut-layout > ul { font-size: 14px; }
+.floating-charts .donut-layout > ul > li { padding-bottom: 8px; }
+.floating-charts .donut-layout > ul > li + li { margin-top: 8px; }
+.floating-charts .donut-layout > ul > li > span:last-child > span:last-child { font-size: 12px; }
 .retidos-vehicle-badge { background: var(--retidos-vehicle-surface); color: var(--retidos-vehicle-text); }
 .retidos-vehicle-badge svg { color: var(--retidos-vehicle-icon); }
 .retidos-divergence-yes { background: color-mix(in oklab, var(--retidos-divergent) 14%, transparent); color: var(--destructive); }

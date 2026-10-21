@@ -53,11 +53,11 @@ const axisTick = { fontSize: 13, fill: "var(--muted-foreground)" };
 const valueLabel = { fontSize: 14, fill: "var(--foreground)", fontWeight: 600 };
 const shortName = (name: string, length: number) => name.length > length ? `${name.slice(0, length - 1)}…` : name;
 
-export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12, rowHeight = 0, yAxisWidth = 110, tickFormatter, tooltipLabel, valueName = "Registros" }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number; rowHeight?: number; yAxisWidth?: number; tickFormatter?: (name: string) => string; tooltipLabel?: string; valueName?: string }) {
+export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12, rowHeight = 0, yAxisWidth = 110, tickFormatter, tooltipLabel, valueName = "Registros", height }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number; rowHeight?: number; yAxisWidth?: number; tickFormatter?: (name: string) => string; tooltipLabel?: string; valueName?: string; height?: number }) {
   const [width, setWidth] = useState(600);
   if (!data.length) return <Empty text={emptyText} />;
   const d = data.slice(0, limit);
-  const chartHeight = horizontal ? Math.max(320, d.length * Math.max(50, rowHeight) + 64) : Math.max(340, Math.min(480, d.length * 18 + 240));
+  const chartHeight = height ?? (horizontal ? Math.max(320, d.length * Math.max(50, rowHeight) + 64) : Math.max(340, Math.min(480, d.length * 18 + 240)));
   const categoryWidth = Math.min(Math.max(120, yAxisWidth), Math.max(85, Math.floor(width * 0.36)));
   const formatCategory = (name: string) => shortName(tickFormatter ? tickFormatter(name) : name, horizontal ? Math.max(9, Math.floor(categoryWidth / 7)) : width < 420 ? 10 : 16);
   return (

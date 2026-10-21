@@ -1,4 +1,5 @@
 # Tasks
+- [x] Replace AM1 disk with a cratered full-moon icon shared with the main Dashboard and compact/equalize only the three Floating charts; preserve calculations and imports, with no automated tests or extra audits.
 - [x] Add isolated Pacotes Flutuantes with confirmed atomic active-list replacement, named Perdidos import, filtered analytics/table and corrected dashboard shift icons. Seven mandatory integrity checks passed; real XLSX end-to-end import not exercised because no source workbook was attached; no publication or extra audit.
 - [x] Reorganize Retidos route indicators into four occurrence cards and three route cards; count only identified realized models and remove the duplicated standalone total. Eight focused rule tests passed; no browser audit or publication performed.
 - [x] Refine Retidos vehicle badges and divergence donut; confirmed vehicle equivalence is analysis-only, preserving imports and source records. Three focused rule tests passed; build OK; no browser audit performed.

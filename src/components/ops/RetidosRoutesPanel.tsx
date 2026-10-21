@@ -60,7 +60,7 @@ function DivergenceBadge({ value }: { value: Divergence }) {
   return <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">Não identificado</span>;
 }
 
-function RouteKpi({ icon: Icon, label, value, hint, chipClass, chipStyle }: { icon: typeof Package; label: string; value: number; hint: string; chipClass?: string; chipStyle?: React.CSSProperties }) {
+function RouteKpi({ icon: Icon, label, value, hint, chipClass, chipStyle }: { icon: typeof Package; label: string; value: number; hint: string; chipClass?: string; chipStyle?: CSSProperties }) {
   return (
     <div className="min-w-0 rounded-lg border bg-card p-4 shadow-card">
       <div className="flex items-center gap-3">

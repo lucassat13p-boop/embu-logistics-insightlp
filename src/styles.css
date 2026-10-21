@@ -97,6 +97,11 @@
   --pie-9: oklch(0.58 0.18 20);
   --pie-10: oklch(0.74 0.17 125);
   --pie-missing: oklch(0.65 0.01 60);
+  --retidos-divergent: #F97316;
+  --retidos-matched: #22C55E;
+  --retidos-vehicle-surface: oklch(0.3 0.004 60);
+  --retidos-vehicle-text: oklch(0.92 0.003 60);
+  --retidos-vehicle-icon: oklch(0.82 0.003 60);
   --sidebar: oklch(0.19 0.008 50);
   --sidebar-foreground: oklch(0.85 0.005 60);
   --sidebar-primary: oklch(0.66 0.2 38);
@@ -176,6 +181,9 @@
 }
 
 .donut-block { container-type: inline-size; }
+.retidos-vehicle-badge { background: var(--retidos-vehicle-surface); color: var(--retidos-vehicle-text); }
+.retidos-vehicle-badge svg { color: var(--retidos-vehicle-icon); }
+.retidos-divergence-yes { background: color-mix(in oklab, var(--retidos-divergent) 14%, transparent); color: var(--destructive); }
 :root {
   --summary-blue: oklch(0.56 0.17 245);
   --summary-red: oklch(0.57 0.22 22);

@@ -131,7 +131,7 @@ export function RetidosRoutesPanel({ rows }: { rows: RecordRow[] }) {
               <div className="mt-3 overflow-x-auto rounded-md border">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-                    <tr><th className="px-3 py-2">#</th><th className="px-3 py-2">Cluster</th><th className="px-3 py-2">Perfil (programado)</th><th className="px-3 py-2">Modelo (que veio)</th><th className="px-3 py-2 text-right">Retirados</th><th className="px-3 py-2">Divergência</th></tr>
+                    <tr><th className="px-3 py-2">#</th><th className="px-3 py-2">Cluster</th><th className="px-3 py-2">Veículo Programado</th><th className="px-3 py-2">Veículo Utilizado</th><th className="px-3 py-2 text-right">Retirados</th><th className="px-3 py-2">Divergência</th></tr>
                   </thead>
                   <tbody>
                     {analysis.top.map((stat, i) => {

@@ -23,6 +23,11 @@ export function FloatingImport() {
   const [done, setDone] = useState(false);
   const diff = preview && previous ? floatingDiff(previous.rows, preview.rows) : null;
   async function load(file: File) {
+    if (!/\.xlsx$/i.test(file.name)) {
+      setBusy(false); setPreview(null); setPrevious(null); setDone(false); setFileName(file.name);
+      setError("Este módulo exige um arquivo Excel (.xlsx). Selecione uma planilha no formato XLSX contendo a aba 'Perdidos'.");
+      return;
+    }
     setBusy(true); setPreview(null); setPrevious(null); setDone(false); setError(""); setFileName(file.name);
     try {
       const prepared = prepareFloatingFile(await parseFile(file));

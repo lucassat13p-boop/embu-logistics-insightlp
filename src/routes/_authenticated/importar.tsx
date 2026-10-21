@@ -18,13 +18,14 @@ import { cn } from "@/lib/utils";
 import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
 import { FullImport } from "@/components/ops/FullImport";
 import { countTreatedSheet, saveTreatedImport, treatedImportsQuery } from "@/lib/on-hold-treated";
+import { buildRetidosAux, resolveRetidosRoute, retidosMainSheetIndex } from "@/lib/retidos-routes";
 import { useQuery as useTreatedQuery } from "@tanstack/react-query";
 import { buildOperationalImport } from "@/lib/operational-errors";
 import { invalidateImportQueries } from "@/lib/import-cache";
 
 const FORMAT_HINTS: Partial<Record<ModuleKey, string>> = {
   avaria: "Formato recomendado: CSV (.csv)",
-  retidos_veiculos: "Formato recomendado: CSV (.csv)",
+  retidos_veiculos: "Formato recomendado: Excel (.xlsx) completo (abas PACOTES RETIRADOS, romaneio e Plano de expedição). CSV simples de retirados também é aceito.",
   erros_operacionais: "Formato recomendado: Excel (.xlsx)",
   auto_add: "Formatos recomendados: Excel (.xlsx) ou CSV (.csv)",
   on_hold: "Formato recomendado: Excel (.xlsx)",
@@ -69,6 +70,7 @@ function ImportPage() {
   const [treatedShift, setTreatedShift] = useState("");
   const { data: treatedExisting = [] } = useTreatedQuery({ ...treatedImportsQuery(), enabled: mod?.key === "on_hold" });
   const treatedPreview = useMemo(() => mod?.key === "on_hold" && parsed ? countTreatedSheet(parsed.sheets) : null, [mod?.key, parsed]);
+  const retidosAux = useMemo(() => mod?.key === "retidos_veiculos" && parsed && (parsed.format === "xlsx" || parsed.format === "xls") ? buildRetidosAux(parsed.sheets) : null, [mod?.key, parsed]);
   const treatedPrevious = treatedExisting.find((r) => r.operation_date === treatedDate && r.shift === treatedShift);
 
   const sheet = parsed?.sheets[sheetIdx];
@@ -113,7 +115,7 @@ function ImportPage() {
       if (!p.sheets.length || p.sheets.every((s) => !s.rows.length)) throw new Error("Arquivo sem conteúdo legível.");
       if (operational && p.format === "pdf") throw new Error("Erros Operacionais aceita XLSX (aba TABELAS) ou CSV exportado da aba TABELAS.");
       const op = operational ? buildOperationalImport(p.sheets, p.format) : null;
-      const idx = op ? op.sheetIdx : mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
+      const idx = op ? op.sheetIdx : mod.key === "retidos_veiculos" && (p.format === "xlsx" || p.format === "xls") ? retidosMainSheetIndex(p.sheets) : mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
       const active = p.sheets[idx];
       if (!active) throw new Error("Planilha não encontrada.");
       const h = operational ? 1 : detectHeaderRow(active.rows);
@@ -142,6 +144,18 @@ function ImportPage() {
     if (!used.length) { toast.error("Mapeie ao menos uma coluna."); return null; }
     setBusy("Validando...");
     const r = validate(mod, table.body, mapping);
+    if (mod.key === "retidos_veiculos" && retidosAux?.hasAny) {
+      for (const v of r.valid) {
+        const info = resolveRetidosRoute(retidosAux, v.fields.tracking_number);
+        if (!info) continue;
+        v.extra.route_match = info.match;
+        v.extra.route_at = info.at;
+        v.extra.route_cluster = info.cluster;
+        v.extra.route_perfil = info.perfil;
+        v.extra.route_modelo = info.modelo;
+        if (info.match === "ok" && info.cluster) v.fields.route = info.cluster;
+      }
+    }
     setResult(r);
     try { setExisting(await countExisting(mod, r.valid.map((v) => v.dedupe_key))); } catch { setExisting(null); }
     setBusy(null);

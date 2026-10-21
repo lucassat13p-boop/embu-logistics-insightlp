@@ -6,6 +6,7 @@ import { PageHeader, Panel } from "@/components/ops/blocks";
 import { RecordsTable } from "@/components/ops/RecordsTable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MODULES } from "@/lib/modules";
+import { fetchFloatingActive } from "@/lib/floating-packages";
 
 export const Route = createFileRoute("/_authenticated/busca")({
   validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : "" }),
@@ -30,8 +31,12 @@ function Page() {
     enabled: !!q,
     queryFn: async () => {
       const s = q.replace(/[%,()]/g, " ").trim();
+      if (moduleFilter === "pacotes_flutuantes") {
+        const active = await fetchFloatingActive();
+        return active.rows.filter((row) => [row.order_id, row.driver_name, row.route, row.to_number, row.product, row.collaborator].some((value) => value?.toLocaleLowerCase("pt-BR").includes(s.toLocaleLowerCase("pt-BR"))));
+      }
       const cols = ["order_id", "collaborator", "product", "lh", "route", "status", "reason"];
-      let query = supabase.from("records").select("*").or(cols.map((c) => `${c}.ilike.%${s}%`).join(","));
+      let query = supabase.from("records").select("*").neq("module", "pacotes_flutuantes").or(cols.map((c) => `${c}.ilike.%${s}%`).join(","));
       if (moduleFilter !== "all") query = query.eq("module", moduleFilter);
       const { data, error } = await query.limit(1000);
       if (error) throw error;

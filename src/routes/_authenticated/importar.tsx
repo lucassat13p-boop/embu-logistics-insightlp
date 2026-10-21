@@ -17,6 +17,7 @@ import { commitImport, countExisting, headerSignature, validate, type DupStrateg
 import { cn } from "@/lib/utils";
 import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/avaria-analysis";
 import { FullImport } from "@/components/ops/FullImport";
+import { FloatingImport } from "@/components/ops/FloatingImport";
 import { countTreatedSheet, saveTreatedImport, treatedImportsQuery } from "@/lib/on-hold-treated";
 import { buildRetidosAux, resolveRetidosRoute, retidosMainSheetIndex } from "@/lib/retidos-routes";
 import { useQuery as useTreatedQuery } from "@tanstack/react-query";
@@ -233,7 +234,7 @@ function ImportPage() {
             </Select>
             {mod && <p className="text-xs text-muted-foreground">{mod.description}. Os registros alimentam somente este módulo.</p>}
           </div>
-          {mod?.key !== "full" && <div className="space-y-1.5">
+          {mod?.key !== "full" && mod?.key !== "pacotes_flutuantes" && <div className="space-y-1.5">
             <Label>Arquivo do relatório</Label>
             {mod && FORMAT_HINTS[mod.key] && (
               <p className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary-soft p-2 text-xs">
@@ -258,6 +259,7 @@ function ImportPage() {
       </Panel>
 
       {mod?.key === "full" && <FullImport />}
+      {mod?.key === "pacotes_flutuantes" && <FloatingImport />}
 
       {mod?.key !== "full" && parsed && table && mod && (
         <Panel title="2. Estrutura e mapeamento" subtitle="Coluna do arquivo → Campo do sistema" action={<Button size="sm" variant="outline" onClick={saveMapping}><Save className="mr-1 h-4 w-4" />Salvar mapeamento</Button>}>

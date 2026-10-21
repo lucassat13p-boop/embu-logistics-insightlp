@@ -54,7 +54,19 @@ export function FloatingImport() {
   }
   return <div className="space-y-4"><Panel title="Arquivo de Pacotes Flutuantes">
     <p className="mb-3 text-sm text-muted-foreground">Excel (.xlsx) · Aba Perdidos · Lista completa e atual</p>
-    <Input type="file" accept=".xlsx" disabled={busy} aria-label="Arquivo de Pacotes Flutuantes" onChange={(event) => { const file = event.target.files?.[0]; if (file) void load(file); event.target.value = ""; }} />
+    <p className="mb-3 flex items-start gap-2 rounded-md border border-primary/30 bg-primary-soft p-2 text-xs">
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+      <span>
+        <span className="font-semibold">Formato recomendado: Excel (.xlsx)</span>
+        <br />
+        <span className="text-muted-foreground">Envie uma planilha Excel (.xlsx) contendo a aba 'Perdidos'. O sistema utilizará exclusivamente os dados dessa aba.</span>
+      </span>
+    </p>
+    <label className={cn("flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:border-primary", busy && "pointer-events-none opacity-50")}>
+      <FileUp className="h-5 w-5 text-primary" />
+      <span className="truncate">{fileName && !error && busy || preview ? fileName : "Selecionar arquivo (.xlsx)"}</span>
+      <input type="file" className="hidden" accept=".xlsx" disabled={busy} aria-label="Arquivo de Pacotes Flutuantes" onChange={(event) => { const file = event.target.files?.[0]; if (file) void load(file); event.target.value = ""; }} />
+    </label>
     {busy && <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Processando…</p>}
     {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
   </Panel>

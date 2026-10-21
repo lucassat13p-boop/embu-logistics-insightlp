@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, FileUp, Loader2, Save } from "lucide-react";
+import { CheckCircle2, FileUp, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -21,6 +21,14 @@ import { countTreatedSheet, saveTreatedImport, treatedImportsQuery } from "@/lib
 import { useQuery as useTreatedQuery } from "@tanstack/react-query";
 import { buildOperationalImport } from "@/lib/operational-errors";
 import { invalidateImportQueries } from "@/lib/import-cache";
+
+const FORMAT_HINTS: Partial<Record<ModuleKey, string>> = {
+  avaria: "Formato recomendado: CSV (.csv)",
+  retidos_veiculos: "Formato recomendado: CSV (.csv)",
+  erros_operacionais: "Formato recomendado: Excel (.xlsx)",
+  auto_add: "Formatos recomendados: Excel (.xlsx) ou CSV (.csv)",
+  on_hold: "Formato recomendado: Excel (.xlsx)",
+};
 
 export const Route = createFileRoute("/_authenticated/importar")({
   validateSearch: (s: Record<string, unknown>) => ({ modulo: typeof s.modulo === "string" ? (s.modulo as string) : undefined }),
@@ -200,6 +208,16 @@ function ImportPage() {
           </div>
           {mod?.key !== "full" && <div className="space-y-1.5">
             <Label>Arquivo do relatório</Label>
+            {mod && FORMAT_HINTS[mod.key] && (
+              <p className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary-soft p-2 text-xs">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>
+                  <span className="font-semibold">{FORMAT_HINTS[mod.key]}</span>
+                  <br />
+                  <span className="text-muted-foreground">Esta é uma recomendação para facilitar a importação. Os demais formatos compatíveis continuam disponíveis.</span>
+                </span>
+              </p>
+            )}
             <label className={cn("flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:border-primary", !mod && "pointer-events-none opacity-50")}>
               <FileUp className="h-5 w-5 text-primary" />
               <span className="truncate">{file ? file.name : "Selecionar arquivo (.xlsx, .xls, .csv, .pdf)"}</span>

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, FileUp, Loader2, Save } from "lucide-react";
+import { CheckCircle2, FileUp, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -163,6 +163,16 @@ export function FullImport() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label>XLSX completo ou CSV da aba “2 - Exportar TO em LOTE”</Label>
+            <p className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary-soft p-2 text-xs">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>
+                <span className="font-semibold">Formato recomendado: Excel (.xlsx)</span>
+                <br />
+                <span className="text-muted-foreground">Prefira o arquivo Excel completo, mantendo as abas de LH/TOs, pacotes e status.</span>
+                <br />
+                <span className="text-muted-foreground">Esta é uma recomendação para facilitar a importação. Os demais formatos compatíveis continuam disponíveis.</span>
+              </span>
+            </p>
             <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-sm hover:border-primary">
               <FileUp className="h-5 w-5 text-primary" /><span className="truncate">{base ? base.file.name : "Selecionar arquivo (.xlsx, .xls, .csv)"}</span>
               <input type="file" className="hidden" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files?.[0] && onBase(e.target.files[0])} />

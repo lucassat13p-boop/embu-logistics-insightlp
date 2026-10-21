@@ -110,12 +110,12 @@ export function LineBlock({ data }: { data: { label: string; value: number }[] }
   );
 }
 
-export function Ranking({ data, limit = 8, personKind }: { data: { name: string; value: number }[]; limit?: number; personKind?: PersonKind }) {
+export function Ranking({ data, limit = 8, personKind, showPrivacyToggle = true }: { data: { name: string; value: number }[]; limit?: number; personKind?: PersonKind; showPrivacyToggle?: boolean }) {
   const { personName } = useRankingPrivacy();
   if (!data.length) return <Empty />;
   const max = data[0].value;
   return (
-    <div>{personKind && <div className="mb-3 flex justify-end"><RankingPrivacyToggle /></div>}<ol className="space-y-4">
+    <div>{personKind && showPrivacyToggle && <div className="mb-3 flex justify-end"><RankingPrivacyToggle /></div>}<ol className="space-y-4">
       {data.slice(0, limit).map((d, i) => (
         <li key={d.name} className="flex items-start gap-3 text-base">
           <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded text-sm font-semibold", i === 0 ? "bg-primary-soft text-primary" : "bg-muted text-muted-foreground")}>{i + 1}</span>

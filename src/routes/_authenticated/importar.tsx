@@ -96,6 +96,19 @@ function ImportPage() {
 
   const avariaPreview = useMemo(() => result ? buildAvariaPreview(result) : null, [mod?.key, result, selectedShifts, includeSoc, allShifts]);
 
+  const retidosRouteSummary = useMemo(() => {
+    if (mod?.key !== "retidos_veiculos" || !result) return null;
+    if (!retidosAux) return { mode: "csv" as const };
+    const s = { mode: "xlsx" as const, missing: retidosAux.missing, warnings: retidosAux.warnings, hasAny: retidosAux.hasAny, identified: 0, unidentified: 0, ambiguous: 0, routes: new Set<string>() };
+    for (const v of result.valid) {
+      const m = v.extra.route_match;
+      if (m === "ok") { s.identified++; if (typeof v.extra.route_cluster === "string" && v.extra.route_cluster) s.routes.add(v.extra.route_cluster); }
+      else if (m === "ambigua") s.ambiguous++;
+      else if (m === "nao_identificada") s.unidentified++;
+    }
+    return s;
+  }, [mod?.key, result, retidosAux]);
+
   const resultForImport = avariaPreview && result ? { ...result, valid: avariaPreview.kept, ignoredCount: result.ignoredCount + avariaPreview.excluded } : result;
 
   async function loadMapping(headers: string[], m = mod) {
@@ -310,13 +323,38 @@ function ImportPage() {
 
       {result && mod && (
         <Panel title="3. Validação">
-          {(mod.key === "on_hold" || mod.key === "retidos_veiculos") && <div className="mb-4 rounded-md border border-primary/30 bg-primary-soft p-3 text-sm"><p className="font-semibold">Primeira aba selecionada: {sheet?.name ?? "Sem informação"}</p><p className="mt-1 text-xs text-muted-foreground">Campos identificados: {table?.headers.length ?? 0}. Somente esta primeira aba será importada; todas as demais serão ignoradas.</p></div>}
+          {mod.key === "on_hold" && <div className="mb-4 rounded-md border border-primary/30 bg-primary-soft p-3 text-sm"><p className="font-semibold">Primeira aba selecionada: {sheet?.name ?? "Sem informação"}</p><p className="mt-1 text-xs text-muted-foreground">Campos identificados: {table?.headers.length ?? 0}. Somente esta primeira aba será importada; todas as demais serão ignoradas.</p></div>}
+          {mod.key === "retidos_veiculos" && <div className="mb-4 rounded-md border border-primary/30 bg-primary-soft p-3 text-sm"><p className="font-semibold">Aba principal: {sheet?.name ?? "Sem informação"}</p><p className="mt-1 text-xs text-muted-foreground">Campos identificados: {table?.headers.length ?? 0}. {retidosAux ? "As abas auxiliares romaneio e Plano de expedição, quando presentes, alimentam a análise de rotas desta mesma importação." : "Somente esta aba será importada."}</p></div>}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {[["Registros encontrados", result.total], ["Registros válidos", result.valid.length], ["Registros com erro", result.errorCount], ["Registros ignorados", result.ignoredCount], ["Duplicados", result.dupInFile + (existing ?? 0)]].map(([l, v]) => (
               <div key={l as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-display text-2xl font-bold tabular-nums">{(v as number).toLocaleString("pt-BR")}</p></div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{mod.appendOnly ? "Cada linha será salva como uma ocorrência independente, inclusive pedidos repetidos. Ignorados = linhas completamente vazias." : `Ignorados = linhas completamente vazias. Duplicados = ${result.dupInFile} repetidos no arquivo + ${existing ?? "?"} já existentes no banco.`}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{mod.appendOnly ? (mod.key === "retidos_veiculos" ? "Cada linha será salva como uma ocorrência independente, inclusive pedidos repetidos. Reimportar o mesmo arquivo não cria cópias artificiais: ocorrências idênticas já importadas são ignoradas. Ignorados = linhas completamente vazias." : "Cada linha será salva como uma ocorrência independente, inclusive pedidos repetidos. Ignorados = linhas completamente vazias.") : `Ignorados = linhas completamente vazias. Duplicados = ${result.dupInFile} repetidos no arquivo + ${existing ?? "?"} já existentes no banco.`}</p>
+
+          {retidosRouteSummary && <div className="mt-4 rounded-md border p-3 text-sm">
+            <p className="text-[11px] font-semibold uppercase text-muted-foreground">Análise de rotas (romaneio + Plano de expedição)</p>
+            {retidosRouteSummary.mode === "csv" ? (
+              <p className="mt-1 text-xs text-muted-foreground">Arquivo CSV simples: os retirados serão importados normalmente, sem dados de rota. O painel de rotas informará que ainda não há dados suficientes para essa análise.</p>
+            ) : !retidosRouteSummary.hasAny ? (
+              <>
+                <p className="mt-1 text-destructive">Análise de rotas indisponível{retidosRouteSummary.missing.length ? `: aba(s) ausente(s) no arquivo: ${retidosRouteSummary.missing.join(", ")}` : ""}.</p>
+                {retidosRouteSummary.warnings.map((w) => <p key={w} className="mt-1 text-xs text-destructive">{w}</p>)}
+                <p className="mt-1 text-xs text-muted-foreground">A importação dos retirados continua normalmente. Abas detectadas no arquivo ({retidosAux?.sheetNames.length ?? 0}): {retidosAux?.sheetNames.map((n) => `"${n}"`).join(", ") || "nenhuma"}</p>
+              </>
+            ) : (
+              <>
+                <div className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-5">
+                  {[["Ocorrências processadas", result.valid.length], ["Com rota identificada", retidosRouteSummary.identified], ["Sem rota identificada", retidosRouteSummary.unidentified], ["Correspondências ambíguas", retidosRouteSummary.ambiguous], ["Rotas identificadas", retidosRouteSummary.routes.size]].map(([l, v]) => (
+                    <div key={l as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-display text-2xl font-bold tabular-nums">{(v as number).toLocaleString("pt-BR")}</p></div>
+                  ))}
+                </div>
+                {retidosRouteSummary.missing.length > 0 && <p className="mt-2 text-xs text-muted-foreground">Aba(s) auxiliar(es) não encontrada(s): {retidosRouteSummary.missing.join(", ")}.</p>}
+                {retidosRouteSummary.warnings.map((w) => <p key={w} className="mt-1 text-xs text-muted-foreground">{w}</p>)}
+                <p className="mt-2 text-xs text-muted-foreground">O ranking "Top 10 Rotas com Mais Retirados" será atualizado com esta importação.</p>
+              </>
+            )}
+          </div>}
 
           {avariaPreview && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[["AM1", avariaPreview.found.AM1], ["AM2", avariaPreview.found.AM2], ["PM1", avariaPreview.found.PM1], ["Sem informação", avariaPreview.found.missing], ["SOC encontrados", avariaPreview.found.soc], ["Serão importados", avariaPreview.kept.length], ["Ignorados pelos filtros", avariaPreview.excluded], ["SOC", includeSoc ? "Incluído" : "Não incluído"]].map(([label, value]) => <div key={label as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{label}</p><p className="font-semibold tabular-nums">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p></div>)}</div>}
           {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {allShifts ? "Todos" : selectedShifts.length ? selectedShifts.join(", ") : "Nenhum"}.</p>}
@@ -345,7 +383,7 @@ function ImportPage() {
             </div>
           )}
 
-          {(existing ?? 0) > 0 && (
+          {(existing ?? 0) > 0 && mod.key !== "retidos_veiculos" && (
             <div className="mt-4 space-y-2">
               <p className="text-sm font-semibold">{existing} registro(s) já existem neste módulo. Como tratar?</p>
               <RadioGroup value={strategy} onValueChange={(v) => setStrategy(v as DupStrategy)} className="gap-2">
@@ -369,7 +407,7 @@ function ImportPage() {
           <CheckCircle2 className="h-6 w-6 text-success" />
           <div className="flex-1 text-sm">
             <p className="font-semibold">Importação registrada · {done.status}</p>
-            <p className="text-muted-foreground">{done.inserted} novos · {done.existing} já existentes ({strategy === "update" ? "atualizados" : "ignorados"})</p>
+            <p className="text-muted-foreground">{done.inserted} novos · {done.existing} já existentes ({strategy === "update" ? "atualizados" : "ignorados"}){mod.key === "retidos_veiculos" && retidosRouteSummary?.mode === "xlsx" && retidosRouteSummary.hasAny ? " · Ranking de rotas atualizado" : ""}</p>
           </div>
           <Button variant="outline" asChild><Link to="/historico/$id" params={{ id: done.batchId }}>Ver detalhes</Link></Button>
           <Button onClick={() => nav({ to: "/m/$slug", params: { slug: mod.slug } })}>Abrir {mod.label}</Button>

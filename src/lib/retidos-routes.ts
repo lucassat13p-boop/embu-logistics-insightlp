@@ -36,14 +36,20 @@ const norm = (v: unknown) => cellText(v) ?? "";
 /** Identifier key for BRs and ATs: uppercase, no whitespace. */
 const normId = (v: unknown) => norm(v).toUpperCase().replace(/\s+/g, "");
 
-function findSheet(sheets: Sheet[], target: string): Sheet | undefined {
-  const key = nameKey(target);
-  return sheets.find((s) => nameKey(s.name) === key) ?? sheets.find((s) => nameKey(s.name).includes(key));
+function findSheet(sheets: Sheet[], targets: string | string[]): Sheet | undefined {
+  const keys = (Array.isArray(targets) ? targets : [targets]).map(nameKey);
+  for (const key of keys) { const s = sheets.find((x) => nameKey(x.name) === key); if (s) return s; }
+  for (const key of keys) { const s = sheets.find((x) => nameKey(x.name).includes(key)); if (s) return s; }
+  return undefined;
 }
+/** Accepted sheet names: new layout first, then legacy names. */
+const MAIN_NAMES = ["3 - RETIRADOS EHA", "PACOTES RETIRADOS"];
+const ROMANEIO_NAMES = ["1 - ROMANEIO", "romaneio"];
+const PLANO_NAMES = ["4 - FORECAST", "Plano de expedição"];
 
 /** Main records sheet: "PACOTES RETIRADOS" (tolerant to spaces/case); fallback = first non-empty sheet. */
 export function retidosMainSheetIndex(sheets: Sheet[]): number {
-  const found = findSheet(sheets, "PACOTES RETIRADOS");
+  const found = findSheet(sheets, MAIN_NAMES);
   if (found) return sheets.indexOf(found);
   return Math.max(0, sheets.findIndex((s) => s.rows.length));
 }
@@ -69,8 +75,8 @@ export function buildRetidosAux(sheets: Sheet[]): RetidosAux {
   const atToRoutes = new Map<string, Map<string, RouteTriple>>();
   let romaneioOk = false, planoOk = false;
 
-  const romaneio = findSheet(sheets, "romaneio");
-  if (!romaneio) missing.push("romaneio");
+  const romaneio = findSheet(sheets, ROMANEIO_NAMES);
+  if (!romaneio) missing.push("1 - ROMANEIO (ou romaneio)");
   else {
     const h = headerCols(romaneio.rows, ["SPX TN", "Planned AT"]);
     if (!h) warnings.push(`Aba "${romaneio.name}" encontrada, mas sem as colunas SPX TN e Planned AT.`);
@@ -87,8 +93,8 @@ export function buildRetidosAux(sheets: Sheet[]): RetidosAux {
     }
   }
 
-  const plano = findSheet(sheets, "Plano de expedição");
-  if (!plano) missing.push("Plano de expedição");
+  const plano = findSheet(sheets, PLANO_NAMES);
+  if (!plano) missing.push("4 - FORECAST (ou Plano de expedição)");
   else {
     const h = headerCols(plano.rows, ["AT / TO", "Cluster", "Perfil", "MODELO"]);
     if (!h) warnings.push(`Aba "${plano.name}" encontrada, mas sem as colunas AT / TO, Cluster, Perfil e MODELO.`);

@@ -60,13 +60,13 @@ function DivergenceBadge({ value }: { value: Divergence }) {
 
 function RouteKpi({ icon: Icon = Package, vehicle, label, value, hint, chipClass, chipStyle }: { icon?: typeof Package; vehicle?: string; label: string; value: number | null; hint: string; chipClass?: string; chipStyle?: CSSProperties }) {
   return (
-    <div className="min-w-0 rounded-lg border bg-card p-4 shadow-card">
-      <div className="flex items-center gap-3">
-        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", chipClass)} style={chipStyle}>{vehicle ? <VehicleIcon name={vehicle} /> : <Icon className="h-5 w-5" />}</span>
-        <p className="min-w-0 text-xs font-medium uppercase leading-tight text-muted-foreground">{label}</p>
+    <div className="min-w-0 rounded-md border bg-card px-3 py-2.5 shadow-card" title={hint}>
+      <div className="flex items-center gap-2">
+        <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded", chipClass)} style={chipStyle}>{vehicle ? <VehicleIcon name={vehicle} /> : <Icon className="h-3.5 w-3.5" />}</span>
+        <p className="min-w-0 text-[10px] font-semibold uppercase leading-tight text-muted-foreground">{label}</p>
       </div>
-      <p className={cn("mt-3 font-display font-bold tabular-nums", value === null ? "text-sm text-muted-foreground" : "text-3xl")}>{value === null ? "Nenhum dado disponível" : value.toLocaleString("pt-BR")}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+      <p className={cn("mt-1.5 font-display font-bold tabular-nums", value === null ? "text-xs text-muted-foreground" : "text-xl")}>{value === null ? "Nenhum dado disponível" : value.toLocaleString("pt-BR")}</p>
+      <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -107,14 +107,12 @@ export function RetidosRoutesPanel({ rows }: { rows: RecordRow[] }) {
 
   return (
     <Panel title="Análise de Rotas" subtitle="Cruzamento BR → AT planejada → Cluster → Perfil (veículo programado) → Modelo (veículo que veio).">
-      <div className="mb-5 space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
           <RouteKpi icon={Package} label="Total de Retirados" value={analysis.total || null} hint="Todas as ocorrências (inclui repetições)" chipClass="bg-destructive/10 text-destructive" />
           <RouteKpi vehicle="MOTO" label="Retirados de Moto" value={vehicles.identified ? vehicles.counts.MOTO : null} hint="Modelo realizado: MOTO" chipClass="bg-primary-soft text-primary" />
           <RouteKpi vehicle="FIORINO" label="Retirados de Fiorino" value={vehicles.identified ? vehicles.counts.FIORINO : null} hint="FIORINO e FIORINO ADESIVADA" chipClass="bg-success/15 text-success" />
           <RouteKpi vehicle="PASSEIO" label="Retirados de Passeio" value={vehicles.identified ? vehicles.counts.PASSEIO : null} hint="Modelo realizado: PASSEIO" chipClass="bg-muted text-muted-foreground" />
-        </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <RouteKpi icon={RouteIcon} label="Rotas Impactadas" value={analysis.hasData ? analysis.impacted : null} hint="Rotas com pelo menos 1 retirado" chipClass="bg-primary-soft text-primary" />
           <RouteKpi icon={Truck} label="Rotas com Divergência de Veículo" value={analysis.hasData ? analysis.divergentRoutes : null} hint="PERFIL diferente do MODELO" chipStyle={{ background: "color-mix(in oklab, var(--chart-2) 14%, transparent)", color: "var(--chart-2)" }} />
           <RouteKpi icon={AlertTriangle} label="Retirados em Rotas com Divergência" value={analysis.hasData ? analysis.divergentPackages : null} hint="Pacotes retirados nessas rotas" chipClass="bg-destructive/10 text-destructive" />

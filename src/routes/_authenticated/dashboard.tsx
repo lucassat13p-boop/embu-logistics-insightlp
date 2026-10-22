@@ -206,12 +206,12 @@ function buildSummary(cur: Record<SourceKey, Item[]>, all: Record<SourceKey, Ite
   if (range && missingDate) fullNotes.push(`${fmt(missingDate)} registro(s) sem data operacional fora do período`);
   if (shiftFiltered && missingShift) fullNotes.push(`${fmt(missingShift)} registro(s) sem turno confiável fora do filtro`);
   return [
-    { label: "PACOTES RETIRADOS DO VEÍCULO", value: all.retidos_veiculos.length ? cur.retidos_veiculos.length : null, note: "Retidos de Veículos · ocorrências, incluindo BRs repetidos", source: "retidos_veiculos", icon: Truck, tone: "blue" },
+    { label: "PACOTES RETIRADOS DO VEÍCULO", value: cur.retidos_veiculos.length, note: "Retidos de Veículos · ocorrências, incluindo BRs repetidos", source: "retidos_veiculos", icon: Truck, tone: "blue" },
     { label: "ERROS DE SORTING", value: errCat("SORTING"), note: errCat("SORTING") === null ? "Classificação SORTING não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: TriangleAlert, tone: "red" },
     { label: "ERROS DE ETIQUETA", value: errCat("ETIQUETAGEM"), note: errCat("ETIQUETAGEM") === null ? "Classificação ETIQUETAGEM não existe nos dados" : "Erros Operacionais · sem Backlog", source: "erros_operacionais", icon: Tags, tone: "amber" },
-    { label: "AVARIAS RECEBIDAS", value: cur.avaria.length || null, note: "AVARIA · total de avarias no período e turno", source: "avaria", icon: Package, tone: "orange" },
-    { label: "PACOTES FULL", value: validFull.length && !fullUnavailable ? new Set(cur.full.map((i) => normId(i.row?.order_id)).filter(Boolean)).size : null, note: fullUnavailable ? `Não é possível aplicar o filtro: ${fullNotes.slice(1).join(" · ")}` : fullNotes.join(" · "), source: "full", icon: PackageOpen, tone: "purple" },
-    { label: "AVARIAS SALVAS", value: tr ? sumT(cur.tratativas, "avarias_saved") : null, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: ShieldCheck, tone: "green" },
+    { label: "AVARIAS RECEBIDAS", value: cur.avaria.length, note: "AVARIA · total de avarias no período e turno", source: "avaria", icon: Package, tone: "orange" },
+    { label: "PACOTES FULL", value: !fullUnavailable ? new Set(cur.full.map((i) => normId(i.row?.order_id)).filter(Boolean)).size : null, note: fullUnavailable ? `Não é possível aplicar o filtro: ${fullNotes.slice(1).join(" · ")}` : fullNotes.join(" · "), source: "full", icon: PackageOpen, tone: "purple" },
+    { label: "AVARIAS SALVAS", value: tr ? sumT(cur.tratativas, "avarias_saved") : 0, note: tr ? `${tr} lançamento(s) em Tratativas Operacionais` : "Sem lançamentos no período", source: "tratativas", icon: ShieldCheck, tone: "green" },
     { label: "PACOTES TRATADOS DO ON HOLD", value: trImp ? sumT(cur.tratativas, "on_hold_treated") : null, note: trImp ? `${trImp} importação(ões) da aba Pacotes Tratados do ON HOLD` : "Sem importação no período", source: "tratativas", icon: PackageCheck, tone: "cyan" },
   ];
 }

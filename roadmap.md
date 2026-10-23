@@ -1,4 +1,5 @@
 # Tasks
+- [x] Add general/per-shift Operational Errors ranking presentation with dynamic title, selected-shift columns and shared privacy; preserve existing general counts and filters.
 - [x] Correct Floating active/history deletion atomically with explicit confirmation and add general/per-shift collaborator rankings; preserve other modules.
 - [x] Replace AM1 disk with a cratered full-moon icon shared with the main Dashboard and compact/equalize only the three Floating charts; preserve calculations and imports, with no automated tests or extra audits.
 - [x] Add isolated Pacotes Flutuantes with confirmed atomic active-list replacement, named Perdidos import, filtered analytics/table and corrected dashboard shift icons. Seven mandatory integrity checks passed; real XLSX end-to-end import not exercised because no source workbook was attached; no publication or extra audit.

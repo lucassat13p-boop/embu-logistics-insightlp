@@ -1,4 +1,5 @@
 # Tasks
+- [x] Add default-off missing-login inclusion exclusively to Operational Errors rankings, grouping missing occurrences without changing source records or other analytics.
 - [x] Add general/per-shift Operational Errors ranking presentation with dynamic title, selected-shift columns and shared privacy; preserve existing general counts and filters.
 - [x] Correct Floating active/history deletion atomically with explicit confirmation and add general/per-shift collaborator rankings; preserve other modules.
 - [x] Replace AM1 disk with a cratered full-moon icon shared with the main Dashboard and compact/equalize only the three Floating charts; preserve calculations and imports, with no automated tests or extra audits.

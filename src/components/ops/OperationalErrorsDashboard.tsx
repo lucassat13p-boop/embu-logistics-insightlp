@@ -15,6 +15,12 @@ import { RecordsTable } from "./RecordsTable";
 import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 import { RankingPrivacyToggle, useRankingPrivacy } from "./RankingPrivacy";
 import { ShiftIcon } from "./ShiftIcon";
+import { errorLoginRankingRows } from "@/lib/error-login-ranking";
+
+function LoginRanking({ data, limit }: { data: { name: string; value: number }[]; limit?: number }) {
+  const { personName } = useRankingPrivacy();
+  return <Ranking data={data.map((item) => ({ ...item, name: item.name === "Não identificado" ? item.name : personName(item.name) }))} limit={limit} showPrivacyToggle={false} />;
+}
 
 type Metric = { name: string; value: number };
 function ComparisonTable({ title, first, second, labels, people = false }: { title: string; first: Metric[]; second: Metric[]; labels: string[]; people?: boolean }) {
@@ -41,12 +47,14 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   const [shifts, setShifts] = useState<ErrorShift[]>([]);
   const [rankingMode, setRankingMode] = useState<"general" | "shift">("general");
   const [includeBacklog, setIncludeBacklog] = useState(false);
+  const [includeMissingLogin, setIncludeMissingLogin] = useState(false);
   const rows = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, period), shifts), includeBacklog), [originals, period, shifts, includeBacklog]);
   const second = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, comparison), shifts), includeBacklog), [originals, comparison, shifts, includeBacklog]);
+  const rankingRows = useMemo(() => errorLoginRankingRows(rows, includeMissingLogin), [rows, includeMissingLogin]);
   const shiftRankings = useMemo(() => ERROR_SHIFTS.filter((shift) => !shifts.length || shifts.includes(shift)).map((shift) => ({
     shift,
-    data: countBy(rows.filter((row) => errorShift(row.shift) === shift), "collaborator").slice(0, 5),
-  })), [rows, shifts]);
+    data: countBy(rankingRows.filter((row) => errorShift(row.shift) === shift), "collaborator").slice(0, 5),
+  })), [rankingRows, shifts]);
   const months = availableMonths(originals);
   const hasDates = originals.some((row) => recordMonth(row.record_date));
   const comparisonReady = hasDates && definedErrorPeriod(period) && definedErrorPeriod(comparison) && period.kind === comparison.kind;
@@ -56,7 +64,7 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   if (!originals.length) return <div>{title}<Empty text="Nenhum dado disponível" /></div>;
   const categories = countErrorCategories(rows);
   const reasonData = countBy(rows, "reason");
-  const loginData = countBy(rows, "collaborator");
+  const loginData = countBy(rankingRows, "collaborator");
   const shiftData = shiftsCount(rows);
   return <div className="space-y-5">{title}
     <PeriodFilter months={months} period={period} onChange={(value) => { setPeriod(value); setComparison((previous) => ({ ...previous, kind: value.kind })); }} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={(value) => { setComparison(value); setPeriod((previous) => ({ ...previous, kind: value.kind })); }} onClear={clear} />
@@ -65,9 +73,9 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
     {!rows.length ? <Empty text="Nenhum dado disponível" /> : <>
       <div className="grid gap-3 md:grid-cols-3"><Kpi accent label="Total de erros" value={rows.length} />{categories.map((item) => <Kpi key={item.name} label={item.name} value={item.value} />)}</div>
       {reasonData.length > 0 && <Panel title="Erros por motivo"><BarBlock data={reasonData} horizontal rowHeight={38} yAxisWidth={180} valueName="Ocorrências" /></Panel>}
-      {loginData.length > 0 && <Panel title={rankingMode === "general" ? "Erros por login" : "Top 5 colaboradores por turno"} action={<div className="flex flex-wrap items-center gap-2"><div className="flex rounded-md border bg-muted p-1" role="group" aria-label="Modo do ranking"><Button size="sm" variant={rankingMode === "general" ? "default" : "ghost"} aria-pressed={rankingMode === "general"} onClick={() => setRankingMode("general")}>Ranking geral</Button><Button size="sm" variant={rankingMode === "shift" ? "default" : "ghost"} aria-pressed={rankingMode === "shift"} onClick={() => setRankingMode("shift")}>Por turno</Button></div><RankingPrivacyToggle /></div>}>
-        {rankingMode === "general" ? <Ranking personKind="Colaborador" data={loginData} showPrivacyToggle={false} /> : <div className={shiftRankings.length > 1 ? "grid gap-6 lg:grid-cols-3" : "grid gap-6"}>{shiftRankings.map((ranking) => <div key={ranking.shift} className="min-w-0"><h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-primary"><ShiftIcon shift={ranking.shift} className="h-4 w-4" />{ranking.shift} — Top 5</h4>{ranking.data.length ? <Ranking data={ranking.data} limit={5} personKind="Colaborador" showPrivacyToggle={false} /> : <Empty text="Nenhuma ocorrência disponível neste turno" />}</div>)}</div>}
-      </Panel>}
+      <Panel title={rankingMode === "general" ? "Erros por login" : "Top 5 colaboradores por turno"} action={<div className="flex flex-wrap items-center gap-2"><div className="flex rounded-md border bg-muted p-1" role="group" aria-label="Modo do ranking"><Button size="sm" variant={rankingMode === "general" ? "default" : "ghost"} aria-pressed={rankingMode === "general"} onClick={() => setRankingMode("general")}>Ranking geral</Button><Button size="sm" variant={rankingMode === "shift" ? "default" : "ghost"} aria-pressed={rankingMode === "shift"} onClick={() => setRankingMode("shift")}>Por turno</Button></div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={includeMissingLogin} onChange={(event) => setIncludeMissingLogin(event.target.checked)} />Incluir sem login</label><RankingPrivacyToggle /></div>}>
+        {rankingMode === "general" ? <LoginRanking data={loginData} /> : <div className={shiftRankings.length > 1 ? "grid gap-6 lg:grid-cols-3" : "grid gap-6"}>{shiftRankings.map((ranking) => <div key={ranking.shift} className="min-w-0"><h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-primary"><ShiftIcon shift={ranking.shift} className="h-4 w-4" />{ranking.shift} — Top 5</h4>{ranking.data.length ? <LoginRanking data={ranking.data} limit={5} /> : <Empty text="Nenhuma ocorrência disponível neste turno" />}</div>)}</div>}
+      </Panel>
       {shiftData.length > 0 && <Panel title="Erros por turno responsável"><BarBlock data={shiftData} valueName="Ocorrências" /></Panel>}
       {byDate(rows).length > 0 && <Panel title="Evolução dos erros"><LineBlock data={byDate(rows)} /></Panel>}
     </>}

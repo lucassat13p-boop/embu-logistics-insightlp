@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { byDate, countBy, type RecordRow } from "@/lib/data";
 import { HUB_NAME, type FieldKey } from "@/lib/modules";
 import { availableMonths, EMPTY_PERIOD, filterByPeriod, periodLabel, recordMonth, type PeriodSelection } from "@/lib/period";
-import { countErrorCategories, definedErrorPeriod, ERROR_SHIFTS, errorShift, filterBacklog, filterErrorShifts, type ErrorShift } from "@/lib/operational-errors";
+import { countErrorCategories, definedErrorPeriod, ERROR_SHIFTS, errorCategory, errorShift, filterBacklog, filterErrorShifts, type ErrorShift } from "@/lib/operational-errors";
 import { variation } from "@/lib/comparison";
 import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "./blocks";
 import { PeriodFilter } from "./PeriodFilter";
@@ -46,15 +46,17 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [shifts, setShifts] = useState<ErrorShift[]>([]);
   const [rankingMode, setRankingMode] = useState<"general" | "shift">("general");
+  const [categoryFilter, setCategoryFilter] = useState<"todos" | "SORTING" | "ETIQUETAGEM">("todos");
   const [includeBacklog, setIncludeBacklog] = useState(false);
   const [includeMissingLogin, setIncludeMissingLogin] = useState(false);
   const rows = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, period), shifts), includeBacklog), [originals, period, shifts, includeBacklog]);
   const second = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, comparison), shifts), includeBacklog), [originals, comparison, shifts, includeBacklog]);
   const rankingRows = useMemo(() => errorLoginRankingRows(rows, includeMissingLogin), [rows, includeMissingLogin]);
+  const categoryRows = useMemo(() => categoryFilter === "todos" ? rankingRows : rankingRows.filter((row) => errorCategory(row) === categoryFilter), [rankingRows, categoryFilter]);
   const shiftRankings = useMemo(() => ERROR_SHIFTS.filter((shift) => !shifts.length || shifts.includes(shift)).map((shift) => ({
     shift,
-    data: countBy(rankingRows.filter((row) => errorShift(row.shift) === shift), "collaborator").slice(0, 5),
-  })), [rankingRows, shifts]);
+    data: countBy(categoryRows.filter((row) => errorShift(row.shift) === shift), "collaborator").slice(0, 5),
+  })), [categoryRows, shifts]);
   const months = availableMonths(originals);
   const hasDates = originals.some((row) => recordMonth(row.record_date));
   const comparisonReady = hasDates && definedErrorPeriod(period) && definedErrorPeriod(comparison) && period.kind === comparison.kind;
@@ -64,7 +66,9 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   if (!originals.length) return <div>{title}<Empty text="Nenhum dado disponível" /></div>;
   const categories = countErrorCategories(rows);
   const reasonData = countBy(rows, "reason");
-  const loginData = countBy(rankingRows, "collaborator");
+  const loginData = countBy(categoryRows, "collaborator");
+  const categoryLabels: Record<typeof categoryFilter, string> = { todos: "Todos os erros", SORTING: "Sorting", ETIQUETAGEM: "Etiquetagem" };
+  const rankingTitle = `${rankingMode === "general" ? "Top 8 colaboradores" : "Top 5 colaboradores por turno"} — ${categoryLabels[categoryFilter]}`;
   const shiftData = shiftsCount(rows);
   return <div className="space-y-5">{title}
     <PeriodFilter months={months} period={period} onChange={(value) => { setPeriod(value); setComparison((previous) => ({ ...previous, kind: value.kind })); }} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={(value) => { setComparison(value); setPeriod((previous) => ({ ...previous, kind: value.kind })); }} onClear={clear} />
@@ -73,7 +77,7 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
     {!rows.length ? <Empty text="Nenhum dado disponível" /> : <>
       <div className="grid gap-3 md:grid-cols-3"><Kpi accent label="Total de erros" value={rows.length} />{categories.map((item) => <Kpi key={item.name} label={item.name} value={item.value} />)}</div>
       {reasonData.length > 0 && <Panel title="Erros por motivo"><BarBlock data={reasonData} horizontal rowHeight={38} yAxisWidth={180} valueName="Ocorrências" /></Panel>}
-      <Panel title={rankingMode === "general" ? "Erros por login" : "Top 5 colaboradores por turno"} action={<div className="flex flex-wrap items-center gap-2"><div className="flex rounded-md border bg-muted p-1" role="group" aria-label="Modo do ranking"><Button size="sm" variant={rankingMode === "general" ? "default" : "ghost"} aria-pressed={rankingMode === "general"} onClick={() => setRankingMode("general")}>Ranking geral</Button><Button size="sm" variant={rankingMode === "shift" ? "default" : "ghost"} aria-pressed={rankingMode === "shift"} onClick={() => setRankingMode("shift")}>Por turno</Button></div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={includeMissingLogin} onChange={(event) => setIncludeMissingLogin(event.target.checked)} />Incluir sem login</label><RankingPrivacyToggle /></div>}>
+      <Panel title={rankingTitle} action={<div className="flex flex-wrap items-center gap-2"><div className="flex rounded-md border bg-muted p-1" role="group" aria-label="Modo do ranking"><Button size="sm" variant={rankingMode === "general" ? "default" : "ghost"} aria-pressed={rankingMode === "general"} onClick={() => setRankingMode("general")}>Ranking geral</Button><Button size="sm" variant={rankingMode === "shift" ? "default" : "ghost"} aria-pressed={rankingMode === "shift"} onClick={() => setRankingMode("shift")}>Por turno</Button></div><div className="flex rounded-md border bg-muted p-1" role="group" aria-label="Tipo de erro"><Button size="sm" variant={categoryFilter === "todos" ? "default" : "ghost"} aria-pressed={categoryFilter === "todos"} onClick={() => setCategoryFilter("todos")}>Todos</Button><Button size="sm" variant={categoryFilter === "SORTING" ? "default" : "ghost"} aria-pressed={categoryFilter === "SORTING"} onClick={() => setCategoryFilter("SORTING")}>Sorting</Button><Button size="sm" variant={categoryFilter === "ETIQUETAGEM" ? "default" : "ghost"} aria-pressed={categoryFilter === "ETIQUETAGEM"} onClick={() => setCategoryFilter("ETIQUETAGEM")}>Etiquetagem</Button></div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-primary" checked={includeMissingLogin} onChange={(event) => setIncludeMissingLogin(event.target.checked)} />Incluir sem login</label><RankingPrivacyToggle /></div>}>
         {rankingMode === "general" ? <LoginRanking data={loginData} /> : <div className={shiftRankings.length > 1 ? "grid gap-6 lg:grid-cols-3" : "grid gap-6"}>{shiftRankings.map((ranking) => <div key={ranking.shift} className="min-w-0"><h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-primary"><ShiftIcon shift={ranking.shift} className="h-4 w-4" />{ranking.shift} — Top 5</h4>{ranking.data.length ? <LoginRanking data={ranking.data} limit={5} /> : <Empty text="Nenhuma ocorrência disponível neste turno" />}</div>)}</div>}
       </Panel>
       {shiftData.length > 0 && <Panel title="Erros por turno responsável"><BarBlock data={shiftData} valueName="Ocorrências" /></Panel>}

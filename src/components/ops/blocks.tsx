@@ -53,7 +53,7 @@ const axisTick = { fontSize: 13, fill: "var(--muted-foreground)" };
 const valueLabel = { fontSize: 14, fill: "var(--foreground)", fontWeight: 600 };
 const shortName = (name: string, length: number) => name.length > length ? `${name.slice(0, length - 1)}…` : name;
 
-export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12, rowHeight = 0, yAxisWidth = 110, tickFormatter, tooltipLabel, valueName = "Registros", height }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number; rowHeight?: number; yAxisWidth?: number; tickFormatter?: (name: string) => string; tooltipLabel?: string; valueName?: string; height?: number }) {
+export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12, rowHeight = 0, yAxisWidth = 110, tickFormatter, tooltipLabel, valueName = "Registros", height, fillHeight = false, maxBarSize = 32 }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number; rowHeight?: number; yAxisWidth?: number; tickFormatter?: (name: string) => string; tooltipLabel?: string; valueName?: string; height?: number; fillHeight?: boolean; maxBarSize?: number }) {
   const [width, setWidth] = useState(600);
   if (!data.length) return <Empty text={emptyText} />;
   const d = data.slice(0, limit);
@@ -61,7 +61,7 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
   const categoryWidth = Math.min(Math.max(120, yAxisWidth), Math.max(85, Math.floor(width * 0.36)));
   const formatCategory = (name: string) => shortName(tickFormatter ? tickFormatter(name) : name, horizontal ? Math.max(9, Math.floor(categoryWidth / 7)) : width < 420 ? 10 : 16);
   return (
-    <div className="min-w-0 w-full" style={{ height: chartHeight }}>
+    <div className="min-w-0 w-full" style={{ height: fillHeight ? "100%" : chartHeight }}>
       <ResponsiveContainer onResize={(nextWidth) => setWidth(nextWidth)}>
         {horizontal ? (
           <BarChart data={d} layout="vertical" margin={{ top: 8, bottom: 8, left: 0, right: 48 }} barCategoryGap="24%">
@@ -73,7 +73,7 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
               labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${String(label)}` : String(label)}
               formatter={(value) => [Number(value).toLocaleString("pt-BR"), valueName]}
             />
-            <Bar dataKey="value" name={valueName} fill="var(--chart-1)" radius={[0, 4, 4, 0]} maxBarSize={32} isAnimationActive={false}>
+            <Bar dataKey="value" name={valueName} fill="var(--chart-1)" radius={[0, 4, 4, 0]} maxBarSize={maxBarSize} isAnimationActive={false}>
               <LabelList dataKey="value" position="right" {...valueLabel} formatter={(value: unknown) => Number(value).toLocaleString("pt-BR")} />
             </Bar>
           </BarChart>

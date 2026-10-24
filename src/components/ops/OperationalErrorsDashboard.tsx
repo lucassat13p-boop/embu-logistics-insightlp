@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { byDate, countBy, type RecordRow } from "@/lib/data";
 import { HUB_NAME, type FieldKey } from "@/lib/modules";
 import { availableMonths, EMPTY_PERIOD, filterByPeriod, periodLabel, recordMonth, type PeriodSelection } from "@/lib/period";
-import { countErrorCategories, definedErrorPeriod, ERROR_SHIFTS, errorShift, filterBacklog, filterErrorShifts, type ErrorShift } from "@/lib/operational-errors";
+import { countErrorCategories, definedErrorPeriod, ERROR_SHIFTS, errorCategory, errorShift, filterBacklog, filterErrorShifts, type ErrorShift } from "@/lib/operational-errors";
 import { variation } from "@/lib/comparison";
 import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "./blocks";
 import { PeriodFilter } from "./PeriodFilter";
@@ -51,10 +51,11 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   const rows = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, period), shifts), includeBacklog), [originals, period, shifts, includeBacklog]);
   const second = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, comparison), shifts), includeBacklog), [originals, comparison, shifts, includeBacklog]);
   const rankingRows = useMemo(() => errorLoginRankingRows(rows, includeMissingLogin), [rows, includeMissingLogin]);
+  const categoryRows = useMemo(() => categoryFilter === "todos" ? rankingRows : rankingRows.filter((row) => errorCategory(row) === categoryFilter), [rankingRows, categoryFilter]);
   const shiftRankings = useMemo(() => ERROR_SHIFTS.filter((shift) => !shifts.length || shifts.includes(shift)).map((shift) => ({
     shift,
-    data: countBy(rankingRows.filter((row) => errorShift(row.shift) === shift), "collaborator").slice(0, 5),
-  })), [rankingRows, shifts]);
+    data: countBy(categoryRows.filter((row) => errorShift(row.shift) === shift), "collaborator").slice(0, 5),
+  })), [categoryRows, shifts]);
   const months = availableMonths(originals);
   const hasDates = originals.some((row) => recordMonth(row.record_date));
   const comparisonReady = hasDates && definedErrorPeriod(period) && definedErrorPeriod(comparison) && period.kind === comparison.kind;

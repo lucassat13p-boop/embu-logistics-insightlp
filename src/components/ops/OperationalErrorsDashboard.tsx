@@ -46,6 +46,7 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [shifts, setShifts] = useState<ErrorShift[]>([]);
   const [rankingMode, setRankingMode] = useState<"general" | "shift">("general");
+  const [categoryFilter, setCategoryFilter] = useState<"todos" | "SORTING" | "ETIQUETAGEM">("todos");
   const [includeBacklog, setIncludeBacklog] = useState(false);
   const [includeMissingLogin, setIncludeMissingLogin] = useState(false);
   const rows = useMemo(() => filterBacklog(filterErrorShifts(filterByPeriod(originals, period), shifts), includeBacklog), [originals, period, shifts, includeBacklog]);
@@ -65,7 +66,9 @@ export function OperationalErrorsDashboard({ allRows }: { allRows: RecordRow[] }
   if (!originals.length) return <div>{title}<Empty text="Nenhum dado disponível" /></div>;
   const categories = countErrorCategories(rows);
   const reasonData = countBy(rows, "reason");
-  const loginData = countBy(rankingRows, "collaborator");
+  const loginData = countBy(categoryRows, "collaborator");
+  const categoryLabels: Record<typeof categoryFilter, string> = { todos: "Todos os erros", SORTING: "Sorting", ETIQUETAGEM: "Etiquetagem" };
+  const rankingTitle = `${rankingMode === "general" ? "Top 8 colaboradores" : "Top 5 colaboradores por turno"} — ${categoryLabels[categoryFilter]}`;
   const shiftData = shiftsCount(rows);
   return <div className="space-y-5">{title}
     <PeriodFilter months={months} period={period} onChange={(value) => { setPeriod(value); setComparison((previous) => ({ ...previous, kind: value.kind })); }} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={(value) => { setComparison(value); setPeriod((previous) => ({ ...previous, kind: value.kind })); }} onClear={clear} />

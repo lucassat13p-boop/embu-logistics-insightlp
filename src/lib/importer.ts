@@ -5,6 +5,7 @@ import { cellText, parseDate } from "./parsers";
 import { parseRetidosTime } from "./retidos-analysis";
 import { recordMonth } from "./period";
 import { parseOperationalDate } from "./operational-import-layout";
+import { publishStagedImport } from "./staged-import";
 
 export type Mapping = Record<string, FieldKey | "">;
 export type RowIssue = { rowNumber: number; column: string | null; message: string; kind: "erro" | "ignorado" | "duplicado"; raw?: Record<string, unknown> };
@@ -105,74 +106,53 @@ export async function commitImport(opts: {
   mapping: Mapping; result: ValidationResult; strategy: DupStrategy; avariaOptions?: AvariaImportOptions;
 }) {
   const t0 = performance.now();
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) throw new Error("Sessão expirada. Entre novamente.");
-  const user = u.user;
   const { mod, result } = opts;
-  const keys = result.valid.map((v) => v.dedupe_key);
-  const existing = await countExisting(mod, keys);
-
-  const { data: batch, error: bErr } = await supabase.from("import_batches").insert({
-    module: mod.key, file_name: opts.fileName, file_type: opts.format, sheet_name: opts.sheetName,
-    user_id: u.user.id, user_email: u.user.email ?? null, total_rows: result.total, valid_rows: result.valid.length,
-    error_rows: result.errorCount, ignored_rows: result.ignoredCount, duplicate_rows: result.dupInFile + existing,
-    status: "Processando", duplicate_strategy: mod.appendOnly ? "append" : opts.strategy, mapping: opts.mapping, headers: opts.headers,
-     selected_shifts: opts.avariaOptions?.shifts ?? null, include_soc: opts.avariaOptions?.includeSoc ?? null,
-     soc_rows: opts.avariaOptions?.found.soc ?? null,
-  }).select().single();
-  if (bErr || !batch) throw new Error(bErr?.message ?? "Falha ao criar lote");
-
-  let failed: string | null = null;
-  try {
-    const rows = result.valid.map((v) => ({
-      module: mod.key, batch_id: batch.id, row_number: v.rowNumber, created_by: user.id,
-      record_date: (v.fields.record_date as string) ?? null, record_date_raw: v.record_date_raw,
-      month: (v.fields.month as string) ?? null, location: (v.fields.location as string) ?? null,
-      order_id: (v.fields.order_id as string) ?? null, status: (v.fields.status as string) ?? null,
-      collaborator: (v.fields.collaborator as string) ?? null, product: (v.fields.product as string) ?? null,
-      shift: (v.fields.shift as string) ?? null, route: (v.fields.route as string) ?? null, lh: (v.fields.lh as string) ?? null,
-      reason: (v.fields.reason as string) ?? null, classification: (v.fields.classification as string) ?? null,
-      quantity: (v.fields.quantity as number) ?? null, extra: v.extra as never, raw: v.raw as never,
-      tracking_number: (v.fields.tracking_number as string) ?? null,
-      product_code: (v.fields.product_code as string) ?? null, treatment: (v.fields.treatment as string) ?? null,
-      delivery_attempts: (v.fields.delivery_attempts as string) ?? null, aging: (v.fields.aging as string) ?? null,
-      driver_name: (v.fields.driver_name as string) ?? null, driver_id: (v.fields.driver_id as string) ?? null,
-      carrier_3pl: (v.fields.carrier_3pl as string) ?? null, neighborhood: (v.fields.neighborhood as string) ?? null,
-      exception_order_id: (v.fields.exception_order_id as string) ?? null,
-      follow_up_action: (v.fields.follow_up_action as string) ?? null,
-      create_time: (v.fields.create_time as string) ?? null,
-      eha_inbound_time: (v.fields.eha_inbound_time as string) ?? null,
-      resolve_time: (v.fields.resolve_time as string) ?? null,
-      dedupe_key: mod.appendOnly ? (mod.key === "retidos_veiculos" ? v.dedupe_key : `${batch.id}:${v.rowNumber}:${v.dedupe_key}`) : v.dedupe_key, updated_at: new Date().toISOString(),
-    }));
-    for (let i = 0; i < rows.length; i += 500) {
-      const { error } = mod.appendOnly && mod.key !== "retidos_veiculos" ? await supabase.from("records").insert(rows.slice(i, i + 500)) : await supabase.from("records").upsert(rows.slice(i, i + 500), {
-        onConflict: "module,dedupe_key", ignoreDuplicates: opts.strategy === "ignore" || mod.key === "retidos_veiculos",
-      });
-      if (error) throw error;
-    }
-    const issues = result.issues.map((i) => ({ batch_id: batch.id, module: mod.key, row_number: i.rowNumber, column_name: i.column, kind: i.kind, message: i.message, raw: (i.raw ?? null) as never }));
-    for (let i = 0; i < issues.length; i += 500) {
-      const { error } = await supabase.from("import_errors").insert(issues.slice(i, i + 500));
-      if (error) throw error;
-    }
-    const names = [...new Set(result.valid.map((v) => v.fields.collaborator).filter(Boolean) as string[])];
-    if (names.length) await supabase.from("collaborators").upsert(names.map((name) => ({ name, first_seen_batch: batch.id })), { onConflict: "name", ignoreDuplicates: true });
-  } catch (e) {
-    failed = e instanceof Error ? e.message : String(e);
-  }
-  const inserted = opts.strategy === "ignore" ? result.valid.length - existing : result.valid.length - existing;
-  const status = failed ? "Erro" : result.errorCount || result.dupInFile || existing ? "Concluído com avisos" : "Concluído";
-  const { error: batchUpdateError } = await supabase.from("import_batches").update({
-    status, duration_ms: Math.round(performance.now() - t0), finished_at: new Date().toISOString(),
-    inserted_rows: failed ? 0 : Math.max(0, inserted), updated_rows: failed || opts.strategy === "ignore" ? 0 : existing,
-  }).eq("id", batch.id);
-  // Chunked writes are not atomic: never imply that an unsuccessful import rolled back.
-  if (failed || batchUpdateError) {
-    const reason = [failed, batchUpdateError?.message].filter(Boolean).join(" / ");
-    throw new Error(`Falha ao concluir a importação (lote ${batch.id}): ${reason}. Alguns registros podem ter sido salvos. Confira o histórico antes de importar novamente.`);
-  }
-  return { batchId: batch.id, inserted: Math.max(0, inserted), existing, status };
+  const rows = result.valid.map((v) => ({
+    row_number: v.rowNumber,
+    record_date: (v.fields.record_date as string) ?? null, record_date_raw: v.record_date_raw,
+    month: (v.fields.month as string) ?? null, location: (v.fields.location as string) ?? null,
+    order_id: (v.fields.order_id as string) ?? null, status: (v.fields.status as string) ?? null,
+    collaborator: (v.fields.collaborator as string) ?? null, product: (v.fields.product as string) ?? null,
+    shift: (v.fields.shift as string) ?? null, route: (v.fields.route as string) ?? null, lh: (v.fields.lh as string) ?? null,
+    reason: (v.fields.reason as string) ?? null, classification: (v.fields.classification as string) ?? null,
+    quantity: (v.fields.quantity as number) ?? null, extra: v.extra, raw: v.raw,
+    tracking_number: (v.fields.tracking_number as string) ?? null,
+    product_code: (v.fields.product_code as string) ?? null, treatment: (v.fields.treatment as string) ?? null,
+    delivery_attempts: (v.fields.delivery_attempts as string) ?? null, aging: (v.fields.aging as string) ?? null,
+    driver_name: (v.fields.driver_name as string) ?? null, driver_id: (v.fields.driver_id as string) ?? null,
+    carrier_3pl: (v.fields.carrier_3pl as string) ?? null, neighborhood: (v.fields.neighborhood as string) ?? null,
+    exception_order_id: (v.fields.exception_order_id as string) ?? null,
+    follow_up_action: (v.fields.follow_up_action as string) ?? null,
+    create_time: (v.fields.create_time as string) ?? null,
+    eha_inbound_time: (v.fields.eha_inbound_time as string) ?? null,
+    resolve_time: (v.fields.resolve_time as string) ?? null,
+    dedupe_key: v.dedupe_key,
+  }));
+  const issues = result.issues.map((i) => ({
+    row_number: i.rowNumber, column_name: i.column,
+    kind: i.kind, message: i.message, raw: i.raw ?? null,
+  }));
+  return publishStagedImport({
+    module: mod.key,
+    rows,
+    issues,
+    metadata: {
+      file_name: opts.fileName,
+      file_type: opts.format,
+      sheet_name: opts.sheetName,
+      total_rows: result.total,
+      error_rows: result.errorCount,
+      ignored_rows: result.ignoredCount,
+      duplicates_in_file: result.dupInFile,
+      strategy: opts.strategy,
+      append_only: mod.appendOnly ?? false,
+      mapping: opts.mapping, headers: opts.headers,
+      selected_shifts: opts.avariaOptions?.shifts ?? null,
+      include_soc: opts.avariaOptions?.includeSoc ?? null,
+      soc_rows: opts.avariaOptions?.found.soc ?? null,
+      duration_ms: Math.round(performance.now() - t0),
+    },
+  });
 }
 
 export const headerSignature = (headers: string[]) => headers.map((h) => h.trim().toLowerCase()).sort().join("|");

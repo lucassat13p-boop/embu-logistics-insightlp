@@ -60,3 +60,31 @@ Nenhuma das etapas pendentes autoriza alteração em `main`, deploy ou execuçã
 - `src/components/ops/BatchList.tsx`: em lote com status Erro a coluna importados mostra 'Não confirmado' em vez de 0, porque a gravação de chunks pode ter persistido dados parciais. Falha na leitura do histórico passa a ser mostrada.
 - `src/routes/_authenticated/historico.$id.tsx`: detalhes informam explicitamente risco de gravação parcial em lotes com Erro, não apresentam zero como contagem confirmada, e mostram falhas de carregamento de lotes/avisos.
 - As mudanças são somente de interface/consulta; **não fornecem atomicidade nem verificam contagens persistidas de lotes falhos**. Não realizar testes/deploy/migrações sem autorização.
+
+## Preparação de fechamento — 27/10/2026 (NÃO ATIVADA)
+
+### Importações transacionais — código preparado, revisão de SQL pendente
+- Arquivos novos: `supabase/migrations/202610270001_staged_import.sql` (tabelas temporárias de upload e função de finalização atômica) e `src/lib/staged-import.ts` (envio em partes, finalização e tratamento de respostas incertas).
+- `src/lib/importer.ts`, `src/lib/full-import.ts` e `src/integrations/supabase/types.ts` apontam para a função nova. **Dependem da aplicação da migração antes de publicar a interface.** Não fazer merge da nova interface sem confirmar que a migração foi aplicada e validada em um ambiente isolado.
+- São rascunhos para revisão: a transação, autorização, deduplicação e tratamento de colisão/race conditions ainda exigem validação de banco e importações reais anonimizadas. Não executar automaticamente.
+- A tabela de staging recebe arquivos em partes. A publicação de registros é proposta como uma operação única do PostgreSQL; uploads incompletos não entram nos relatórios. A limpeza de uploads abandonados precisa ser operacionalizada depois, com prazo de retenção e job com permissão adequada.
+
+### Segurança — proposta de RLS, sem aplicação
+- `docs/sql-proposals/20261027_access_review.sql` contém proposta comentada de membros autorizados, papéis, pré-validação, substituição de policies e rollback.
+- **Não é uma correção aplicada**: nenhum usuário atual foi inventariado, nenhuma role foi criada ou liberada. É preciso autenticar administradores, cadastrar membros autorizados e auditar todas as tabelas relacionadas antes de ativar RLS mais restritiva.
+- A página de cadastro não é barreira de segurança. Impedir contas não aprovadas requer regra no backend/Supabase e políticas RLS, não apenas alteração visual.
+
+### Dependência XLSX — atualização pendente
+- SheetJS documenta o tarball oficial da versão 0.20.3: `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`.
+- **Não alteramos** `package.json` nem `bun.lock`: o ambiente não disponibiliza resolução dos artefatos e não seria seguro alterar apenas um deles. Os formatos XLSX, XLS, CSV e várias abas precisam ser verificados com arquivos representativos.
+- No ambiente com Bun e acesso à internet, atualizar a dependência apontando para o tarball oficial, gerar novamente `bun.lock` com o gerenciador e revisar compatibilidade antes de publicar. Não atualizar apenas o número de versão no package.json.
+
+### Ordem obrigatória antes de disponibilizar as correções
+1. Revisão de SQL e de permissões por especialista, inventário de usuários atuais, backup e ambiente isolado.
+2. Aplicar migração de staging em ambiente isolado e validar importações pequenas, grandes, duplicadas e interrompidas; observar preservação do status manual FULL.
+3. Verificar nova interface usando o mesmo ambiente e aprovar correções.
+4. Gerar lockfile da dependência Excel e verificar XLS/XLSX/CSV com amostras representativas.
+5. Projetar e validar membership + RLS sem bloquear ninguém; habilitar apenas com aprovação explícita.
+6. Somente então avaliar merge/deploy com plano de rollback e autorização do responsável.
+
+**Estado real:** código implementado na branch, porém sem testes, sem migrações executadas e sem implantação; segurança e Excel ainda pendentes.

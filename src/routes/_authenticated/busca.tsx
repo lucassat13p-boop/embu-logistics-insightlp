@@ -39,7 +39,12 @@ function Page() {
         const active = await fetchFloatingActive();
         return active.rows.filter((row) => [row.order_id, row.driver_name, row.route, row.to_number, row.product, row.collaborator].some((value) => value?.toLocaleLowerCase("pt-BR").includes(s.toLocaleLowerCase("pt-BR"))));
       }
-      const cols = ["order_id", "collaborator", "product", "lh", "route", "status", "reason"];
+      const cols = [
+        "order_id", "tracking_number", "to_number", "sender_name", "collaborator",
+        "driver_name", "driver_id", "carrier_3pl", "product", "product_code", "lh",
+        "route", "status", "br_status", "status_issue", "manual_status", "reason",
+        "classification", "treatment", "exception_order_id", "follow_up_action",
+      ];
       // Fetch every matching page instead of silently discarding results after the first 1000.
       // Order by a unique key so pagination is stable when record dates coincide.
       const matches: RecordRow[] = [];

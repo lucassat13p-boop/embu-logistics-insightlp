@@ -58,7 +58,7 @@ function ModulePage() {
 }
 
 function ModuleContent({ mod }: { mod: ModuleDef }) {
-  const { data: allRows = [], isLoading } = useQuery(recordsQuery(mod.key));
+  const { data: allRows = [], isLoading, isError, error, refetch } = useQuery(recordsQuery(mod.key));
   const [period, setPeriod] = useInitialTodayPeriod();
   const [comparison, setComparison] = useState<PeriodSelection>({ ...EMPTY_PERIOD });
   const [mode, setMode] = useState<"single" | "compare">("single");
@@ -67,7 +67,10 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const isAvaria = mod.key === "avaria";
   const isOnHold = mod.key === "on_hold";
   const months = useMemo(() => availableMonths(allRows), [allRows]);
-  const rows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, period), avariaShifts) : allRows, [allRows, period, isAvaria, avariaShifts]);
+  const rows = useMemo(() => {
+    const inPeriod = filterByPeriod(allRows, period);
+    return isAvaria ? filterAvariaByShift(inPeriod, avariaShifts) : inPeriod;
+  }, [allRows, period, isAvaria, avariaShifts]);
   const comparisonRows = useMemo(() => isAvaria ? filterAvariaByShift(filterByPeriod(allRows, comparison), avariaShifts) : [], [allRows, comparison, isAvaria, avariaShifts]);
   const has = (f: FieldKey) => hasField(rows, f);
   const dates = rows.map((r) => r.record_date).filter(Boolean).sort() as string[];
@@ -80,6 +83,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   );
 
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-10 w-64" /><Skeleton className="h-32" /><Skeleton className="h-64" /></div>;
+  if (isError) return <div role="alert" className="space-y-3 rounded-lg border p-5"><p className="font-semibold text-destructive">Não foi possível carregar os dados de {mod.label}.</p><p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "Erro desconhecido ao consultar os registros."}</p><Button variant="outline" onClick={() => void refetch()}>Tentar novamente</Button></div>;
   if (isOnHold) return <OnHoldDashboard allRows={allRows} />;
   if (mod.key === "retidos_veiculos") return <RetidosDashboard allRows={allRows} />;
   if (mod.key === "full") return <FullDashboard allRows={allRows} />;
@@ -95,7 +99,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   return (
     <div className="space-y-5">
       <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={importBtn} />
-      {isAvaria && <PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); setAvariaShifts(["all"]); }} />}
+      <PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} allowCompare={isAvaria} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); setAvariaShifts(["all"]); }} />
       {isAvaria && <div><Label>Turno</Label><ToggleGroup type="multiple" variant="outline" size="sm" className="mt-2 justify-start" value={avariaShifts} onValueChange={(value: string[]) => { setAvariaShifts((prev) => { const next = value as AvariaShift[]; if (next.includes("all")) { return prev.includes("all") && next.length > 1 ? next.filter((item) => item !== "all") as AvariaShift[] : ["all"]; } return next.length ? next : ["all"]; }); }}><ToggleGroupItem value="all">Todos</ToggleGroupItem><ToggleGroupItem value="AM1">AM1</ToggleGroupItem><ToggleGroupItem value="AM2">AM2</ToggleGroupItem><ToggleGroupItem value="PM1">PM1</ToggleGroupItem></ToggleGroup></div>}
 
       {isAvaria && mode === "compare" && <MonthComparison firstRows={rows} secondRows={comparisonRows} firstPeriod={period} secondPeriod={comparison} />}
@@ -153,7 +157,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
       </div>
 
       <Panel title={isAvaria ? "Ocorrências dos pedidos" : "Registros"}>
-        <RecordsTable defaultToToday={!isAvaria} key={`${JSON.stringify(period)}-${avariaShifts.join(",")}`} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
+        <RecordsTable defaultToToday={false} key={`${JSON.stringify(period)}-${avariaShifts.join(",")}`} rows={rows} columns={columns} forceColumns={isAvaria ? columns : ["record_date", "order_id", "status"]} />
       </Panel>
     </div>
   );

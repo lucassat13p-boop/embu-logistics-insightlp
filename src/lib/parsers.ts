@@ -115,7 +115,10 @@ export function parseDate(v: unknown): { iso: string | null; raw: string | null 
   return { iso: null, raw };
 }
 function valid(y: number, mo: number, d: number, raw: string) {
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return { iso: null, raw };
+  if (!Number.isInteger(y) || y < 1900 || y > 9999 || mo < 1 || mo > 12 || d < 1 || d > 31) return { iso: null, raw };
+  // Reject impossible dates (29/02 in non-leap years, 31/04, etc.) rather than saving malformed strings.
+  const parsed = new Date(Date.UTC(y, mo - 1, d));
+  if (parsed.getUTCFullYear() !== y || parsed.getUTCMonth() !== mo - 1 || parsed.getUTCDate() !== d) return { iso: null, raw };
   return { iso: `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`, raw };
 }
 

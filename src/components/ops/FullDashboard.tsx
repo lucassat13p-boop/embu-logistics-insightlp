@@ -23,7 +23,7 @@ import { FullBulkDialog } from "./FullBulkDialog";
 import { fullBrList, fullManualError } from "@/lib/full-selection";
 
 const PAGE = 50;
-const classOf = (r: RecordRow) => r.manual_status?.trim() ? "manual" : fullFinalStatus(r) === FULL_PENDING ? "pending" : "auto";
+const classOf = (r: RecordRow) => fullFinalStatus(r) === FULL_PENDING ? "pending" : r.manual_status?.trim() ? "manual" : "auto";
 
 export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
   const qc = useQueryClient();

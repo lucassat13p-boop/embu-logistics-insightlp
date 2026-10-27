@@ -1,0 +1,62 @@
+-- REVIEW-ONLY PROPOSAL. Not referenced by automatic migration runners.
+-- Before executing: inventory current auth.users and staff roles; seed at least two administrators,
+-- verify every existing employee's expected access, backup policies and run isolated regressions.
+-- Apply in one reviewed transaction only AFTER seeding hub_members.
+--
+-- Example preflight (read only, through a privileged SQL administrator):
+-- select schemaname,tablename,policyname,cmd,roles,qual,with_check
+-- from pg_policies where schemaname='public' order by tablename,policyname;
+--
+-- PROPOSED MEMBERSHIP MODEL:
+-- create table public.hub_members(
+--   user_id uuid primary key references auth.users(id) on delete cascade,
+--   role text not null check (role in ('admin','operator','reader')),
+--   approved_at timestamptz not null default now(),
+--   approved_by uuid
+-- );
+-- revoke all on public.hub_members from public,anon,authenticated;
+-- grant select on public.hub_members to authenticated;
+-- alter table public.hub_members enable row level security;
+-- create policy "members view own membership" on public.hub_members for select to authenticated
+-- using (user_id=auth.uid());
+--
+-- create function public.hub_can_read() returns boolean
+-- language sql security definer stable set search_path=''
+-- as $$select exists(select 1 from public.hub_members m where m.user_id=auth.uid())$$;
+-- create function public.hub_can_write() returns boolean
+-- language sql security definer stable set search_path=''
+-- as $$select exists(select 1 from public.hub_members m
+--   where m.user_id=auth.uid() and m.role in ('admin','operator'))$$;
+-- revoke all on function public.hub_can_read() from public,anon;
+-- revoke all on function public.hub_can_write() from public,anon;
+-- grant execute on function public.hub_can_read(),public.hub_can_write() to authenticated;
+--
+-- Seed approved members using a privileged connection BEFORE replacing existing policies:
+-- insert into public.hub_members(user_id,role,approved_by) values (...);
+--
+-- Proposed record policies after membership is in place:
+-- drop policy "auth read records" on public.records;
+-- create policy "approved hub read records" on public.records for select to authenticated
+-- using (public.hub_can_read());
+-- drop policy "auth insert records" on public.records;
+-- create policy "approved hub insert records" on public.records for insert to authenticated
+-- with check (public.hub_can_write() and created_by=auth.uid()
+--   and exists(select 1 from public.import_batches b where b.id=batch_id and b.user_id=auth.uid()));
+-- drop policy "auth update records" on public.records;
+-- create policy "approved hub update records" on public.records for update to authenticated
+-- using (public.hub_can_write())
+-- with check (public.hub_can_write());
+--
+-- The UPDATE policy above intentionally preserves team-shared workflows, but is still broad.
+-- Future hardening MUST move the mutable operations to narrow RPC functions, constrain
+-- mutable columns to each workflow and add per-record audit logs before write access
+-- can be considered least privilege. Protect ALL related tables (batches, mappings,
+-- errors, treatments, floating snapshots) with corresponding membership policies in
+-- the same reviewed deployment; restricting records alone does not solve the issue.
+--
+-- Backend must independently disable public email signups or use a secure invitation and
+-- approval system. Merely hiding the signup button is NOT a security boundary.
+--
+-- ROLLBACK PLAN: preserve existing pg_policies definitions and restore them in one
+-- transaction if behavior changes unexpectedly. Membership data is not a replacement
+-- for a backup. Never apply this proposal automatically.

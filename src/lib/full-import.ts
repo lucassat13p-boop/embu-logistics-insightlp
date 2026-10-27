@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { cellText } from "./parsers";
 import { normalizeHeader } from "./modules";
+import { publishStagedImport } from "./staged-import";
 
 export type FullBaseField = "to_number" | "order_id" | "sender_name";
 export type FullStatusField = "match_br" | "br_status";
@@ -149,38 +150,41 @@ export async function commitFullImport(o: {
   fileName: string; format: string; sheetName: string; headers: string[]; mapping: unknown;
 }) {
   const t0 = performance.now();
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) throw new Error("Sessão expirada. Entre novamente.");
-  const keys = o.build.rows.map((r) => fullDedupeKey(o.date, o.shift, r.key));
-  const existing = await countFullExisting(keys);
-  const { data: batch, error: bErr } = await supabase.from("import_batches").insert({
-    module: "full", file_name: o.fileName, file_type: o.format, sheet_name: o.sheetName, user_id: u.user.id, user_email: u.user.email ?? null,
-    total_rows: o.build.total, valid_rows: o.build.rows.length, error_rows: o.build.missingBr, ignored_rows: 0, duplicate_rows: o.build.dupInFile + existing,
-    status: "Processando", duplicate_strategy: o.strategy, mapping: o.mapping as never, headers: o.headers,
-    selected_shifts: o.shift ? [o.shift] : null,
-  }).select().single();
-  if (bErr || !batch) throw new Error(bErr?.message ?? "Falha ao criar lote");
-  let failed: string | null = null;
-  try {
-    // manual_status is never sent, so re-imports keep manual classifications.
-    const rows = o.build.rows.map((r) => ({
-      module: "full", batch_id: batch.id, row_number: r.rowNumber, created_by: u.user!.id,
-      record_date: o.date, record_date_raw: o.date, shift: o.shift, order_id: r.order_id, to_number: r.to_number, sender_name: r.sender_name,
-      status: r.br_status, br_status: r.br_status, status_issue: r.status_issue, lh: r.lh, raw: r.raw as never, extra: {} as never,
-      dedupe_key: fullDedupeKey(o.date, o.shift, r.key), updated_at: new Date().toISOString(),
-    }));
-    for (let i = 0; i < rows.length; i += 500) {
-      const { error } = await supabase.from("records").upsert(rows.slice(i, i + 500), { onConflict: "module,dedupe_key", ignoreDuplicates: o.strategy === "ignore" });
-      if (error) throw error;
-    }
-  } catch (e) { failed = e instanceof Error ? e.message : String(e); }
-  const inserted = Math.max(0, o.build.rows.length - existing);
-  const status = failed ? "Erro" : o.build.missingBr || o.build.dupInFile || existing || o.build.pending ? "Concluído com avisos" : "Concluído";
-  const { error: batchUpdateError } = await supabase.from("import_batches").update({ status, duration_ms: Math.round(performance.now() - t0), finished_at: new Date().toISOString(), inserted_rows: failed ? 0 : inserted, updated_rows: failed || o.strategy === "ignore" ? 0 : existing }).eq("id", batch.id);
-  // Chunked writes are not atomic: never imply that an unsuccessful import rolled back.
-  if (failed || batchUpdateError) {
-    const reason = [failed, batchUpdateError?.message].filter(Boolean).join(" / ");
-    throw new Error(`Falha ao concluir a importação FULL (lote ${batch.id}): ${reason}. Alguns registros podem ter sido salvos. Confira o histórico antes de importar novamente.`);
-  }
-  return { batchId: batch.id, inserted, existing, status };
+  const rows = o.build.rows.map((r) => ({
+    row_number: r.rowNumber,
+    record_date: o.date,
+    record_date_raw: o.date,
+    shift: o.shift,
+    order_id: r.order_id,
+    to_number: r.to_number,
+    sender_name: r.sender_name,
+    status: r.br_status,
+    br_status: r.br_status,
+    status_issue: r.status_issue,
+    lh: r.lh,
+    raw: r.raw,
+    extra: {},
+    dedupe_key: fullDedupeKey(o.date, o.shift, r.key),
+  }));
+  return publishStagedImport({
+    module: "full",
+    rows,
+    issues: [],
+    metadata: {
+      file_name: o.fileName,
+      file_type: o.format,
+      sheet_name: o.sheetName,
+      total_rows: o.build.total,
+      error_rows: o.build.missingBr,
+      ignored_rows: 0,
+      duplicates_in_file: o.build.dupInFile,
+      pending_rows: o.build.pending,
+      strategy: o.strategy,
+      append_only: false,
+      mapping: o.mapping,
+      headers: o.headers,
+      selected_shifts: o.shift ? [o.shift] : null,
+      duration_ms: Math.round(performance.now() - t0),
+    },
+  });
 }

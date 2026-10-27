@@ -6,6 +6,7 @@
 
 - **Busca global:** paginação estável pelo ID para retornar todos os resultados encontrados no banco (não apenas 1.000); tratamento explícito de erros de consulta. Arquivo: `src/routes/_authenticated/busca.tsx`.
 - **Preservado:** pesquisa sem filtro automático de data, seleção de módulo e inclusão da lista ativa de pacotes flutuantes.
+- **Validação das importações (parcial):** `src/lib/importer.ts` e `src/lib/full-import.ts` agora interrompem o processo caso a consulta de duplicados falhe, detectam falha ao atualizar o lote e avisam explicitamente quando registros podem ter sido gravados parcialmente. **Ainda não é uma transação atômica e não há rollback automático.**
 
 ## Pendente — requer análise de impacto e autorização antes de aplicar
 

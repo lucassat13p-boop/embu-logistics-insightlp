@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { batchesQuery } from "@/lib/data";
 import { MODULES, moduleByKey } from "@/lib/modules";
@@ -9,7 +10,7 @@ import { Empty, StatusBadge } from "./blocks";
 import { DeleteImportButton } from "./DeleteImportButton";
 
 export function BatchList() {
-  const { data = [], isLoading } = useQuery(batchesQuery());
+  const { data = [], isLoading, isError, error, refetch } = useQuery(batchesQuery());
   const [q, setQ] = useState("");
   const [mod, setMod] = useState("all");
   const [st, setSt] = useState("all");
@@ -33,6 +34,7 @@ export function BatchList() {
         <Select value={st} onValueChange={setSt}><SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Todos os status</SelectItem>{["Processando", "Concluído", "Concluído com avisos", "Erro"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
       </div>
+      {isError && <div role="alert" className="rounded-md border p-3 text-sm text-destructive">Não foi possível consultar o histórico: {error instanceof Error ? error.message : "Erro desconhecido."} <Button size="sm" variant="outline" onClick={() => void refetch()}>Tentar novamente</Button></div>}
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
@@ -47,7 +49,7 @@ export function BatchList() {
                 <td className="max-w-[180px] truncate px-3 py-2">{b.user_email ?? "Sem informação"}</td>
                 <td className="px-3 py-2 tabular-nums">{b.total_rows}</td>
                 <td className="px-3 py-2 tabular-nums">{b.valid_rows}</td>
-                <td className="px-3 py-2 tabular-nums">{b.inserted_rows}</td>
+                <td className="px-3 py-2 tabular-nums">{b.status === "Erro" ? <span title="Importação interrompida: não foi possível confirmar quantos registros foram realmente salvos.">Não confirmado</span> : b.inserted_rows}</td>
                 <td className="px-3 py-2 tabular-nums">{b.ignored_rows}</td>
                 <td className="max-w-[220px] px-3 py-2 text-xs">{b.module === "avaria" ? `${b.selected_shifts?.join(", ") || "Nenhum"} · SOC ${b.include_soc === null ? "—" : b.include_soc ? "incluído" : "não incluído"}` : "—"}</td>
                 <td className="px-3 py-2 tabular-nums">{b.error_rows}</td>
@@ -58,7 +60,7 @@ export function BatchList() {
             ))}
           </tbody>
         </table>
-        {!isLoading && !rows.length && <Empty text="Nenhuma importação encontrada." />}
+        {!isLoading && !isError && !rows.length && <Empty text="Nenhuma importação encontrada." />}
       </div>
     </div>
   );

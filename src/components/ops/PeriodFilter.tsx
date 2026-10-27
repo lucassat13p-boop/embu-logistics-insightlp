@@ -35,7 +35,7 @@ function PeriodFields({ value, onChange, months, label }: { value: PeriodSelecti
   </div>;
 }
 
-export function PeriodFilter({ months, period, onChange, mode, onModeChange, comparison, onComparisonChange, onClear }: {
+export function PeriodFilter({ months, period, onChange, mode, onModeChange, comparison, onComparisonChange, onClear, allowCompare = true }: {
   months: string[];
   period: PeriodSelection;
   onChange: (period: PeriodSelection) => void;
@@ -44,13 +44,14 @@ export function PeriodFilter({ months, period, onChange, mode, onModeChange, com
   comparison: PeriodSelection;
   onComparisonChange: (period: PeriodSelection) => void;
   onClear: () => void;
+  allowCompare?: boolean;
 }) {
   return (
     <div className="w-full min-w-0 space-y-3 rounded-md border bg-card p-3">
-      <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Modo de análise:</span><Button size="sm" variant={mode === "single" ? "default" : "outline"} onClick={() => onModeChange("single")}>Período único</Button><Button size="sm" variant={mode === "compare" ? "default" : "outline"} onClick={() => onModeChange("compare")}><Columns3 className="h-4 w-4" />Comparar períodos</Button><Button size="sm" variant="ghost" onClick={onClear}><X className="h-4 w-4" />Limpar filtro</Button></div>
-      <div className={mode === "compare" ? "grid gap-3 xl:grid-cols-2" : "max-w-4xl"}>
-        <PeriodFields label={mode === "compare" ? "Período 1" : "Tipo de período"} value={period} onChange={onChange} months={months} />
-        {mode === "compare" && <PeriodFields label="Período 2" value={comparison} onChange={onComparisonChange} months={months} />}
+      <div className="flex flex-wrap items-center gap-2">{allowCompare && <><span className="text-sm font-medium">Modo de análise:</span><Button size="sm" variant={mode === "single" ? "default" : "outline"} onClick={() => onModeChange("single")}>Período único</Button><Button size="sm" variant={mode === "compare" ? "default" : "outline"} onClick={() => onModeChange("compare")}><Columns3 className="h-4 w-4" />Comparar períodos</Button></>}<Button size="sm" variant="ghost" onClick={onClear}><X className="h-4 w-4" />Limpar filtro</Button></div>
+      <div className={allowCompare && mode === "compare" ? "grid gap-3 xl:grid-cols-2" : "max-w-4xl"}>
+        <PeriodFields label={allowCompare && mode === "compare" ? "Período 1" : "Tipo de período"} value={period} onChange={onChange} months={months} />
+        {allowCompare && mode === "compare" && <PeriodFields label="Período 2" value={comparison} onChange={onComparisonChange} months={months} />}
       </div>
     </div>
   );

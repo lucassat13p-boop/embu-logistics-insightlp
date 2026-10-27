@@ -136,8 +136,10 @@ export const fullDedupeKey = (date: string | null, shift: string | null, key: st
 export async function countFullExisting(keys: string[]) {
   let n = 0;
   for (let i = 0; i < keys.length; i += 200) {
-    const { count } = await supabase.from("records").select("id", { count: "exact", head: true }).eq("module", "full").in("dedupe_key", keys.slice(i, i + 200));
-    n += count ?? 0;
+    const { count, error } = await supabase.from("records").select("id", { count: "exact", head: true }).eq("module", "full").in("dedupe_key", keys.slice(i, i + 200));
+    if (error) throw new Error(`Não foi possível conferir os registros FULL existentes: ${error.message}`);
+    if (count === null) throw new Error("Não foi possível conferir a quantidade de registros FULL existentes.");
+    n += count;
   }
   return n;
 }
@@ -174,7 +176,11 @@ export async function commitFullImport(o: {
   } catch (e) { failed = e instanceof Error ? e.message : String(e); }
   const inserted = Math.max(0, o.build.rows.length - existing);
   const status = failed ? "Erro" : o.build.missingBr || o.build.dupInFile || existing || o.build.pending ? "Concluído com avisos" : "Concluído";
-  await supabase.from("import_batches").update({ status, duration_ms: Math.round(performance.now() - t0), finished_at: new Date().toISOString(), inserted_rows: failed ? 0 : inserted, updated_rows: failed || o.strategy === "ignore" ? 0 : existing }).eq("id", batch.id);
-  if (failed) throw new Error(failed);
+  const { error: batchUpdateError } = await supabase.from("import_batches").update({ status, duration_ms: Math.round(performance.now() - t0), finished_at: new Date().toISOString(), inserted_rows: failed ? 0 : inserted, updated_rows: failed || o.strategy === "ignore" ? 0 : existing }).eq("id", batch.id);
+  // Chunked writes are not atomic: never imply that an unsuccessful import rolled back.
+  if (failed || batchUpdateError) {
+    const reason = [failed, batchUpdateError?.message].filter(Boolean).join(" / ");
+    throw new Error(`Falha ao concluir a importação FULL (lote ${batch.id}): ${reason}. Alguns registros podem ter sido salvos. Confira o histórico antes de importar novamente.`);
+  }
   return { batchId: batch.id, inserted, existing, status };
 }

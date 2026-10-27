@@ -102,6 +102,18 @@ export type Database = {
           },
         ]
       }
+      import_upload_parts: {
+        Row: { upload_id: string; part_index: number; rows: Json; issues: Json }
+        Insert: { upload_id: string; part_index: number; rows?: Json; issues?: Json }
+        Update: { upload_id?: string; part_index?: number; rows?: Json; issues?: Json }
+        Relationships: []
+      }
+      import_uploads: {
+        Row: { id: string; user_id: string; module: string; metadata: Json; expected_parts: number; created_at: string }
+        Insert: { id?: string; user_id?: string; module: string; metadata: Json; expected_parts: number; created_at?: string }
+        Update: { id?: string; user_id?: string; module?: string; metadata?: Json; expected_parts?: number; created_at?: string }
+        Relationships: []
+      }
       import_batches: {
         Row: {
           created_at: string
@@ -482,6 +494,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      finalize_staged_import: { Args: { p_upload_id: string }; Returns: Json }
       classify_full_selection: {
         Args: {
           p_expected_ids: string[]

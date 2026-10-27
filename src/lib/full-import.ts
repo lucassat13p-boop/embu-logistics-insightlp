@@ -124,10 +124,10 @@ export function fullFinalStatus(r: { manual_status?: string | null; br_status?: 
   if (manual && normStatus(manual) !== normStatus(FULL_LMHUB)) return manual;
   // LMHub_Received is never final, even for rows imported before this rule (status_issue may be empty).
   if (r.br_status && normStatus(r.br_status) === normStatus(FULL_LMHUB)) return FULL_PENDING;
-  // A recognized status wins even over "Status não reconhecido automaticamente" stored by older imports.
+  // A recognized status wins even over stale "Status não reconhecido automaticamente" flags.
   const auto = autoStatus(r.br_status ?? null);
   if (auto) return auto;
-  if (!r.status_issue) return r.br_status ?? FULL_PENDING;
+  // Older imports may have no status_issue; an unknown raw status must still be classified manually.
   return FULL_PENDING;
 }
 

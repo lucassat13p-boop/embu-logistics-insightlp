@@ -16,7 +16,8 @@ export async function fetchRecords(module?: ModuleKey) {
     let q = supabase.from("records").select("*").order("record_date", { ascending: false, nullsFirst: false }).range(from, from + 999);
     if (module) q = q.eq("module", module);
     else q = q.neq("module", "pacotes_flutuantes");
-    if (module === "retidos_veiculos" || module === "full") q = q.order("id", { ascending: true });
+    // Stable secondary order prevents records with the same date from changing pages.
+    q = q.order("id", { ascending: true });
     const { data, error } = await q;
     if (error) throw error;
     out.push(...(data ?? []));
@@ -32,9 +33,15 @@ export const batchesQuery = () =>
   queryOptions({
     queryKey: ["batches"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("import_batches").select("*").order("created_at", { ascending: false }).limit(1000);
-      if (error) throw error;
-      return data ?? [];
+      const out: BatchRow[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase.from("import_batches").select("*")
+          .order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, from + 999);
+        if (error) throw error;
+        out.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      return out;
     },
   });
 
@@ -42,11 +49,18 @@ export const errorsQuery = (batchId?: string) =>
   queryOptions({
     queryKey: ["import_errors", batchId ?? "all"],
     queryFn: async () => {
-      let q = supabase.from("import_errors").select("*").order("row_number").limit(5000);
-      if (batchId) q = q.eq("batch_id", batchId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      const out: Tables<"import_errors">[] = [];
+      for (let from = 0; ; from += 1000) {
+        let q = supabase.from("import_errors").select("*")
+          .order("row_number", { ascending: true, nullsFirst: false }).order("id", { ascending: true })
+          .range(from, from + 999);
+        if (batchId) q = q.eq("batch_id", batchId);
+        const { data, error } = await q;
+        if (error) throw error;
+        out.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      return out;
     },
   });
 

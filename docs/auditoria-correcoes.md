@@ -53,3 +53,10 @@ Nenhuma das etapas pendentes autoriza alteração em `main`, deploy ou execuçã
 - **Excel:** a dependência `xlsx@0.18.5` está travada em `bun.lock` e deve ser substituída ou atualizada junto com o lockfile via instalação reproduzível. A distribuição oficial corrigida do SheetJS usa tarball fora do registro npm; não alterar só `package.json` sem atualizar `bun.lock`. A nova versão precisa preservar XLS, XLSX, CSV, datas e múltiplas abas. Mudança não aplicada nesta etapa porque o artefato oficial não pôde ser obtido/verificado neste ambiente.
 - **Importações:** `commitImport` e `commitFullImport` ainda executam vários UPSERTs de 500 em chamadas independentes. Exibir avisos não torna a operação atômica. A correção completa exige RPC transacional, tratamento de dedupe, checagem de ownership em atualizações, referências de lotes, idempotência e implementação correspondente no frontend, depois validação isolada e migração em produção.
 - **Não foram realizados** testes, builds, conexão com dados de produção ou aplicação de SQL. Recomenda-se revisão manual e verificação em ambiente isolado antes de merge.
+
+## Etapa adicional: transparência do histórico (27/10/2026)
+
+- `src/lib/data.ts`: histórico de lotes e de avisos passa a usar paginação com ordenação estável; removidos tetos anteriores de 1.000 lotes e 5.000 avisos por consulta. A consulta de registros mantém teto de 50.000 em módulos usuais conforme decisão anterior.
+- `src/components/ops/BatchList.tsx`: em lote com status Erro a coluna importados mostra 'Não confirmado' em vez de 0, porque a gravação de chunks pode ter persistido dados parciais. Falha na leitura do histórico passa a ser mostrada.
+- `src/routes/_authenticated/historico.$id.tsx`: detalhes informam explicitamente risco de gravação parcial em lotes com Erro, não apresentam zero como contagem confirmada, e mostram falhas de carregamento de lotes/avisos.
+- As mudanças são somente de interface/consulta; **não fornecem atomicidade nem verificam contagens persistidas de lotes falhos**. Não realizar testes/deploy/migrações sem autorização.

@@ -10,6 +10,9 @@
 - **Filtros de módulos genéricos:** indicadores e tabela usam o mesmo período selecionado (incluindo Auto Add); não há mais filtro “Hoje” oculto adicional na tabela. Falhas de leitura mostram aviso e opção de tentar novamente.
 - **Validação das importações (parcial):** `src/lib/importer.ts` e `src/lib/full-import.ts` agora interrompem o processo caso a consulta de duplicados falhe, detectam falha ao atualizar o lote e avisam explicitamente quando registros podem ter sido gravados parcialmente. **Ainda não é uma transação atômica e não há rollback automático.**
 
+- **Datas importadas:** `src/lib/parsers.ts` rejeita datas impossíveis, como 31/04 e 29/02 em anos não bissextos, antes de transformar o valor em data do sistema.
+- **Pesquisa ampliada:** busca geral passa a incluir Tracking Number, TO Number, motorista, driver ID, transportadora, status FULL, código de produto e outros campos operacionais que antes não eram pesquisados.
+
 ## Pendente — requer análise de impacto e autorização antes de aplicar
 
 ### 1. Regras de acesso (prioridade alta)
@@ -42,3 +45,11 @@
 - Backup e plano de reversão de schema/dados antes de migrações.
 
 Nenhuma das etapas pendentes autoriza alteração em `main`, deploy ou execução SQL.
+
+## Notas de segurança e rollout (27/10/2026)
+
+- **Cadastro aberto:** a tela `src/routes/auth.tsx` fornece `signUp`. Se o Supabase permitir cadastro livre, a política RLS de SELECT para qualquer `authenticated` pode expor informações a contas recém-criadas. Restringir a capacidade de registrar/acessar por convites e/ou tabela de usuários aprovados é prioridade alta, mas o sistema já pode ter usuários ativos; não fechar acesso sem inventário e verificação da configuração real do provedor.
+- **RLS:** não corrigir apenas mudando `USING (true)` para `created_by = auth.uid()`; isso pode quebrar classificações de FULL, importações atualizadas por outra pessoa e tratativas compartilhadas. Construir esquema de aprovação/papéis e depois uma migração aditiva com políticas para edição e leitura, com auditoria de UPDATE em função atômica invoker.
+- **Excel:** a dependência `xlsx@0.18.5` está travada em `bun.lock` e deve ser substituída ou atualizada junto com o lockfile via instalação reproduzível. A distribuição oficial corrigida do SheetJS usa tarball fora do registro npm; não alterar só `package.json` sem atualizar `bun.lock`. A nova versão precisa preservar XLS, XLSX, CSV, datas e múltiplas abas. Mudança não aplicada nesta etapa porque o artefato oficial não pôde ser obtido/verificado neste ambiente.
+- **Importações:** `commitImport` e `commitFullImport` ainda executam vários UPSERTs de 500 em chamadas independentes. Exibir avisos não torna a operação atômica. A correção completa exige RPC transacional, tratamento de dedupe, checagem de ownership em atualizações, referências de lotes, idempotência e implementação correspondente no frontend, depois validação isolada e migração em produção.
+- **Não foram realizados** testes, builds, conexão com dados de produção ou aplicação de SQL. Recomenda-se revisão manual e verificação em ambiente isolado antes de merge.

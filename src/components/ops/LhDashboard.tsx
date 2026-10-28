@@ -98,21 +98,28 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
         {!searched.length && <p className="mt-3 text-sm text-muted-foreground">Nenhuma LH encontrada para a pesquisa.</p>}
         <div className="mt-3 flex items-center justify-end gap-2 text-sm"><span className="text-muted-foreground">Página {cur + 1} de {pages}</span><Button size="icon" variant="outline" aria-label="Página anterior" disabled={cur === 0} onClick={() => setPage(cur - 1)}><ChevronLeft className="h-4 w-4" /></Button><Button size="icon" variant="outline" aria-label="Próxima página" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><ChevronRight className="h-4 w-4" /></Button></div>
       </Panel>
-      <div className="space-y-4">
-        <Panel title="Resumo das chegadas">
-          <div className="grid grid-cols-2 gap-3 2xl:grid-cols-3">
-            <Kpi accent label="LHs programadas" value={rows.length} />
-            <Kpi label="LHs recebidas" value={received} />
-            <Kpi label="LHs pendentes" value={rows.length - received} />
-            <Kpi label="Chegadas atrasadas" value={deltas.length ? late : null} hint="Sem horário real de chegada" />
-            <Kpi label="Chegadas antecipadas" value={deltas.length ? early : null} hint="Sem horário real de chegada" />
-            {orders != null && <Kpi label="Pedidos" value={orders.toLocaleString("pt-BR")} />}
-          </div>
-        </Panel>
-        <Panel title="Recebidas x Pendentes"><PieBlock label="Recebidas x Pendentes" data={[{ name: "Recebidas", value: received }, { name: "Pendentes", value: rows.length - received }].filter((d) => d.value)} total={rows.length} categories={["Recebidas", "Pendentes"]} categoryColors={{ Recebidas: "var(--success)", Pendentes: "var(--primary)" }} includeMissing={false} /></Panel>
-        <Panel title="Top 5 unidades de origem"><BarBlock data={originData} horizontal yAxisWidth={170} valueName="LHs" /></Panel>
-        <Panel title="Chegadas por horário" subtitle="Horário real de chegada">{hourData.length ? <LineBlock data={hourData} /> : <Empty text="Sem horários reais de chegada." />}</Panel>
+      <div className="min-w-0 space-y-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <MiniKpi accent label="Total programadas" value={rows.length} />
+          <MiniKpi label="Recebidas" value={received} tone="text-success" />
+          <MiniKpi label="Pendentes" value={rows.length - received} tone="text-primary" />
+          <MiniKpi label="Atrasadas" value={deltas.length ? late : null} hint="Sem horário real" />
+          <MiniKpi label="Antecipadas" value={deltas.length ? early : null} hint="Sem horário real" />
+          <MiniKpi label="Pedidos / Volumes" value={orders != null ? orders.toLocaleString("pt-BR") : null} hint="Sem informação" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Panel title="Recebidas x Pendentes"><PieBlock label="Recebidas x Pendentes" data={[{ name: "Recebidas", value: received }, { name: "Pendentes", value: rows.length - received }].filter((d) => d.value)} total={rows.length} categories={["Recebidas", "Pendentes"]} categoryColors={{ Recebidas: "var(--success)", Pendentes: "var(--primary)" }} includeMissing={false} /></Panel>
+          <Panel title="Top 5 unidades de origem"><BarBlock data={originData} horizontal yAxisWidth={120} valueName="LHs" height={Math.max(160, originData.length * 34 + 40)} maxBarSize={20} /></Panel>
+        </div>
+        <Panel title="Chegadas por horário" subtitle="Horário real de chegada">{hourData.length ? <div className="[&>div]:!h-44"><LineBlock data={hourData} /></div> : <Empty text="Sem horários reais de chegada." />}</Panel>
       </div>
     </div>}
+  </div>;
+}
+
+function MiniKpi({ label, value, hint, accent, tone }: { label: string; value: number | string | null; hint?: string; accent?: boolean; tone?: string }) {
+  return <div className={`min-w-0 rounded-lg border bg-card px-3 py-2 shadow-card ${accent ? "border-primary/40" : ""}`}>
+    <p className="truncate text-[11px] font-medium uppercase text-muted-foreground" title={label}>{label}</p>
+    {value != null ? <p className={`text-xl font-bold tabular-nums ${tone ?? "text-foreground"}`}>{value}</p> : <p className="truncate text-xs text-muted-foreground" title={hint}>{hint ?? "Sem informação"}</p>}
   </div>;
 }

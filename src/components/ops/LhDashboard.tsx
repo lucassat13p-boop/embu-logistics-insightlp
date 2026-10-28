@@ -100,12 +100,12 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
       </Panel>
       <div className="min-w-0 space-y-3">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <MiniKpi accent label="Total programadas" value={rows.length} />
-          <MiniKpi label="Recebidas" value={received} tone="text-success" />
-          <MiniKpi label="Pendentes" value={rows.length - received} tone="text-primary" />
-          <MiniKpi label="Atrasadas" value={deltas.length ? late : null} hint="Sem horário real" />
-          <MiniKpi label="Antecipadas" value={deltas.length ? early : null} hint="Sem horário real" />
-          <MiniKpi label="Pedidos / Volumes" value={orders != null ? orders.toLocaleString("pt-BR") : null} hint="Sem informação" />
+          <MiniKpi accent label="Total programadas" value={rows.length} tone="text-primary" />
+          <MiniKpi label="Recebidas" value={received} tone="text-success" pct={pct(received, rows.length)} />
+          <MiniKpi label="Pendentes" value={rows.length - received} tone="text-primary" pct={pct(rows.length - received, rows.length)} />
+          <MiniKpi label="Atrasadas" value={deltas.length ? late : null} hint="Sem horário real" tone="text-destructive" pct={deltas.length ? pct(late, rows.length) : undefined} />
+          <MiniKpi label="Antecipadas" value={deltas.length ? early : null} hint="Sem horário real" tone="lh-kpi-blue" pct={deltas.length ? pct(early, rows.length) : undefined} />
+          <MiniKpi label="Pedidos / Volumes" value={orders != null ? orders.toLocaleString("pt-BR") : null} hint="Sem informação" tone="lh-kpi-purple" />
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Panel title="Recebidas x Pendentes"><PieBlock label="Recebidas x Pendentes" data={[{ name: "Recebidas", value: received }, { name: "Pendentes", value: rows.length - received }].filter((d) => d.value)} total={rows.length} categories={["Recebidas", "Pendentes"]} categoryColors={{ Recebidas: "var(--success)", Pendentes: "var(--primary)" }} includeMissing={false} /></Panel>
@@ -117,9 +117,14 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
   </div>;
 }
 
-function MiniKpi({ label, value, hint, accent, tone }: { label: string; value: number | string | null; hint?: string; accent?: boolean; tone?: string }) {
+function pct(part: number, total: number) {
+  const v = total > 0 ? (part / total) * 100 : 0;
+  return `${v.toFixed(1).replace(".", ",")}%`;
+}
+
+function MiniKpi({ label, value, hint, accent, tone, pct: pctText }: { label: string; value: number | string | null; hint?: string; accent?: boolean; tone?: string; pct?: string }) {
   return <div className={`min-w-0 rounded-lg border bg-card px-3 py-2 shadow-card ${accent ? "border-primary/40" : ""}`}>
     <p className="truncate text-[11px] font-medium uppercase text-muted-foreground" title={label}>{label}</p>
-    {value != null ? <p className={`text-xl font-bold tabular-nums ${tone ?? "text-foreground"}`}>{value}</p> : <p className="truncate text-xs text-muted-foreground" title={hint}>{hint ?? "Sem informação"}</p>}
+    {value != null ? <p className={`text-xl font-bold tabular-nums ${tone ?? "text-foreground"}`}>{value}{pctText && <span className="ml-1 text-xs font-semibold">{pctText}</span>}</p> : <p className="truncate text-xs text-muted-foreground" title={hint}>{hint ?? "Sem informação"}</p>}
   </div>;
 }

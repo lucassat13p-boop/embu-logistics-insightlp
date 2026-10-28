@@ -116,3 +116,10 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
     </div>}
   </div>;
 }
+
+function MiniKpi({ label, value, hint, accent, tone }: { label: string; value: number | string | null; hint?: string; accent?: boolean; tone?: string }) {
+  return <div className={`min-w-0 rounded-lg border bg-card px-3 py-2 shadow-card ${accent ? "border-primary/40" : ""}`}>
+    <p className="truncate text-[11px] font-medium uppercase text-muted-foreground" title={label}>{label}</p>
+    {value != null ? <p className={`text-xl font-bold tabular-nums ${tone ?? "text-foreground"}`}>{value}</p> : <p className="truncate text-xs text-muted-foreground" title={hint}>{hint ?? "Sem informação"}</p>}
+  </div>;
+}

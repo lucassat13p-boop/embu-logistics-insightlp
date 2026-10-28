@@ -284,3 +284,6 @@
 @utility bg-brand { background-image: var(--gradient-brand); }
 @utility shadow-card { box-shadow: var(--shadow-card); }
 @utility font-display { font-family: var(--font-display); }
+
+.lh-kpi-blue { color: var(--summary-blue); }
+.lh-kpi-purple { color: var(--summary-purple); }

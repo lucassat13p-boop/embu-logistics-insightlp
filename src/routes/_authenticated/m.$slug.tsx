@@ -26,6 +26,7 @@ import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
 import { Suspense } from "react";
 import { FloatingDashboard } from "@/components/ops/FloatingDashboard";
 import { floatingActiveQuery } from "@/lib/floating-packages";
+import { LhDashboard } from "@/components/ops/LhDashboard";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: async ({ params, context }) => {
@@ -84,6 +85,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   if (mod.key === "retidos_veiculos") return <RetidosDashboard allRows={allRows} />;
   if (mod.key === "full") return <FullDashboard allRows={allRows} />;
   if (mod.key === "erros_operacionais") return <OperationalErrorsDashboard allRows={allRows} />;
+  if (mod.key === "rotas") return <LhDashboard allRows={allRows} />;
 
   const classCounts = isAvaria ? countAvariaTypes(rows) : countBy(rows, "classification");
   const shiftData = isAvaria ? countAvariaShifts(rows) : countBy(rows, "shift");

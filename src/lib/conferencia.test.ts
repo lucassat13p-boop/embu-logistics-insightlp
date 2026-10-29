@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 import { auditFromRecord, auditRanking, auditShift, meanDuration } from "./conferencia";
 import type { RecordRow } from "./data";
-const row = (route: string, start: string, end: string | null) => auditFromRecord({ id: route, route, create_time: start, resolve_time: end, raw: { "Validation Operator": "[ops1]Pessoa", "Revalidation Operator": "[ops2]Outra pessoa" } } as RecordRow);
+const row = (route: string, start: string, end: string | null) => auditFromRecord({ id: route, route, create_time: start, resolve_time: end, raw: { "Validation Operator": "[ops1]Pessoa", "Revalidation Operator": "[ops2]Outra pessoa" } } as unknown as RecordRow);
 it("assigns late AM1 to next operational date and early AM1 to its own date", () => {
   expect(auditShift("2026-10-27 22:00:00")).toEqual({ shift: "AM1", date: "2026-10-28" });
   expect(auditShift("2026-10-28 02:30:00")).toEqual({ shift: "AM1", date: "2026-10-28" });

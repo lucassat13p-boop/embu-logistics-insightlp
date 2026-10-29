@@ -24,3 +24,22 @@ it("requires three distinct routes only for speed ranking", () => {
 it("attributes validation to its original operator, not revalidation", () => {
   expect(row("AT1", "2026-10-28 01:00:00", null).operator).toEqual({ key: "ops1", login: "ops1", name: "Pessoa", label: "Pessoa" });
 });
+it("ranks exactly five distinct-route totals without a minimum in productivity mode", () => {
+  const rows = [12, 10, 8, 7, 6, 2].flatMap((total, i) => Array.from({ length: total }, (_, n) => {
+    const r = row(`AT${i}-${n}`, "2026-10-28 01:00:00", null);
+    return { ...r, operator: { key: `ops${i}`, login: `ops${i}`, name: `Pessoa ${i}`, label: `Pessoa ${i}` } };
+  }));
+  expect(auditRanking([...rows, rows[0]]) .map((r) => r.routes)).toEqual([12, 10, 8, 7, 6]);
+  expect(auditRanking(rows.filter((r) => r.operator.login === "ops5"))[0]?.routes).toBe(2);
+});
+it("groups by login despite name spelling differences and counts each AT only once", () => {
+  const base = row("AT1", "2026-10-28 01:00:00", null);
+  const other = { ...base, route: "AT2", operator: { key: "OPS1", login: "OPS1", name: "PESSOA COMPLETA", label: "PESSOA COMPLETA" } };
+  expect(auditRanking([base, base, other]).map((r) => r.routes)).toEqual([2]);
+});
+it("uses an identity-stable tie order independent of input order", () => {
+  const base = row("AT1", "2026-10-28 01:00:00", null);
+  const other = { ...base, operator: { key: "ops2", login: "ops2", name: "Pessoa", label: "Pessoa" } };
+  expect(auditRanking([other, base]).map((r) => r.key)).toEqual(["ops1", "ops2"]);
+  expect(auditRanking([base, other]).map((r) => r.key)).toEqual(["ops1", "ops2"]);
+});

@@ -230,6 +230,10 @@
 .summary-tone-purple { --summary-accent: var(--summary-purple); }
 .summary-tone-green { --summary-accent: var(--summary-green); }
 .summary-tone-cyan { --summary-accent: var(--summary-cyan); }
+.summary-tone-neutral { --summary-accent: var(--muted-foreground); }
+.text-summary-accent { color: var(--summary-accent); }
+.summary-metric.missorted-metric { align-items: stretch; }
+.summary-metric.missorted-metric:hover { background: color-mix(in oklab, var(--summary-accent) 12%, var(--summary-surface)); }
 .shift-summary-section { container-type: inline-size; }
 .summary-section-heading {
   position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
@@ -241,6 +245,7 @@
 .summary-metrics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
 @container (min-width: 650px) { .summary-metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @container (min-width: 1140px) { .summary-metrics-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+@container (min-width: 1140px) { .summary-metrics-with-missorted { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @container (max-width: 350px) { .summary-metrics-grid { grid-template-columns: minmax(0, 1fr); } }
 .summary-metric, .shift-attention-card {
   min-width: 0; border: 1px solid color-mix(in oklab, var(--summary-accent) 42%, var(--border)); border-radius: 8px;

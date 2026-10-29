@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp, Truck, TriangleAlert, Tags, Package, PackageOpen, ShieldCheck, PackageCheck, ClipboardCheck, type LucideIcon } from "lucide-react";
 import { ShiftIcon } from "@/components/ops/ShiftIcon";
+import { MissortedCard } from "@/components/ops/Missorted";
 import { BarBlock, Empty, LineBlock, PageHeader, Panel } from "@/components/ops/blocks";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { Button } from "@/components/ui/button";
@@ -151,7 +152,7 @@ function Dashboard() {
           </div>
           <p className="summary-period text-xs text-muted-foreground">{periodText} · {shiftText}</p>
         </div>
-        <TooltipProvider delayDuration={250}><div className="summary-metrics-grid">{summary.map((s, index) => <SummaryCard key={s.label} {...s} previousValue={priorSummary[index]?.value ?? null} />)}</div></TooltipProvider>
+        <TooltipProvider delayDuration={250}><div className="summary-metrics-grid summary-metrics-with-missorted">{summary.map((s, index) => <SummaryCard key={s.label} {...s} previousValue={priorSummary[index]?.value ?? null} />)}<MissortedCard range={range} shifts={shifts} /></div></TooltipProvider>
       </section>
 
       <section className="shift-attention-section" aria-labelledby="shift-attention-title">

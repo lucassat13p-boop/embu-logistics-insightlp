@@ -19,6 +19,7 @@ import { normalizedAvariaType, normalizedShift, OFFICIAL_SHIFTS } from "@/lib/av
 import { FullImport } from "@/components/ops/FullImport";
 import { FloatingImport } from "@/components/ops/FloatingImport";
 import { LhImport } from "@/components/ops/LhImport";
+import { ConferenciaImport } from "@/components/ops/ConferenciaImport";
 import { countTreatedSheet, saveTreatedImport, treatedImportsQuery } from "@/lib/on-hold-treated";
 import { buildRetidosAux, resolveRetidosRoute, retidosMainSheetIndex } from "@/lib/retidos-routes";
 import { useQuery as useTreatedQuery } from "@tanstack/react-query";
@@ -235,7 +236,7 @@ function ImportPage() {
             </Select>
             {mod && <p className="text-xs text-muted-foreground">{mod.description}. Os registros alimentam somente este módulo.</p>}
           </div>
-          {mod?.key !== "full" && mod?.key !== "pacotes_flutuantes" && mod?.key !== "rotas" && <div className="space-y-1.5">
+          {mod?.key !== "full" && mod?.key !== "pacotes_flutuantes" && mod?.key !== "rotas" && mod?.key !== "conferencia" && <div className="space-y-1.5">
             <Label>Arquivo do relatório</Label>
             {mod && FORMAT_HINTS[mod.key] && (
               <p className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary-soft p-2 text-xs">
@@ -262,8 +263,9 @@ function ImportPage() {
       {mod?.key === "full" && <FullImport />}
       {mod?.key === "pacotes_flutuantes" && <FloatingImport />}
       {mod?.key === "rotas" && <LhImport />}
+      {mod?.key === "conferencia" && <ConferenciaImport />}
 
-      {mod?.key !== "full" && mod?.key !== "rotas" && parsed && table && mod && (
+      {mod?.key !== "full" && mod?.key !== "rotas" && mod?.key !== "conferencia" && parsed && table && mod && (
         <Panel title="2. Estrutura e mapeamento" subtitle="Coluna do arquivo → Campo do sistema" action={<Button size="sm" variant="outline" onClick={saveMapping}><Save className="mr-1 h-4 w-4" />Salvar mapeamento</Button>}>
           <div className="mb-4 grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">

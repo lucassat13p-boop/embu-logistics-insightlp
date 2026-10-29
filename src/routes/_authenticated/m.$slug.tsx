@@ -27,6 +27,8 @@ import { Suspense } from "react";
 import { FloatingDashboard } from "@/components/ops/FloatingDashboard";
 import { floatingActiveQuery } from "@/lib/floating-packages";
 import { LhDashboard } from "@/components/ops/LhDashboard";
+import { ConferenciaDashboard } from "@/components/ops/ConferenciaDashboard";
+import { auditQuery } from "@/lib/conferencia";
 
 export const Route = createFileRoute("/_authenticated/m/$slug")({
   loader: async ({ params, context }) => {
@@ -35,6 +37,7 @@ export const Route = createFileRoute("/_authenticated/m/$slug")({
     const mod = moduleBySlug(params.slug);
     if (!mod) throw notFound();
     if (mod.key === "pacotes_flutuantes") await context.queryClient.ensureQueryData(floatingActiveQuery());
+    if (mod.key === "conferencia") await context.queryClient.ensureQueryData(auditQuery());
     return { label: mod.label };
   },
   head: ({ loaderData }) => ({
@@ -55,6 +58,7 @@ function ModulePage() {
   const mod = moduleBySlug(slug);
   if (!mod) throw notFound();
   if (mod.key === "pacotes_flutuantes") return <Suspense fallback={<Skeleton className="h-64" />}><FloatingDashboard /></Suspense>;
+  if (mod.key === "conferencia") return <Suspense fallback={<Skeleton className="h-64" />}><ConferenciaDashboard /></Suspense>;
   return <ModuleContent key={mod.key} mod={mod} />;
 }
 

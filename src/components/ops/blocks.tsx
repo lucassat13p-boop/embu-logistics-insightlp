@@ -6,7 +6,7 @@ import { RankingPrivacyToggle, useRankingPrivacy, type PersonKind } from "./Rank
 
 export const NO_DATA = "Nenhum dado disponível";
 
-export function Panel({ title, subtitle, action, children, className }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string }) {
+export function Panel({ title, subtitle, action, children, className, bodyClassName }: { title: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string; bodyClassName?: string }) {
   return (
     <section className={cn("min-w-0 rounded-lg border bg-card shadow-card", className)}>
       <header className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-4 sm:px-5">
@@ -16,7 +16,7 @@ export function Panel({ title, subtitle, action, children, className }: { title:
         </div>
         {action}
       </header>
-      <div className="min-w-0 p-4 sm:p-5">{children}</div>
+      <div className={cn("min-w-0 p-4 sm:p-5", bodyClassName)}>{children}</div>
     </section>
   );
 }

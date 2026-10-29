@@ -65,7 +65,10 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
   const shifts = ["AM1", "AM2", "PM1"];
   const origins = useMemo(() => [...new Set(allRows.map((r) => r.route).filter(Boolean) as string[])].sort(), [allRows]);
   const rows = useMemo(() => periodRows.filter((r) => (shift === ALL || r.shift === shift) && (origin === ALL || r.origin === origin))
-    .sort((a, b) => (a.scheduledAt ?? "9").localeCompare(b.scheduledAt ?? "9")), [periodRows, shift, origin]);
+    .sort((a, b) => {
+      const ra = /reversa/i.test(String(a.shift ?? "")) ? 1 : 0, rb = /reversa/i.test(String(b.shift ?? "")) ? 1 : 0;
+      return ra - rb || (a.scheduledAt ?? "9").localeCompare(b.scheduledAt ?? "9");
+    }), [periodRows, shift, origin]);
   const searched = useMemo(() => { const s = q.trim().toLowerCase(); return s ? rows.filter((r) => [r.lh, r.driver, r.plate, r.origin].some((v) => v?.toLowerCase().includes(s))) : rows; }, [rows, q]);
   const pages = Math.max(1, Math.ceil(searched.length / PAGE));
   const cur = Math.min(page, pages - 1);

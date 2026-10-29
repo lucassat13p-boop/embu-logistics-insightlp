@@ -39,6 +39,7 @@ export type ModuleKey =
   | "rotas"
   | "retidos_veiculos"
   | "erros_operacionais"
+  | "conferencia"
   | "pacotes_flutuantes";
 
 export const FIELD_LABELS: Record<FieldKey, string> = {
@@ -150,6 +151,7 @@ export const MODULES: ModuleDef[] = [
     defaultMapping: { "ERRO/MOTIVO": "reason", "TURNO RESPONSÁVEL": "shift", "TURNO RESPONSAVEL": "shift", BR: "order_id", LOGIN: "collaborator", DATA: "record_date", "CLASSIFICAÇÃO": "classification" },
     description: "Fonte: aba TABELAS (XLSX) ou CSV · blocos de 4 colunas ou 5 colunas com Data",
   },
+  { key: "conferencia", slug: "conferencia", label: "CONFERÊNCIA", short: "CONFERÊNCIA", fields: ["route", "location", "collaborator", "record_date", "shift", "create_time", "resolve_time", "status"], required: ["route"], dedupe: ["route", "create_time"], fieldLabels: { route: "AT/TO", location: "Corredor / Gaiola", record_date: "Data operacional", create_time: "Início da validação", resolve_time: "Fim da validação" }, description: "CSV de auditoria de rotas/ATs · Validation Operator" },
   { key: "auto_add", slug: "auto-add", label: "AUTO ADD", short: "AUTO ADD", fields: ALL, required: [], dedupe: ["order_id", "record_date", "status"], description: "Relatórios AUTO ADD" },
   {
     key: "on_hold", slug: "on-hold", label: "ON HOLD", short: "ON HOLD",

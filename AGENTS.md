@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
-- Conferência isolates CSV/dashboard and atomic invoker RPC by module/batch; route/start keys retain history, pure wall-clock helpers derive shifts/durations/rankings, preserving manual MISSORTED.
+- Conferência isolates CSV/RPC by module/batch; route/start keys retain history. Pure helpers derive shifts/durations and login-keyed distinct-route Top 5; chart counts ignore speed mode and preserve manual MISSORTED.
 - Record indexes use module/date DESC NULLS LAST/id; one import-cache predicate refreshes affected aggregate/history/search/treated readers without freshness or source changes.
 - Themes use one root provider/shared CSS tokens, pre-paint preference restore and light-only login; portals/charts/notifications stay consistent.
 - Ranking privacy uses one root provider, browser persistence and session-stable labels; only people presentation changes, never identities/calculations/categories.

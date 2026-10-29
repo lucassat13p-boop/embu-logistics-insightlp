@@ -82,8 +82,20 @@ export const meanDuration = (rows: AuditRow[]) => { const values = rows.flatMap(
 export const durationLabel = (n: number | null) => { if (n === null) return "Sem informação"; const seconds = Math.round(n); return `${Math.floor(seconds / 60)}min ${String(seconds % 60).padStart(2, "0")}s`; };
 export function auditRanking(rows: AuditRow[], speed = false) {
   const groups = new Map<string, AuditRow[]>();
-  for (const row of rows) { if (!row.operator.key) continue; const group = groups.get(row.operator.key) ?? []; group.push(row); groups.set(row.operator.key, group); }
-  return [...groups].map(([key, group]) => ({ key, name: group[0]?.operator.label ?? "Sem informação", routes: new Set(group.map((r) => r.route)).size, average: meanDuration(group) }))
+  const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+  for (const row of rows) {
+    const identity = row.operator.login || row.operator.key;
+    if (!identity || !row.route.trim() || row.route === "Sem informação") continue;
+    const key = normalize(identity);
+    const group = groups.get(key) ?? [];
+    group.push(row); groups.set(key, group);
+  }
+  return [...groups].map(([key, group]) => {
+    const labels = [...new Set(group.map((r) => r.operator.label.trim().replace(/\s+/g, " ")))];
+    // Stable full-name choice independent of fetch order or spelling variants.
+    labels.sort((a, b) => b.length - a.length || a.localeCompare(b, "pt-BR") || a.localeCompare(b));
+    return { key, name: labels[0] ?? "Sem informação", routes: new Set(group.map((r) => r.route.trim())).size, average: meanDuration(group) };
+  })
     .filter((r) => !speed || (r.routes >= 3 && r.average !== null))
-    .sort((a, b) => (speed ? (a.average ?? Infinity) - (b.average ?? Infinity) : b.routes - a.routes) || a.name.localeCompare(b.name, "pt-BR")).slice(0, 5);
+    .sort((a, b) => (speed ? (a.average ?? Infinity) - (b.average ?? Infinity) : b.routes - a.routes) || a.key.localeCompare(b.key, "pt-BR") || a.key.localeCompare(b.key)).slice(0, 5);
 }

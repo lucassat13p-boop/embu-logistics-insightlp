@@ -109,7 +109,7 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Panel title="Recebidas x Pendentes"><PieBlock label="Recebidas x Pendentes" data={[{ name: "Recebidas", value: received }, { name: "Pendentes", value: rows.length - received }].filter((d) => d.value)} total={rows.length} categories={["Recebidas", "Pendentes"]} categoryColors={{ Recebidas: "var(--success)", Pendentes: "var(--primary)" }} includeMissing={false} /></Panel>
-          <Panel title="Top 5 unidades de origem"><div className="max-w-full overflow-x-auto"><div className="min-w-[480px]"><BarBlock data={originData} horizontal yAxisWidth={180} categoryTitles valueName="LHs" height={Math.max(160, originData.length * 34 + 40)} maxBarSize={20} /></div></div></Panel>
+          <Panel title="Top 5 unidades de origem" className="flex flex-col [&>div]:flex-1 [&>div]:min-h-0"><div className="flex h-full max-w-full items-center overflow-x-auto"><div className="min-w-[480px] flex-1"><BarBlock data={originData} horizontal yAxisWidth={180} categoryTitles valueName="LHs" fillHeight maxBarSize={20} /></div></div></Panel>
         </div>
         <Panel title="Chegadas por horário" subtitle="Horário real de chegada">{hourData.length ? <div className="[&>div]:!h-44"><LineBlock data={hourData} /></div> : <Empty text="Sem horários reais de chegada." />}</Panel>
       </div>

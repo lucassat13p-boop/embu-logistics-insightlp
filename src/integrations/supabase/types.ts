@@ -550,6 +550,15 @@ export type Database = {
         Returns: Json
       }
       delete_import_batch: { Args: { p_batch_id: string }; Returns: Json }
+      import_conferencia: {
+        Args: {
+          p_file_name: string
+          p_headers: Json
+          p_ignored?: number
+          p_rows: Json
+        }
+        Returns: Json
+      }
       replace_floating_snapshot: {
         Args: {
           p_expected_batch: string

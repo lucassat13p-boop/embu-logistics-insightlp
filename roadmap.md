@@ -1,4 +1,5 @@
 # Tasks
+- [x] Refine only Conferência login-based distinct-route Top 5, independent productivity bars and six themed icon KPIs; preserve import, durations, shifts and detail table.
 - [x] Correct LH report shifts only at the view boundary for existing/new records, filters and PNG, preserving original storage and other modules.
 - [x] Add independent Conferência CSV import/history, operational shifts, filtered dashboard/rankings/detail and navigation.
 - [x] Add isolated MISSORTED entries, persistent editable target and filtered percentage-only dashboard card; preserve existing modules.

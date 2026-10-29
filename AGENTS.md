@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
-- Record-read indexes match module equality and descending date with nulls last plus ID ordering; import cache refreshes share one affected-key predicate covering aggregate/history/search readers and successfully saved treated totals, without changing freshness windows or source data.
+- Record indexes use module/date DESC NULLS LAST/id; one import-cache predicate refreshes affected aggregate/history/search/treated readers without freshness or source changes.
 - Visual themes use one root provider and shared CSS tokens, with pre-paint browser preference restoration and a light-only login; this keeps portalled controls, charts and notifications consistent without changing page logic.
 - People-ranking privacy uses one root React provider with browser-only preference persistence and session-stable neutral labels; opt in only ranking and comparison presentation so source identities, calculations and non-person categories remain unchanged.
 - Charts use shared blocks and PieBlock with opt-in sizing; Floating uses scoped height and Operational Errors fills the ranking-aligned reason panel in general mode, preserving shared defaults and analytics.
@@ -30,7 +30,8 @@
 - Retidos de Veículos: XLSX reads PACOTES RETIRADOS plus romaneio/Plano de expedição as route cross-reference stored in records.extra; stable per-row keys ignore exact reimports but keep legitimate repeats. Original time fields remain text, while a pure wall-clock parser derives creation dates and analysis-only shifts; shared import and table extensions are opt-in to preserve other modules.
 - Retidos reasons, equivalence and realized-model counts use pure helpers on filtered rows; route KPIs share one panel, preserving source names.
 - FULL uses base TOs + BR status lookup, preserving manual_status on reimport. Selection/copy use complete authorized reads and stable IDs; bulk edits use an atomic RLS-enforced invoker RPC, confirmed date/shift/BR scope (batch fallback if incomplete), and preserve entire manually classified groups unless overwrite is explicit.
-- Main dashboard summary calculations are isolated from advanced analytics; FULL summary reuses normId after operational date/shift filtering, while other modules retain occurrence counts and treatment sums, preventing global deduplication or source changes.
+- Summary stays isolated: FULL uses normId after date/shift filtering; other modules retain occurrence counts/treatment sums, never global deduplication.
+- MISSORTED uses isolated date/shift-unique entries and singleton target with authenticated RLS and creator-only deletion; shared weighted calculation/cache powers its card and dialogs without touching treatment sources.
 - ON HOLD treated packages come only from the imported "Pacotes Tratados / Não MEXER" sheet stored per date+shift in `on_hold_treated_imports` (upsert replaces, never sums); manual Tratativas keep only Avarias Salvas, so official totals never mix sources.
 - LHs / Rotas uses a dedicated XLSX import (LTS PENDENTES A CHEGAR as schedule, SPX/LHs sheets only as real arrival evidence) stored as one records row per LH (dedupe by trip number) and a dedicated dashboard with canvas PNG export of all filtered LHs, isolating it from the generic importer.
 - LH table keeps local scrolling; origin ranking uses responsive HTML/CSS bars on existing originData to avoid sizing failures and horizontal overflow, preserving shared charts and PNG export.

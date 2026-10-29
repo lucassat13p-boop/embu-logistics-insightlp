@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Empty, PageHeader, Panel } from "@/components/ops/blocks";
+import { MissortedTargetSettings } from "@/components/ops/Missorted";
 import { FIELD_LABELS, HUB_NAME, MODULES, moduleByKey, type FieldKey } from "@/lib/modules";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -31,6 +32,7 @@ function Page() {
   return (
     <div className="space-y-5">
       <PageHeader title="Configurações" subtitle={HUB_NAME} />
+      <MissortedTargetSettings />
       <Panel title="Mapeamentos de colunas salvos">
         {maps.length ? (
           <ul className="divide-y text-sm">{maps.map((m) => (

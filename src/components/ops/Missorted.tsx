@@ -92,7 +92,7 @@ export function MissortedTargetSettings() {
   const target = useQuery(missortedTargetQuery());
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const value = draft ?? String(target.data ?? 0.68).replace(".", ",");
+  const value = draft ?? (target.data ?? 0.68).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   async function save() {
     if (saving) return;
     const normalized = value.trim().replace(",", ".");
@@ -107,5 +107,5 @@ export function MissortedTargetSettings() {
       await qc.invalidateQueries({ queryKey: ["missorted_target"] }); setDraft(null); toast.success("Meta de MISSORTED salva.");
     } catch { toast.error("Não foi possível salvar a meta."); } finally { setSaving(false); }
   }
-  return <Panel title="Meta de MISSORTED"><div className="flex flex-wrap items-end gap-3"><div><Label htmlFor="missorted-target">Meta de MISSORTED (%)</Label><Input id="missorted-target" className="mt-1 w-40" inputMode="decimal" value={value} onChange={(e) => setDraft(e.target.value)} /></div><Button disabled={saving || target.isLoading || target.isError} onClick={save}><Save className="h-4 w-4" />{saving ? "Salvando…" : "Salvar meta"}</Button></div>{target.isError && <p className="mt-2 text-sm text-destructive">Não foi possível consultar a meta.</p>}</Panel>;
+  return <Panel title="Meta de MISSORTED (%)"><form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); if (!target.isLoading && !target.isError) void save(); }}><div className="min-w-0"><Label htmlFor="missorted-target" className="font-semibold">Meta de MISSORTED (%)</Label><div className="mt-2 flex items-center gap-2"><Input id="missorted-target" className="w-40 text-base tabular-nums" inputMode="decimal" value={value} onChange={(e) => setDraft(e.target.value)} /><span className="text-sm text-muted-foreground" aria-hidden="true">%</span></div></div><Button type="submit" disabled={saving || target.isLoading || target.isError}><Save className="h-4 w-4" />{saving ? "Salvando…" : "Salvar meta"}</Button></form>{target.isError && <p className="mt-2 text-sm text-destructive">Não foi possível consultar a meta.</p>}</Panel>;
 }

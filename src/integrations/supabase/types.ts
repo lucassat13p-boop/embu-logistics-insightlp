@@ -227,6 +227,60 @@ export type Database = {
           },
         ]
       }
+      missorted_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          incorrect_packages: number
+          operation_date: string
+          processed_packages: number
+          shift: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          incorrect_packages: number
+          operation_date: string
+          processed_packages: number
+          shift: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          incorrect_packages?: number
+          operation_date?: string
+          processed_packages?: number
+          shift?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      missorted_settings: {
+        Row: {
+          id: boolean
+          target_percent: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          id?: boolean
+          target_percent?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Update: {
+          id?: boolean
+          target_percent?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       on_hold_treated_imports: {
         Row: {
           batch_id: string | null

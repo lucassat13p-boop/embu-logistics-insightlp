@@ -53,7 +53,7 @@ const axisTick = { fontSize: 13, fill: "var(--muted-foreground)" };
 const valueLabel = { fontSize: 14, fill: "var(--foreground)", fontWeight: 600 };
 const shortName = (name: string, length: number) => name.length > length ? `${name.slice(0, length - 1)}…` : name;
 
-export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12, rowHeight = 0, yAxisWidth = 110, tickFormatter, tooltipLabel, valueName = "Registros", height, fillHeight = false, maxBarSize = 32 }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number; rowHeight?: number; yAxisWidth?: number; tickFormatter?: (name: string) => string; tooltipLabel?: string; valueName?: string; height?: number; fillHeight?: boolean; maxBarSize?: number }) {
+export function BarBlock({ data, emptyText = "Nenhum dado disponível para este gráfico.", horizontal, limit = 12, rowHeight = 0, yAxisWidth = 110, tickFormatter, tooltipLabel, valueName = "Registros", height, fillHeight = false, maxBarSize = 32, categoryTitles = false }: { data: { name: string; value: number }[]; emptyText?: string; horizontal?: boolean; limit?: number; rowHeight?: number; yAxisWidth?: number; tickFormatter?: (name: string) => string; tooltipLabel?: string; valueName?: string; height?: number; fillHeight?: boolean; maxBarSize?: number; categoryTitles?: boolean }) {
   const [width, setWidth] = useState(600);
   if (!data.length) return <Empty text={emptyText} />;
   const d = data.slice(0, limit);
@@ -67,7 +67,7 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
           <BarChart data={d} layout="vertical" margin={{ top: 8, bottom: 8, left: 0, right: 48 }} barCategoryGap="24%">
             <CartesianGrid horizontal={false} stroke="var(--border)" />
             <XAxis type="number" tick={axisTick} allowDecimals={false} axisLine={false} tickLine={false} minTickGap={24} />
-            <YAxis type="category" dataKey="name" width={categoryWidth} tick={axisTick} tickFormatter={formatCategory} interval={0} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" width={categoryWidth} tick={categoryTitles ? ({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => <g transform={`translate(${x},${y})`}><foreignObject x={-categoryWidth + 8} y={-10} width={categoryWidth - 16} height={20}><div className="truncate text-right text-[13px] leading-5 text-muted-foreground" title={payload.value}>{payload.value}</div></foreignObject></g> : axisTick} tickFormatter={formatCategory} interval={0} axisLine={false} tickLine={false} />
             <Tooltip
               {...tip}
               labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${String(label)}` : String(label)}

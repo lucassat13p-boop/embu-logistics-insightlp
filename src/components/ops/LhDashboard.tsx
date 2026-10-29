@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Download, Search, Upload } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel } from "./blocks";
+import { Empty, Kpi, LineBlock, PageHeader, Panel } from "./blocks";
 import { PieBlock } from "./PieBlock";
 import { PeriodFilter } from "./PeriodFilter";
 import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
@@ -109,7 +109,17 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Panel title="Recebidas x Pendentes"><PieBlock label="Recebidas x Pendentes" data={[{ name: "Recebidas", value: received }, { name: "Pendentes", value: rows.length - received }].filter((d) => d.value)} total={rows.length} categories={["Recebidas", "Pendentes"]} categoryColors={{ Recebidas: "var(--success)", Pendentes: "var(--primary)" }} includeMissing={false} /></Panel>
-          <Panel title="Top 5 unidades de origem" className="flex flex-col [&>div]:flex-1 [&>div]:min-h-0"><div className="flex h-full max-w-full items-center overflow-x-auto"><div className="min-w-[480px] flex-1"><BarBlock data={originData} horizontal yAxisWidth={180} categoryTitles valueName="LHs" fillHeight maxBarSize={20} /></div></div></Panel>
+          <Panel title="Top 5 unidades de origem" className="flex flex-col [&>div]:flex [&>div]:flex-1 [&>div]:flex-col">
+            {originData.length ? <div className="flex min-h-60 w-full min-w-0 flex-1 flex-col justify-around gap-3" role="list" aria-label="Top 5 unidades de origem">
+              {originData.map(({ name, value }) => <div key={name} role="listitem" className="grid min-w-0 grid-cols-[minmax(0,45fr)_minmax(0,55fr)] items-center gap-2" title={`${name}: ${value} LHs`}>
+                <span className="min-w-0 truncate text-xs text-muted-foreground" title={name}>{name}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="min-w-0 flex-1"><div className="h-5 rounded-sm bg-primary" style={{ width: `${(value / Math.max(...originData.map((item) => item.value))) * 100}%` }} /></div>
+                  <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">{value}</span>
+                </div>
+              </div>)}
+            </div> : <Empty />}
+          </Panel>
         </div>
         <Panel title="Chegadas por horário" subtitle="Horário real de chegada">{hourData.length ? <div className="[&>div]:!h-44"><LineBlock data={hourData} /></div> : <Empty text="Sem horários reais de chegada." />}</Panel>
       </div>

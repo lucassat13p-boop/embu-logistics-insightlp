@@ -10,10 +10,11 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
+- Conferência isolates CSV/dashboard and atomic invoker RPC by module/batch; route/start keys retain history, pure wall-clock helpers derive shifts/durations/rankings, preserving manual MISSORTED.
 - Record indexes use module/date DESC NULLS LAST/id; one import-cache predicate refreshes affected aggregate/history/search/treated readers without freshness or source changes.
-- Visual themes use one root provider and shared CSS tokens, with pre-paint browser preference restoration and a light-only login; this keeps portalled controls, charts and notifications consistent without changing page logic.
-- People-ranking privacy uses one root React provider with browser-only preference persistence and session-stable neutral labels; opt in only ranking and comparison presentation so source identities, calculations and non-person categories remain unchanged.
-- Charts use shared blocks and PieBlock with opt-in sizing; Floating uses scoped height and Operational Errors fills the ranking-aligned reason panel in general mode, preserving shared defaults and analytics.
+- Themes use one root provider/shared CSS tokens, pre-paint preference restore and light-only login; portals/charts/notifications stay consistent.
+- Ranking privacy uses one root provider, browser persistence and session-stable labels; only people presentation changes, never identities/calculations/categories.
+- Shared blocks/PieBlock use opt-in sizing; Floating heights are scoped and Operational Errors fills its ranking-aligned reason panel, preserving defaults/analytics.
 - Floating collaborator ranking modes use a pure helper on filtered active rows and shared privacy-aware Ranking presentation, keeping shift counts independent.
 - Operational Errors rankings use ranking-only login filtering/copies, existing countBy and errorShift partitioning; local privacy presentation keeps the unidentified group neutral without affecting source rows or other analytics.
 - Import deletion uses owner-authorized atomic functions and one shared confirmation control; Floating wraps existing deletion with the replacement advisory lock and explicit active-pointer confirmation, removing only that pointer without restoring history. Exact batch/module/source-row links preserve unrelated records and collaborator identities, and affected query caches refresh after success.

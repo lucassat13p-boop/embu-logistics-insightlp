@@ -62,7 +62,7 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
   const [page, setPage] = useState(0);
   const months = useMemo(() => availableMonths(allRows), [allRows]);
   const periodRows = useMemo(() => filterByPeriod(allRows, period).map(lhFromRecord), [allRows, period]);
-  const shifts = useMemo(() => [...new Set(allRows.map((r) => r.shift).filter(Boolean) as string[])].sort(), [allRows]);
+  const shifts = ["AM1", "AM2", "PM1"];
   const origins = useMemo(() => [...new Set(allRows.map((r) => r.route).filter(Boolean) as string[])].sort(), [allRows]);
   const rows = useMemo(() => periodRows.filter((r) => (shift === ALL || r.shift === shift) && (origin === ALL || r.origin === origin))
     .sort((a, b) => (a.scheduledAt ?? "9").localeCompare(b.scheduledAt ?? "9")), [periodRows, shift, origin]);

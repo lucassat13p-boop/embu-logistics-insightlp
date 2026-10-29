@@ -88,10 +88,21 @@ export function prepareLhFile(sheets: Sheet[]): LhPrepared {
 }
 
 export type LhView = LhRow & { id: string };
+/** Receives only the untouched report shift, never an already converted view value. */
+export function lhDisplayShift(original: string | null): string | null {
+  const value = original?.trim();
+  if (!value) return null;
+  switch (value.toUpperCase()) {
+    case "AM": return "AM1";
+    case "PM1": return "AM2";
+    case "PM2": return "PM1";
+    default: return value;
+  }
+}
 export function lhFromRecord(r: RecordRow): LhView {
   const e = (r.extra ?? {}) as Record<string, unknown>;
   const s = (k: string) => (typeof e[k] === "string" ? (e[k] as string) : null);
-  return { id: r.id, lh: r.lh ?? "", origin: r.route, driver: r.driver_name, plate: s("plate"), shift: r.shift, scheduledAt: s("scheduled_at"), arrivedAt: s("arrived_at"), arrived: r.status === "Chegou", orders: typeof e.orders === "number" ? e.orders : null };
+  return { id: r.id, lh: r.lh ?? "", origin: r.route, driver: r.driver_name, plate: s("plate"), shift: lhDisplayShift(r.shift), scheduledAt: s("scheduled_at"), arrivedAt: s("arrived_at"), arrived: r.status === "Chegou", orders: typeof e.orders === "number" ? e.orders : null };
 }
 /** Minutes late (>0) or early (<0); null when no real arrival time. */
 export function arrivalDelta(r: LhRow) { return r.arrivedAt && r.scheduledAt ? minutes(r.arrivedAt) - minutes(r.scheduledAt) : null; }

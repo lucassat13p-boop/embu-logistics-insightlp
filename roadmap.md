@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Add independent Conferência CSV import/history, operational shifts, filtered dashboard/rankings/detail and navigation.
+- [x] Add independent Conferência CSV import/history, operational shifts, filtered dashboard/rankings/detail and navigation.
 - [x] Add isolated MISSORTED entries, persistent editable target and filtered percentage-only dashboard card; preserve existing modules.
 - [x] Add default-off missing-login inclusion exclusively to Operational Errors rankings, grouping missing occurrences without changing source records or other analytics.
 - [x] Add general/per-shift Operational Errors ranking presentation with dynamic title, selected-shift columns and shared privacy; preserve existing general counts and filters.

@@ -393,7 +393,7 @@ function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur,
       <p className="mt-3 text-xs font-semibold uppercase text-primary">Pontos de atenção</p>
       <ul className="text-sm">{points.map((p) => <li key={p}>• {p}</li>)}</ul>
     </div>
-    {(entries.isError || target.isError || exportError) && <p role="alert" className="text-sm text-destructive">{exportError || "Não foi possível consultar o MISSORTED e sua meta. Tente novamente."}</p>}
-    <Button onClick={download} disabled={generating || entries.isPending || target.isPending || entries.isError || target.isError}><Download className="h-4 w-4" />{generating ? "Gerando PNG…" : "Baixar como PNG"}</Button>
+    {(entries.isError || target.isError || audit.isError || exportError) && <p role="alert" className="text-sm text-destructive">{exportError || "Não foi possível consultar os dados do relatório. Tente novamente."}</p>}
+    <Button onClick={download} disabled={generating || entries.isPending || target.isPending || audit.isPending || entries.isError || target.isError || audit.isError}><Download className="h-4 w-4" />{generating ? "Gerando PNG…" : "Baixar como PNG"}</Button>
   </DialogContent></Dialog>;
 }

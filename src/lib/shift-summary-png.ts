@@ -3,7 +3,7 @@ import { durationLabel } from "@/lib/conferencia";
 
 type Tone = "blue" | "red" | "amber" | "orange" | "purple" | "green" | "cyan" | "muted";
 export type ReportMetric = { label: string; value: number | null; tone: Tone; note?: string };
-export type ReportConfRow = { shift: string; routes: number; collaborators: number; average: number | null; scanned: number | null; missing: number | null; missorted: number | null };
+export type ReportConfRow = { shift: string; hasData: boolean; routes: number; collaborators: number; average: number | null; scanned: number | null; missing: number | null; missorted: number | null };
 export type ReportConferencia = { rows: ReportConfRow[]; total: ReportConfRow; showTotal: boolean };
 type ReportInput = {
   hub: string; period: string; shifts: string; metrics: ReportMetric[];
@@ -147,8 +147,7 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
 
   const dstItemH = (h: { value: string; label: string }) => Math.max(30, wrap(`${h.value} ${h.label}.`, wR - 110, 22).length * 30) + 12;
   const dstBodyH = highlights.length === 0 ? 40 : highlights.reduce((sum, h) => sum + dstItemH(h), 0);
-  const rightNaturalH = attH + 20 + 84 + dstBodyH + 20;
-  const dstH = 84 + dstBodyH + 20 + Math.max(0, confH - rightNaturalH);
+  const dstH = 84 + dstBodyH + 20;
 
   const headerH = 128;
   const summaryH = 2 * 150 + 20;
@@ -269,8 +268,12 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
         g.fillStyle = rgba(color(tone), 0.16); g.fill(); g.strokeStyle = rgba(color(tone), 0.7); g.lineWidth = 1.5; g.stroke();
         textC(r.shift, M + 24 + 20 + 37, ry + 28, 16, tone, true);
       } else text(r.shift, M + 24 + 20, ry + 29, 18, "text", true);
-      [cell(r.routes), cell(r.collaborators), r.average === null ? "—" : durationLabel(r.average), cell(r.scanned), cell(r.missing), cell(r.missorted)]
-        .forEach((v, j) => textR(v, M + 24 + colTurno + (j + 1) * colN - 12, ry + 29, 18, isTotal ? "text" : j >= 4 ? "amber" : "text", isTotal));
+      if (!r.hasData) {
+        text("Sem dados", M + 24 + colTurno + 12, ry + 29, 17, "muted");
+      } else {
+        [cell(r.routes), cell(r.collaborators), r.average === null ? "—" : durationLabel(r.average), cell(r.scanned), cell(r.missing), cell(r.missorted)]
+          .forEach((v, j) => textR(v, M + 24 + colTurno + (j + 1) * colN - 12, ry + 29, 18, isTotal ? "text" : j >= 4 ? "amber" : "text", isTotal));
+      }
       if (i < tableRows.length - 1) { g.strokeStyle = rgba(color("border"), 0.6); g.beginPath(); g.moveTo(M + 24 + 12, ry + 44); g.lineTo(M + 24 + tw - 12, ry + 44); g.stroke(); }
     });
   } else {

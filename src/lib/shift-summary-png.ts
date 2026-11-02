@@ -20,6 +20,15 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
   if (!g) throw new Error("Não foi possível gerar a imagem.");
   const css = getComputedStyle(document.documentElement);
   const color = (role: string) => css.getPropertyValue(`--report-${role}`).trim();
+  // Resolve any CSS color to rgba() so tints and glows work regardless of the source format.
+  const probe = document.createElement("canvas");
+  probe.width = probe.height = 1;
+  const pg = probe.getContext("2d")!;
+  const rgba = (cssColor: string, alpha: number) => {
+    pg.clearRect(0, 0, 1, 1); pg.fillStyle = cssColor; pg.fillRect(0, 0, 1, 1);
+    const d = pg.getImageData(0, 0, 1, 1).data;
+    return `rgba(${d[0]},${d[1]},${d[2]},${alpha})`;
+  };
   const font = (size: number, bold = false) => `${bold ? 700 : 400} ${size}px "${bold ? "Archivo" : "IBM Plex Sans"}", sans-serif`;
   const text = (value: string, x: number, y: number, size: number, role = "text", bold = false) => {
     g.font = font(size, bold); g.fillStyle = color(role); g.fillText(value, x, y);
@@ -27,6 +36,10 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
   const textR = (value: string, x: number, y: number, size: number, role = "text", bold = false) => {
     g.font = font(size, bold); g.fillStyle = color(role); g.fillText(value, x - g.measureText(value).width, y);
   };
+  const textC = (value: string, x: number, y: number, size: number, role = "text", bold = false) => {
+    g.font = font(size, bold); g.fillStyle = color(role); g.fillText(value, x - g.measureText(value).width / 2, y);
+  };
+  const measure = (value: string, size: number, bold = false) => { g.font = font(size, bold); return g.measureText(value).width; };
   const wrap = (value: string, width: number, size: number, bold = false) => {
     g.font = font(size, bold);
     const lines: string[] = [];
@@ -45,9 +58,16 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
     }
     return lines;
   };
-  const box = (x: number, y: number, w: number, h: number, border: string) => {
-    g.beginPath(); g.roundRect(x, y, w, h, 8); g.fillStyle = color("surface"); g.fill();
-    g.strokeStyle = color(border); g.lineWidth = 1.5; g.stroke();
+  const box = (x: number, y: number, w: number, h: number, border: string, radius = 12, tint = 0) => {
+    g.beginPath(); g.roundRect(x, y, w, h, radius); g.fillStyle = color("surface"); g.fill();
+    if (tint > 0) { g.fillStyle = rgba(color(border), tint); g.fill(); }
+    g.strokeStyle = rgba(color(border), 0.85); g.lineWidth = 2; g.stroke();
+  };
+  const glow = (x: number, y: number, r: number, tone: string, alpha = 0.12) => {
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, rgba(color(tone), alpha));
+    grad.addColorStop(1, rgba(color(tone), 0));
+    g.fillStyle = grad; g.fillRect(x - r, y - r, r * 2, r * 2);
   };
   // Stroke pictograms are drawn directly, so PNG generation never races image loading.
   const icon = (index: number, x: number, y: number, tone: string, size = 40) => {
@@ -58,167 +78,260 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
     if (index === 0) { g.strokeRect(3, 9, 21, 20); path([[24, 16], [31, 16], [37, 23], [37, 29], [24, 29]]); circle(11, 31, 4); circle(30, 31, 4); }
     else if (index === 1) { path([[20, 3], [38, 35], [2, 35], [20, 3]]); path([[20, 14], [20, 23]]); circle(20, 29, 1); }
     else if (index === 2) { path([[3, 5], [21, 5], [37, 21], [21, 37], [3, 19], [3, 5]]); circle(11, 13, 2.5); }
+    else if (index === 3) { circle(13, 13, 5); path([[5, 33], [7, 26], [13, 24], [19, 26], [21, 33]]); circle(27, 15, 4); path([[23, 33], [24, 28], [29, 26], [34, 28], [35, 33]]); }
+    else if (index === 4) { path([[4, 12], [4, 4], [12, 4]]); path([[28, 4], [36, 4], [36, 12]]); path([[36, 28], [36, 36], [28, 36]]); path([[12, 36], [4, 36], [4, 28]]); path([[10, 20], [30, 20]]); }
     else if (index === 5) { path([[20, 3], [34, 9], [33, 24], [28, 32], [20, 38], [12, 32], [7, 24], [6, 9], [20, 3]]); path([[12, 20], [18, 26], [28, 14]]); }
     else if (index === 7) { circle(20, 20, 17); path([[12, 12], [28, 28]]); circle(13, 27, 3); circle(27, 13, 3); }
+    else if (index === 8) { circle(20, 15, 8); path([[14, 21], [10, 34], [20, 29], [30, 34], [26, 21]]); }
+    else if (index === 9) { circle(20, 20, 16); path([[12, 20], [18, 26], [28, 14]]); }
+    else if (index === 10) { g.strokeRect(4, 8, 32, 28); path([[4, 16], [36, 16]]); path([[12, 4], [12, 10]]); path([[28, 4], [28, 10]]); }
+    else if (index === 11) { circle(20, 20, 16); path([[20, 12], [20, 20], [27, 24]]); }
+    else if (index === 12) { g.strokeRect(8, 6, 24, 32); g.strokeRect(14, 3, 12, 6); path([[14, 18], [26, 18]]); path([[14, 25], [26, 25]]); }
     else { path([[4, 11], [20, 3], [36, 11], [36, 29], [20, 37], [4, 29], [4, 11], [20, 19], [36, 11]]); path([[20, 19], [20, 37]]); if (index === 6) path([[12, 25], [18, 31], [28, 22]]); }
     g.restore();
   };
   const fmt = (v: number) => v.toLocaleString("pt-BR");
   const num = (v: number | null) => v === null ? "Sem informação" : fmt(v);
+  const cell = (v: number | null) => v === null ? "—" : fmt(v);
 
-  // ---- Layout heights ----
   const W = 1920;
-  const M = 48;
+  const M = 40;
   const conf = input.conferencia;
-  const confTableRows = conf ? conf.rows.length + (conf.showTotal ? 1 : 0) : 0;
-  const confCardsH = conf ? 150 : 0;
-  const confTableH = conf ? 46 + confTableRows * 46 + 14 : 64;
-  const confH = 56 + confCardsH + (conf ? 24 : 0) + confTableH;
-
   const result = input.missorted;
   const sorting = input.metrics[1]?.value ?? null;
   const etiqueta = input.metrics[2]?.value ?? null;
-  const attentionLines: string[] = [];
-  if (conf) {
-    for (const r of conf.rows) attentionLines.push(`${r.shift}: ${num(r.missing)} pedidos faltantes e ${num(r.missorted)} pedidos Missorted.`);
-    if (conf.showTotal) attentionLines.push(`Consolidado: ${num(conf.total.missing)} pedidos faltantes e ${num(conf.total.missorted)} pedidos Missorted.`);
-  } else attentionLines.push("Conferência: sem dados no período.");
-  if (result.percent !== null && result.target !== null && result.above)
-    attentionLines.push(`MISSORTED do Dashboard em ${formatMissorted(result.percent)}, acima da meta de ${formatMissorted(result.target)}.`);
-  attentionLines.push(`Erros de sorting: ${sorting === null ? "sem dados no período" : `${fmt(sorting)} ocorrência(s) para acompanhamento`}.`);
-  attentionLines.push(`Erros de etiqueta: ${etiqueta === null ? "sem dados no período" : `${fmt(etiqueta)} ocorrência(s) para acompanhamento`}.`);
-  const attentionH = 56 + 28 + attentionLines.length * 36 + 28;
-
   const avariasSalvas = input.metrics[5]?.value ?? null;
   const onHoldTratados = input.metrics[6]?.value ?? null;
-  const highlights: [string, string][] = [
-    ["Rotas conferidas", conf ? fmt(conf.total.routes) : "Sem dados no período"],
-    ["Tempo médio de conferência", conf ? durationLabel(conf.total.average) : "Sem dados no período"],
-    ["Pedidos escaneados", conf ? num(conf.total.scanned) : "Sem dados no período"],
-    ["Avarias salvas", avariasSalvas === null ? "Sem dados no período" : fmt(avariasSalvas)],
-    ["Pacotes tratados do ON HOLD", onHoldTratados === null ? "Sem dados no período" : fmt(onHoldTratados)],
-  ];
-  const highlightsH = 56 + 120;
 
-  const headerH = 180;
-  const summaryH = 56 + 2 * 185 + 24;
-  const footerH = 96;
-  const H = Math.max(1080, headerH + 24 + summaryH + 40 + confH + 40 + attentionH + 40 + highlightsH + 24 + footerH);
+  // ---- Pontos de atenção: somente turnos com registros, sem consolidado duplicado ----
+  const confRowsWithData = conf ? conf.rows.filter(r => (r.missing ?? 0) > 0 || (r.missorted ?? 0) > 0) : [];
+  const attentionLines: { value: string; tone: "text" | "red"; bold: boolean }[] = [];
+  if (conf) {
+    for (const r of confRowsWithData)
+      attentionLines.push({ value: `${r.shift}: ${cell(r.missing)} pedidos faltantes e ${cell(r.missorted)} Missorted.`, tone: "text", bold: false });
+    if (conf.showTotal && confRowsWithData.length > 1)
+      attentionLines.push({ value: `Consolidado: ${cell(conf.total.missing)} pedidos faltantes e ${cell(conf.total.missorted)} Missorted.`, tone: "text", bold: false });
+  }
+  if (result.percent !== null && result.target !== null && result.above)
+    attentionLines.push({ value: `MISSORTED (${formatMissorted(result.percent)}): acima da meta de ${formatMissorted(result.target)}.`, tone: "red", bold: true });
+  if (sorting !== null && sorting > 0)
+    attentionLines.push({ value: `${fmt(sorting)} erros de sorting registrados no período.`, tone: "text", bold: false });
+  if (etiqueta !== null && etiqueta > 0)
+    attentionLines.push({ value: `${fmt(etiqueta)} erros de etiqueta registrados no período.`, tone: "text", bold: false });
+  if (attentionLines.length === 0)
+    attentionLines.push({ value: "Nenhum ponto de atenção no período.", tone: "text", bold: false });
+
+  // ---- Destaques operacionais ----
+  const highlights: { value: string; label: string }[] = [];
+  if (conf) {
+    highlights.push({ value: fmt(conf.total.routes), label: "rotas conferidas" });
+    highlights.push({ value: durationLabel(conf.total.average), label: "de tempo médio de conferência" });
+    if (conf.total.scanned !== null) highlights.push({ value: fmt(conf.total.scanned), label: "pedidos escaneados" });
+  }
+  if (avariasSalvas !== null) highlights.push({ value: fmt(avariasSalvas), label: "avarias salvas" });
+  if (onHoldTratados !== null) highlights.push({ value: fmt(onHoldTratados), label: "pacotes tratados do ON HOLD" });
+
+  // ---- Métricas de layout ----
+  const wL = 1130;
+  const wR = W - M * 2 - wL - 20;
+  const xR = M + wL + 20;
+
+  const confTableRows = conf ? conf.rows.length + (conf.showTotal ? 1 : 0) : 0;
+  const confH = conf
+    ? 84 + 118 + 22 + (42 + confTableRows * 44 + 14) + 24
+    : 84 + 64 + 24;
+
+  const attItemH = (line: string) => wrap(line, wR - 100, 22).length * 30 + 14;
+  const attBodyH = attentionLines.reduce((sum, l) => sum + attItemH(l.value), 0);
+  const attH = 84 + attBodyH + 20;
+
+  const dstItemH = (h: { value: string; label: string }) => Math.max(30, wrap(`${h.value} ${h.label}.`, wR - 110, 22).length * 30) + 12;
+  const dstBodyH = highlights.length === 0 ? 40 : highlights.reduce((sum, h) => sum + dstItemH(h), 0);
+  const rightNaturalH = attH + 20 + 84 + dstBodyH + 20;
+  const dstH = 84 + dstBodyH + 20 + Math.max(0, confH - rightNaturalH);
+
+  const headerH = 128;
+  const summaryH = 2 * 150 + 20;
+  const bodyY = headerH + 24 + summaryH + 32;
+  const footerH = 84;
+  const H = Math.max(1080, bodyY + Math.max(confH, attH + 20 + dstH) + 24 + footerH);
 
   canvas.width = W; canvas.height = H;
   g.fillStyle = color("background"); g.fillRect(0, 0, W, H);
-  g.fillStyle = color("orange"); g.fillRect(0, 0, W, 6);
+  glow(W - 120, 0, 640, "orange", 0.14);
+  glow(120, H, 560, "orange", 0.08);
 
-  // ---- Header ----
-  box(M, 39, 64, 70, "orange"); text("S", 67, 89, 42, "orange", true);
-  text("SHOPEE OPERATIONS HUB", 132, 65, 19, "orange", true);
-  text("Relatório Operacional Completo", 132, 111, 40, "text", true);
-  text(input.hub, 132, 144, 21, "muted");
-  const periodWidth = Math.max(480, ...wrap(`PERÍODO · ${input.period}`, W - 1000, 22).map(line => { g.font = font(22, true); return g.measureText(line).width + 48; }), ...wrap(input.shifts, W - 1000, 25).map(line => { g.font = font(25, true); return g.measureText(line).width + 48; }));
-  box(W - periodWidth - M, 39, periodWidth, 105, "orange");
-  wrap(`PERÍODO · ${input.period}`, periodWidth - 48, 22, true).forEach((line, i) => text(line, W - periodWidth - 24, 79 + i * 26, 22, "text", true));
-  wrap(input.shifts, periodWidth - 48, 25, true).forEach((line, i) => text(line, W - periodWidth - 24, 118 + i * 28, 25, "orange", true));
+  // ---- Cabeçalho ----
+  g.beginPath(); g.roundRect(M, 30, 76, 76, 18); g.fillStyle = color("orange"); g.fill();
+  textC("S", M + 38, 82, 44, "text", true); // Shopee mark: laranja com inicial branca
+  g.save(); g.fillStyle = "#ffffff"; g.font = font(44, true); g.fillText("S", M + 38 - g.measureText("S").width / 2, 82); g.restore();
+  const shopeeW = measure("Shopee", 34, true);
+  text("Shopee", M + 100, 84, 34, "text", true);
+  const divX = M + 100 + shopeeW + 26;
+  g.strokeStyle = color("border"); g.lineWidth = 2; g.beginPath(); g.moveTo(divX, 46); g.lineTo(divX, 94); g.stroke();
+  text(`Operations Hub – ${input.hub}`, divX + 26, 74, 40, "text", true);
+  text("Relatório Operacional Completo", divX + 26, 106, 22, "muted");
+  const periodLines = wrap(`Período: ${input.period}`, 430, 20);
+  const shiftLines = wrap(`Turno: ${input.shifts}`, 430, 20, true);
+  const periodW = Math.max(430, ...periodLines.map(l => measure(l, 20) + 90), ...shiftLines.map(l => measure(l, 20, true) + 90));
+  const periodH = 32 + periodLines.length * 26 + shiftLines.length * 26;
+  box(W - M - periodW, 30, periodW, periodH, "orange", 12, 0.06);
+  icon(10, W - M - periodW + 18, 30 + periodH / 2 - 16, "orange", 32);
+  let py = 30 + 36;
+  for (const line of periodLines) { text(line, W - M - periodW + 62, py, 20, "text"); py += 26; }
+  for (const line of shiftLines) {
+    const sep = line.indexOf(":");
+    if (sep > 0) {
+      text(`${line.slice(0, sep + 1)} `, W - M - periodW + 62, py, 20, "text");
+      text(line.slice(sep + 1).trim(), W - M - periodW + 62 + measure(`${line.slice(0, sep + 1)} `, 20), py, 20, "orange", true);
+    } else text(line, W - M - periodW + 62, py, 20, "orange", true);
+    py += 26;
+  }
 
-  let y = headerH + 24;
-
-  // ---- Resumo geral da operação ----
-  text("RESUMO GERAL DA OPERAÇÃO", M, y + 27, 27, "text", true);
+  // ---- Resumo geral: 8 indicadores em 2 linhas de 4 ----
   const missTone = result.percent === null || result.target === null ? "muted" : result.above ? "red" : "green";
   const status = result.percent === null ? "Sem dados" : result.target === null ? "Meta indisponível" : result.above ? "Acima da meta" : "Dentro da meta";
-  const cardWidth = (W - 96 - 72) / 4;
+  const cardW = (W - M * 2 - 3 * 20) / 4;
   const metrics = [...input.metrics, { label: "MISSORTED", value: result.percent, tone: missTone as Tone }];
+  const summaryY = headerH + 24;
   metrics.forEach((m, i) => {
-    const x = M + (i % 4) * (cardWidth + 24), cy = y + 56 + Math.floor(i / 4) * 209;
-    box(x, cy, cardWidth, 185, m.tone);
-    g.fillStyle = color(m.tone); g.fillRect(x + 1, cy + 18, 3, 148);
-    icon(i, x + 24, cy + 24, m.tone);
-    wrap(m.label, cardWidth - 108, 21, true).forEach((line, j) => text(line, x + 82, cy + 40 + j * 26, 21, "text", true));
-    const value = i === 7 ? (result.percent === null ? "Sem dados" : formatMissorted(result.percent)) : m.value === null ? "Nenhum dado disponível" : fmt(m.value);
-    let size = m.value === null ? 25 : 54;
-    while (size > 18 && (g.font = font(size, true), g.measureText(value).width > cardWidth - 48)) size--;
-    text(value, x + 24, cy + 126, size, m.tone, true);
-    const caption = i === 7 ? `Meta: ${result.target === null ? "Sem informação" : formatMissorted(result.target)} · ${status}` : m.value === null ? "Sem informação no relatório" : i === 5 || i === 6 ? "Destaque operacional" : "Período e turnos selecionados";
-    text(caption, x + 24, cy + 162, 19, "muted");
+    const x = M + (i % 4) * (cardW + 20), cy = summaryY + Math.floor(i / 4) * 170;
+    box(x, cy, cardW, 150, m.tone, 12, 0.07);
+    glow(x + 60, cy + 60, 150, m.tone, 0.10);
+    icon(i, x + 20, cy + 22, m.tone, 36);
+    wrap(m.label, cardW - 84, 18, true).forEach((line, j) => text(line, x + 66, cy + 40 + j * 22, 18, "text", true));
+    if (i === 7) {
+      const value = result.percent === null ? "Sem dados" : formatMissorted(result.percent);
+      let size = result.percent === null ? 26 : 52;
+      while (size > 18 && measure(value, size, true) > cardW - 200) size--;
+      text(value, x + 20, cy + 122, size, m.tone, true);
+      const meta = `Meta: ${result.target === null ? "Sem informação" : formatMissorted(result.target)}`;
+      text(meta, x + cardW - 20 - measure(status, 17, true) - 32, cy + 92, 17, "muted");
+      const badgeW = measure(status, 17, true) + 24;
+      g.beginPath(); g.roundRect(x + cardW - 20 - badgeW, cy + 104, badgeW, 30, 15);
+      g.fillStyle = rgba(color(m.tone), result.percent === null || result.target === null ? 0.25 : 0.9); g.fill();
+      g.save(); g.fillStyle = "#ffffff"; g.font = font(17, true); g.fillText(status, x + cardW - 20 - badgeW + 12, cy + 125); g.restore();
+    } else {
+      const value = m.value === null ? "Nenhum dado disponível" : fmt(m.value);
+      let size = m.value === null ? 24 : 54;
+      while (size > 18 && measure(value, size, true) > cardW - 40) size--;
+      text(value, x + 20, cy + 122, size, m.tone, true);
+      if (m.value === null) text("Sem informação no relatório", x + 20, cy + 140, 15, "muted");
+    }
   });
-  y += summaryH + 40;
 
-  // ---- Desempenho da Conferência ----
-  text("DESEMPENHO DA CONFERÊNCIA", M, y + 27, 27, "text", true);
-  let cy = y + 56;
+  // ---- Desempenho da Conferência (coluna esquerda) ----
+  box(M, bodyY, wL, confH, "orange", 14, 0);
+  g.save(); g.beginPath(); g.roundRect(M, bodyY, wL, 64, [14, 14, 0, 0]); g.fillStyle = rgba(color("orange"), 0.12); g.fill(); g.restore();
+  icon(12, M + 22, bodyY + 16, "orange", 32);
+  text("Desempenho da Conferência", M + 66, bodyY + 42, 26, "text", true);
   if (conf) {
     const confCards: { label: string; value: string; tone: Tone; icon: number }[] = [
-      { label: "ROTAS CONFERIDAS", value: fmt(conf.total.routes), tone: "orange", icon: 0 },
-      { label: "TEMPO MÉDIO", value: durationLabel(conf.total.average), tone: "blue", icon: 7 },
-      { label: "COLABORADORES ÚNICOS", value: fmt(conf.total.collaborators), tone: "purple", icon: 3 },
-      { label: "PEDIDOS ESCANEADOS", value: num(conf.total.scanned), tone: "cyan", icon: 6 },
-      { label: "PEDIDOS FALTANTES", value: num(conf.total.missing), tone: "red", icon: 1 },
-      { label: "PEDIDOS MISSORTED", value: num(conf.total.missorted), tone: "amber", icon: 2 },
+      { label: "Rotas Conferidas", value: fmt(conf.total.routes), tone: "cyan", icon: 0 },
+      { label: "Tempo Médio", value: durationLabel(conf.total.average), tone: "orange", icon: 11 },
+      { label: "Colaboradores", value: fmt(conf.total.collaborators), tone: "purple", icon: 3 },
+      { label: "Pedidos Escaneados", value: num(conf.total.scanned), tone: "green", icon: 4 },
+      { label: "Pedidos Faltantes", value: num(conf.total.missing), tone: "amber", icon: 1 },
+      { label: "Pedidos Missorted", value: num(conf.total.missorted), tone: "red", icon: 2 },
     ];
-    const w6 = (W - 96 - 5 * 20) / 6;
+    const w6 = (wL - 48 - 5 * 14) / 6;
+    const cy = bodyY + 84;
     confCards.forEach((c, i) => {
-      const x = M + i * (w6 + 20);
-      box(x, cy, w6, 150, c.tone);
-      g.fillStyle = color(c.tone); g.fillRect(x + 1, cy + 14, 3, 122);
-      icon(c.icon, x + 18, cy + 16, c.tone, 30);
-      wrap(c.label, w6 - 78, 16, true).forEach((line, j) => text(line, x + 58, cy + 30 + j * 20, 16, "text", true));
-      let size = 32;
-      while (size > 16 && (g.font = font(size, true), g.measureText(c.value).width > w6 - 36)) size--;
-      text(c.value, x + 18, cy + 118, size, c.tone, true);
+      const x = M + 24 + i * (w6 + 14);
+      box(x, cy, w6, 118, c.tone, 10, 0.08);
+      icon(c.icon, x + 14, cy + 14, c.tone, 26);
+      wrap(c.label, w6 - 52, 13, true).slice(0, 2).forEach((line, j) => text(line, x + 48, cy + 27 + j * 16, 13, "text", true));
+      const raw = c.value;
+      let size = raw === "Sem informação" ? 16 : 28;
+      while (size > 13 && measure(raw, size, true) > w6 - 24) size--;
+      text(raw, x + 14, cy + 96, size, c.tone, true);
     });
-    cy += 150 + 24;
-    const tw = W - 96;
-    const colTurno = 240;
+    // Tabela por turno
+    const ty = cy + 118 + 22;
+    const tw = wL - 48;
+    const colTurno = 190;
     const colN = (tw - colTurno) / 6;
-    box(M, cy, tw, 46 + confTableRows * 46 + 14, "border");
+    const tableH = 42 + confTableRows * 44 + 14;
+    box(M + 24, ty, tw, tableH, "border", 10);
     const headers = ["Turno", "Rotas", "Colaboradores", "Tempo médio", "Escaneados", "Faltantes", "Missorted"];
-    text(headers[0], M + 24, cy + 31, 19, "muted", true);
-    headers.slice(1).forEach((h, i) => textR(h, M + colTurno + (i + 1) * colN - 12, cy + 31, 19, "muted", true));
-    g.strokeStyle = color("border"); g.lineWidth = 1; g.beginPath(); g.moveTo(M + 16, cy + 46); g.lineTo(M + tw - 16, cy + 46); g.stroke();
+    text(headers[0], M + 24 + 20, ty + 29, 17, "muted", true);
+    headers.slice(1).forEach((h, i) => textR(h, M + 24 + colTurno + (i + 1) * colN - 12, ty + 29, 17, "muted", true));
+    g.strokeStyle = color("border"); g.lineWidth = 1; g.beginPath(); g.moveTo(M + 24 + 12, ty + 42); g.lineTo(M + 24 + tw - 12, ty + 42); g.stroke();
     const tableRows = [...conf.rows, ...(conf.showTotal ? [{ ...conf.total, shift: "Total" }] : [])];
     tableRows.forEach((r, i) => {
-      const ry = cy + 46 + i * 46;
-      const tone = r.shift === "AM1" ? "orange" : r.shift === "AM2" ? "blue" : r.shift === "PM1" ? "purple" : "text";
-      text(r.shift, M + 24, ry + 31, 20, tone, true);
-      [fmt(r.routes), fmt(r.collaborators), durationLabel(r.average), num(r.scanned), num(r.missing), num(r.missorted)]
-        .forEach((v, j) => textR(v, M + colTurno + (j + 1) * colN - 12, ry + 31, 20, j >= 4 ? "amber" : "text"));
-      if (i < tableRows.length - 1) { g.strokeStyle = color("border"); g.beginPath(); g.moveTo(M + 16, ry + 46); g.lineTo(M + tw - 16, ry + 46); g.stroke(); }
+      const ry = ty + 42 + i * 44;
+      const isTotal = r.shift === "Total";
+      if (isTotal) {
+        g.save(); g.beginPath(); g.roundRect(M + 24 + 6, ry, tw - 12, 44, 8); g.fillStyle = rgba(color("orange"), 0.28); g.fill(); g.restore();
+      }
+      const tone = isTotal ? "orange" : r.shift === "AM1" ? "cyan" : r.shift === "AM2" ? "orange" : r.shift === "PM1" ? "purple" : "text";
+      if (!isTotal) {
+        g.beginPath(); g.roundRect(M + 24 + 20, ry + 9, 74, 26, 8);
+        g.fillStyle = rgba(color(tone), 0.16); g.fill(); g.strokeStyle = rgba(color(tone), 0.7); g.lineWidth = 1.5; g.stroke();
+        textC(r.shift, M + 24 + 20 + 37, ry + 28, 16, tone, true);
+      } else text(r.shift, M + 24 + 20, ry + 29, 18, "text", true);
+      [cell(r.routes), cell(r.collaborators), r.average === null ? "—" : durationLabel(r.average), cell(r.scanned), cell(r.missing), cell(r.missorted)]
+        .forEach((v, j) => textR(v, M + 24 + colTurno + (j + 1) * colN - 12, ry + 29, 18, isTotal ? "text" : j >= 4 ? "amber" : "text", isTotal));
+      if (i < tableRows.length - 1) { g.strokeStyle = rgba(color("border"), 0.6); g.beginPath(); g.moveTo(M + 24 + 12, ry + 44); g.lineTo(M + 24 + tw - 12, ry + 44); g.stroke(); }
     });
   } else {
-    box(M, cy, W - 96, 64, "border");
-    text("Sem dados no período", M + 24, cy + 40, 22, "muted");
+    box(M + 24, bodyY + 84, wL - 48, 64, "border", 10);
+    text("Sem dados no período", M + 24 + 24, bodyY + 84 + 40, 22, "muted");
   }
-  y += confH + 40;
 
-  // ---- Principais pontos de atenção ----
-  text("PRINCIPAIS PONTOS DE ATENÇÃO", M, y + 27, 27, "text", true);
-  cy = y + 56;
-  box(M, cy, W - 96, attentionH - 56, "red");
-  g.fillStyle = color("red"); g.fillRect(M + 1, cy + 14, 3, attentionH - 56 - 28);
-  attentionLines.forEach((line, i) => {
-    const isMiss = line.startsWith("MISSORTED");
-    text(`• ${line}`, M + 28, cy + 28 + i * 36 + 8, 22, isMiss ? "red" : "text", isMiss);
-  });
-  y += attentionH + 40;
+  // ---- Principais Pontos de Atenção (coluna direita, topo) ----
+  box(xR, bodyY, wR, attH, "red", 14, 0);
+  g.save(); g.beginPath(); g.roundRect(xR, bodyY, wR, 64, [14, 14, 0, 0]); g.fillStyle = rgba(color("red"), 0.14); g.fill(); g.restore();
+  icon(1, xR + 22, bodyY + 16, "red", 32);
+  text("Principais Pontos de Atenção", xR + 66, bodyY + 42, 24, "text", true);
+  let ay = bodyY + 84;
+  for (const line of attentionLines) {
+    g.beginPath(); g.arc(xR + 32, ay + 8, 5, 0, Math.PI * 2); g.fillStyle = color(line.tone === "red" ? "red" : "orange"); g.fill();
+    for (const wl of wrap(line.value, wR - 100, 22)) { text(wl, xR + 52, ay + 16, 22, line.tone, line.bold); ay += 30; }
+    ay += 14;
+  }
 
-  // ---- Destaques operacionais ----
-  text("DESTAQUES OPERACIONAIS", M, y + 27, 27, "text", true);
-  cy = y + 56;
-  box(M, cy, W - 96, 120, "green");
-  g.fillStyle = color("green"); g.fillRect(M + 1, cy + 14, 3, 92);
-  const hw = (W - 96 - 48) / highlights.length;
-  highlights.forEach(([label, value], i) => {
-    const x = M + 24 + i * hw;
-    wrap(label, hw - 24, 17, true).forEach((line, j) => text(line, x, cy + 34 + j * 21, 17, "muted", true));
-    let size = 30;
-    while (size > 15 && (g.font = font(size, true), g.measureText(value).width > hw - 24)) size--;
-    text(value, x, cy + 96, size, "green", true);
-  });
+  // ---- Destaques Operacionais (coluna direita, abaixo) ----
+  const dy = bodyY + attH + 20;
+  box(xR, dy, wR, dstH, "green", 14, 0);
+  g.save(); g.beginPath(); g.roundRect(xR, dy, wR, 64, [14, 14, 0, 0]); g.fillStyle = rgba(color("green"), 0.14); g.fill(); g.restore();
+  icon(8, xR + 22, dy + 16, "green", 32);
+  text("Destaques Operacionais", xR + 66, dy + 42, 24, "text", true);
+  let ey = dy + 84;
+  if (highlights.length === 0) {
+    text("Sem dados no período.", xR + 32, ey + 16, 22, "muted");
+  } else {
+    for (const h of highlights) {
+      icon(9, xR + 26, ey - 2, "green", 26);
+      const full = `${h.value} ${h.label}.`;
+      const lines = wrap(full, wR - 110, 22);
+      let remaining = h.value;
+      let first = true;
+      for (const wl of lines) {
+        let x = xR + 62;
+        if (first && wl.startsWith(h.value)) {
+          text(h.value, x, ey + 16, 22, "text", true);
+          x += measure(h.value, 22, true);
+          text(wl.slice(h.value.length), x, ey + 16, 22, "text");
+          remaining = remaining.slice(h.value.length).trim();
+        } else {
+          const boldPart = first ? "" : lines.indexOf(wl) === 0 ? "" : "";
+          void boldPart; void remaining;
+          text(wl, x, ey + 16, 22, "text");
+        }
+        first = false;
+        ey += 30;
+      }
+      ey += 12;
+    }
+  }
 
-  // ---- Footer ----
-  g.strokeStyle = color("orange"); g.lineWidth = 1; g.beginPath(); g.moveTo(M, H - 76); g.lineTo(W - M, H - 76); g.stroke();
-  text("HUB LSP-36", M, H - 32, 25, "text", true);
-  text("Shopee Operations Hub · Embu das Artes", 240, H - 32, 21, "muted");
+  // ---- Rodapé ----
+  g.strokeStyle = color("orange"); g.lineWidth = 2; g.beginPath(); g.moveTo(M, H - 66); g.lineTo(W - M, H - 66); g.stroke();
+  text(input.hub, M, H - 28, 22, "text", true);
+  text("Shopee Operations Hub – Embu das Artes", M + measure(input.hub, 22, true) + 20, H - 28, 19, "muted");
   const stamp = `Gerado em ${new Date().toLocaleString("pt-BR")}`;
-  g.font = font(21); text(stamp, W - M - g.measureText(stamp).width, H - 32, 21, "muted");
+  icon(11, W - M - measure(stamp, 19) - 30, H - 44, "muted", 22);
+  textR(stamp, W - M, H - 28, 19, "muted");
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Não foi possível gerar o PNG.")), "image/png"));
 }

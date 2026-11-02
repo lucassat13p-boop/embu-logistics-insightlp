@@ -363,6 +363,7 @@ function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur,
       ? { shift, hasData: false, routes: 0, collaborators: 0, average: null, scanned: null, missing: null, missorted: null }
       : { shift, hasData: true, routes: rs.length, collaborators: new Set(rs.map((r) => r.operator.key).filter(Boolean)).size, average: meanDuration(rs), scanned: sum(rs.map((r) => r.scanned)), missing: sum(rs.map((r) => r.missing)), missorted: sum(rs.map((r) => r.missorted)) };
     const selected = allShifts ? rows : rows.filter((r) => shifts.includes(r.shift as DashShift));
+    if (!selected.length) return null;
     const shiftList = allShifts ? [...DASH_SHIFTS] : shifts;
     return { rows: shiftList.map((s) => stat(selected.filter((r) => r.shift === s), s)), total: stat(selected, "Total"), showTotal: shiftList.length > 1 };
   }, [audit.data, range?.start, range?.end, allShifts, shifts.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps

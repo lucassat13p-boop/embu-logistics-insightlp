@@ -305,19 +305,13 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
       icon(9, xR + 26, ey - 2, "green", 26);
       const full = `${h.value} ${h.label}.`;
       const lines = wrap(full, wR - 110, 22);
-      let remaining = h.value;
       let first = true;
       for (const wl of lines) {
-        let x = xR + 62;
         if (first && wl.startsWith(h.value)) {
-          text(h.value, x, ey + 16, 22, "text", true);
-          x += measure(h.value, 22, true);
-          text(wl.slice(h.value.length), x, ey + 16, 22, "text");
-          remaining = remaining.slice(h.value.length).trim();
+          text(h.value, xR + 62, ey + 16, 22, "text", true);
+          text(wl.slice(h.value.length), xR + 62 + measure(h.value, 22, true), ey + 16, 22, "text");
         } else {
-          const boldPart = first ? "" : lines.indexOf(wl) === 0 ? "" : "";
-          void boldPart; void remaining;
-          text(wl, x, ey + 16, 22, "text");
+          text(wl, xR + 62, ey + 16, 22, "text");
         }
         first = false;
         ey += 30;

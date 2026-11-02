@@ -137,7 +137,7 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
   const xR = M + wL + 20;
 
   const confTableRows = conf ? conf.rows.length + (conf.showTotal ? 1 : 0) : 0;
-  const confH = conf
+  const confContentH = conf
     ? 84 + 118 + 22 + (42 + confTableRows * 44 + 14) + 24
     : 84 + 64 + 24;
 
@@ -149,11 +149,17 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
   const dstBodyH = highlights.length === 0 ? 40 : highlights.reduce((sum, h) => sum + dstItemH(h), 0);
   const dstH = 84 + dstBodyH + 20;
 
+  // O painel da Conferência se estende até a base do painel Destaques Operacionais,
+  // formando um bloco alinhado nas duas colunas; o espaço extra é distribuído internamente.
+  const rightH = attH + 20 + dstH;
+  const confH = Math.max(confContentH, rightH);
+  const confGapExtra = conf ? Math.max(0, confH - confContentH) / 2 : 0;
+
   const headerH = 128;
   const summaryH = 2 * 150 + 20;
   const bodyY = headerH + 24 + summaryH + 32;
   const footerH = 84;
-  const H = Math.max(1080, bodyY + Math.max(confH, attH + 20 + dstH) + 24 + footerH);
+  const H = Math.max(1080, bodyY + Math.max(confH, rightH) + 24 + footerH);
 
   canvas.width = W; canvas.height = H;
   g.fillStyle = color("background"); g.fillRect(0, 0, W, H);
@@ -244,8 +250,8 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
       while (size > 13 && measure(raw, size, true) > w6 - 24) size--;
       text(raw, x + 14, cy + 96, size, c.tone, true);
     });
-    // Tabela por turno
-    const ty = cy + 118 + 22;
+    // Tabela por turno (o espaço extra do painel é dividido entre o vão acima da tabela e a base)
+    const ty = cy + 118 + 22 + confGapExtra;
     const tw = wL - 48;
     const colTurno = 190;
     const colN = (tw - colTurno) / 6;

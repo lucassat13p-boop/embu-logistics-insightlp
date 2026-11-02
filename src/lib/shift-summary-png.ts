@@ -250,8 +250,8 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
       while (size > 13 && measure(raw, size, true) > w6 - 24) size--;
       text(raw, x + 14, cy + 96, size, c.tone, true);
     });
-    // Tabela por turno
-    const ty = cy + 118 + 22;
+    // Tabela por turno (o espaço extra do painel é dividido entre o vão acima da tabela e a base)
+    const ty = cy + 118 + 22 + confGapExtra;
     const tw = wL - 48;
     const colTurno = 190;
     const colN = (tw - colTurno) / 6;

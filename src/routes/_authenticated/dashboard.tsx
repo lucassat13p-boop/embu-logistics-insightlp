@@ -5,7 +5,8 @@ import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDow
 import { ShiftIcon } from "@/components/ops/ShiftIcon";
 import { MissortedCard } from "@/components/ops/Missorted";
 import { formatMissorted, missortedQuery, missortedResult, missortedTargetQuery } from "@/lib/missorted";
-import { createShiftSummaryPng, type ReportShift } from "@/lib/shift-summary-png";
+import { createShiftSummaryPng, type ReportConfRow, type ReportConferencia } from "@/lib/shift-summary-png";
+import { auditFromRecord, auditQuery, meanDuration, type AuditRow } from "@/lib/conferencia";
 import { BarBlock, Empty, LineBlock, PageHeader, Panel } from "@/components/ops/blocks";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { Button } from "@/components/ui/button";
@@ -187,7 +188,7 @@ function Dashboard() {
       </>}
 
       <CustomizeDialog open={customize} onOpenChange={setCustomize} layout={layout} onSave={(items) => setLayout({ items })} />
-      <ReportDialog open={report} onOpenChange={setReport} periodText={periodText} shiftText={shiftText} summary={summary} cur={cur} range={range} shifts={shiftFiltered ? shifts : [...DASH_SHIFTS]} />
+      <ReportDialog open={report} onOpenChange={setReport} periodText={periodText} shiftText={shiftText} summary={summary} cur={cur} range={range} shifts={shiftFiltered ? shifts : [...DASH_SHIFTS]} allShifts={!shiftFiltered} />
     </div>
   );
 }
@@ -349,9 +350,20 @@ function CustomizeDialog({ open, onOpenChange, layout, onSave }: { open: boolean
   </DialogContent></Dialog>;
 }
 
-function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur, range, shifts }: { open: boolean; onOpenChange: (o: boolean) => void; periodText: string; shiftText: string; summary: Summary[]; cur: Record<SourceKey, Item[]>; range: Range | null; shifts: DashShift[] }) {
+function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur, range, shifts, allShifts }: { open: boolean; onOpenChange: (o: boolean) => void; periodText: string; shiftText: string; summary: Summary[]; cur: Record<SourceKey, Item[]>; range: Range | null; shifts: DashShift[]; allShifts: boolean }) {
   const entries = useQuery({ ...missortedQuery(), enabled: open });
   const target = useQuery({ ...missortedTargetQuery(), enabled: open });
+  const audit = useQuery({ ...auditQuery(), enabled: open });
+  const conferencia = useMemo<ReportConferencia | null | undefined>(() => {
+    if (!audit.data) return undefined;
+    const rows = audit.data.map(auditFromRecord).filter((r) => !range || (r.date !== null && r.date >= range.start && r.date <= range.end));
+    if (!rows.length) return null;
+    const sum = (vals: (number | null)[]) => { const v = vals.filter((x): x is number => x !== null); return v.length ? v.reduce((a, b) => a + b, 0) : null; };
+    const stat = (rs: AuditRow[], shift: string): ReportConfRow => ({ shift, routes: rs.length, collaborators: new Set(rs.map((r) => r.operator.key).filter(Boolean)).size, average: meanDuration(rs), scanned: sum(rs.map((r) => r.scanned)), missing: sum(rs.map((r) => r.missing)), missorted: sum(rs.map((r) => r.missorted)) });
+    const selected = allShifts ? rows : rows.filter((r) => shifts.includes(r.shift as DashShift));
+    const shiftList = allShifts ? [...DASH_SHIFTS] : shifts;
+    return { rows: shiftList.map((s) => stat(selected.filter((r) => r.shift === s), s)), total: stat(selected, "Total"), showTotal: shiftList.length > 1 };
+  }, [audit.data, range?.start, range?.end, allShifts, shifts.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   const [generating, setGenerating] = useState(false);
   const [exportError, setExportError] = useState("");
   const selectedEntries = (entries.data ?? []).filter(row => (!range || (row.operation_date >= range.start && row.operation_date <= range.end)) && shifts.includes(row.shift as DashShift));

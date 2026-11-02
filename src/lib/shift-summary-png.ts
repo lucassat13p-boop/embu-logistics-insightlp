@@ -163,7 +163,6 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
 
   // ---- Cabeçalho ----
   g.beginPath(); g.roundRect(M, 30, 76, 76, 18); g.fillStyle = color("orange"); g.fill();
-  textC("S", M + 38, 82, 44, "text", true); // Shopee mark: laranja com inicial branca
   g.save(); g.fillStyle = "#ffffff"; g.font = font(44, true); g.fillText("S", M + 38 - g.measureText("S").width / 2, 82); g.restore();
   const shopeeW = measure("Shopee", 34, true);
   text("Shopee", M + 100, 84, 34, "text", true);

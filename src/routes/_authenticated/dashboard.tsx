@@ -374,12 +374,8 @@ function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur,
   const download = async () => {
     setGenerating(true); setExportError("");
     try {
-      const attention: ReportShift[] = DASH_SHIFTS.filter(shift => shifts.includes(shift)).map(shift => {
-        const rows = tr.filter(i => i.shift === shift && i.t);
-        return { shift, av: sumT(rows, "avarias_saved"), oh: sumT(rows, "on_hold_treated"), entries: rows.length,
-          notes: rows.flatMap(i => i.t?.notes?.trim() ? [{ date: i.t.operation_date, text: i.t.notes }] : []) };
-      });
-      const blob = await createShiftSummaryPng({ hub: HUB_NAME, period: periodText, shifts: shiftText, metrics: summary, attention, missorted: { ...missorted, target: target.data ?? null } });
+      if (conferencia === undefined) return;
+      const blob = await createShiftSummaryPng({ hub: HUB_NAME, period: periodText, shifts: shiftText, metrics: summary, conferencia, missorted: { ...missorted, target: target.data ?? null } });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.download = `resumo-turno-${periodText.replace(/[^\d]+/g, "-")}.png`; a.href = url;
       document.body.appendChild(a); a.click(); a.remove();

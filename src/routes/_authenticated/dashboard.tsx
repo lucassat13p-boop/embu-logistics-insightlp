@@ -359,8 +359,11 @@ function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur,
     const rows = audit.data.map(auditFromRecord).filter((r) => !range || (r.date !== null && r.date >= range.start && r.date <= range.end));
     if (!rows.length) return null;
     const sum = (vals: (number | null)[]) => { const v = vals.filter((x): x is number => x !== null); return v.length ? v.reduce((a, b) => a + b, 0) : null; };
-    const stat = (rs: AuditRow[], shift: string): ReportConfRow => ({ shift, routes: rs.length, collaborators: new Set(rs.map((r) => r.operator.key).filter(Boolean)).size, average: meanDuration(rs), scanned: sum(rs.map((r) => r.scanned)), missing: sum(rs.map((r) => r.missing)), missorted: sum(rs.map((r) => r.missorted)) });
+    const stat = (rs: AuditRow[], shift: string): ReportConfRow => rs.length === 0
+      ? { shift, hasData: false, routes: 0, collaborators: 0, average: null, scanned: null, missing: null, missorted: null }
+      : { shift, hasData: true, routes: rs.length, collaborators: new Set(rs.map((r) => r.operator.key).filter(Boolean)).size, average: meanDuration(rs), scanned: sum(rs.map((r) => r.scanned)), missing: sum(rs.map((r) => r.missing)), missorted: sum(rs.map((r) => r.missorted)) };
     const selected = allShifts ? rows : rows.filter((r) => shifts.includes(r.shift as DashShift));
+    if (!selected.length) return null;
     const shiftList = allShifts ? [...DASH_SHIFTS] : shifts;
     return { rows: shiftList.map((s) => stat(selected.filter((r) => r.shift === s), s)), total: stat(selected, "Total"), showTotal: shiftList.length > 1 };
   }, [audit.data, range?.start, range?.end, allShifts, shifts.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps

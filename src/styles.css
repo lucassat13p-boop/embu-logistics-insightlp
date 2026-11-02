@@ -55,6 +55,18 @@
 
 :root {
   --radius: 0.5rem;
+  --report-background: oklch(0.135 0.003 260);
+  --report-surface: oklch(0.19 0.005 260);
+  --report-border: oklch(0.32 0.007 260);
+  --report-text: oklch(0.97 0.002 260);
+  --report-muted: oklch(0.74 0.008 260);
+  --report-orange: #FF6B35;
+  --report-blue: oklch(0.75 0.15 240);
+  --report-red: oklch(0.72 0.2 25);
+  --report-amber: oklch(0.83 0.15 80);
+  --report-purple: oklch(0.75 0.17 300);
+  --report-green: oklch(0.78 0.17 150);
+  --report-cyan: oklch(0.79 0.13 205);
   --background: oklch(0.975 0.003 60);
   --foreground: oklch(0.2 0.01 50);
   --card: oklch(1 0 0);

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Download, Eye, EyeOff, Info, Settings2, TrendingDown, TrendingUp, Truck, TriangleAlert, Tags, Package, PackageOpen, ShieldCheck, PackageCheck, ClipboardCheck, type LucideIcon } from "lucide-react";
 import { ShiftIcon } from "@/components/ops/ShiftIcon";
 import { MissortedCard } from "@/components/ops/Missorted";
+import { formatMissorted, missortedQuery, missortedResult, missortedTargetQuery } from "@/lib/missorted";
+import { createShiftSummaryPng, type ReportShift } from "@/lib/shift-summary-png";
 import { BarBlock, Empty, LineBlock, PageHeader, Panel } from "@/components/ops/blocks";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { Button } from "@/components/ui/button";
@@ -185,7 +187,7 @@ function Dashboard() {
       </>}
 
       <CustomizeDialog open={customize} onOpenChange={setCustomize} layout={layout} onSave={(items) => setLayout({ items })} />
-      <ReportDialog open={report} onOpenChange={setReport} periodText={periodText} shiftText={shiftText} summary={summary} cur={cur} />
+      <ReportDialog open={report} onOpenChange={setReport} periodText={periodText} shiftText={shiftText} summary={summary} cur={cur} range={range} shifts={shiftFiltered ? shifts : [...DASH_SHIFTS]} />
     </div>
   );
 }
@@ -347,32 +349,31 @@ function CustomizeDialog({ open, onOpenChange, layout, onSave }: { open: boolean
   </DialogContent></Dialog>;
 }
 
-function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur }: { open: boolean; onOpenChange: (o: boolean) => void; periodText: string; shiftText: string; summary: Summary[]; cur: Record<SourceKey, Item[]> }) {
+function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur, range, shifts }: { open: boolean; onOpenChange: (o: boolean) => void; periodText: string; shiftText: string; summary: Summary[]; cur: Record<SourceKey, Item[]>; range: Range | null; shifts: DashShift[] }) {
+  const entries = useQuery({ ...missortedQuery(), enabled: open });
+  const target = useQuery({ ...missortedTargetQuery(), enabled: open });
+  const [generating, setGenerating] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const selectedEntries = (entries.data ?? []).filter(row => (!range || (row.operation_date >= range.start && row.operation_date <= range.end)) && shifts.includes(row.shift as DashShift));
+  const missorted = target.data === undefined ? { percent: null, above: false } : missortedResult(selectedEntries, target.data);
   const lines = summary.map((s) => [s.label, s.value === null ? (s.note?.startsWith("Não disponível") ? "Não disponível" : "Sem dados") : fmt(s.value)] as const);
   const tr = cur.tratativas;
   const points = tr.length ? [`Avarias salvas: ${fmt(sumT(tr, "avarias_saved"))}`, `Pacotes do ON HOLD tratados: ${fmt(sumT(tr, "on_hold_treated"))}`] : ["Nenhum ponto de atenção registrado."];
-  const download = () => {
-    const W = 1200, H = 260 + Math.ceil(lines.length / 3) * 150 + 60 + points.length * 34 + 60;
-    const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d")!;
-    const css = getComputedStyle(document.documentElement);
-    const col = (v: string, f: string) => css.getPropertyValue(v).trim() || f;
-    g.fillStyle = "#ffffff"; g.fillRect(0, 0, W, H);
-    g.fillStyle = "#ee4d2d"; g.fillRect(0, 0, W, 120);
-    g.fillStyle = "#ffffff"; g.font = "bold 34px sans-serif"; g.fillText("Resumo do Turno", 48, 58); g.font = "20px sans-serif"; g.fillText(`${HUB_NAME}`, 48, 94);
-    g.fillStyle = "#222"; g.font = "18px sans-serif"; g.fillText(`Período: ${periodText}   ·   Turnos: ${shiftText}`, 48, 165);
-    lines.forEach(([label, value], i) => {
-      const x = 48 + (i % 3) * 372, y = 200 + Math.floor(i / 3) * 150;
-      g.strokeStyle = "#e5e5e5"; g.lineWidth = 2; g.strokeRect(x, y, 350, 128);
-      g.fillStyle = "#666"; g.font = "15px sans-serif"; g.fillText(label.toUpperCase(), x + 18, y + 34);
-      const empty = value === "Sem dados" || value === "Não disponível";
-      g.fillStyle = empty ? "#999" : "#111"; g.font = empty ? "bold 24px sans-serif" : "bold 44px sans-serif"; g.fillText(value, x + 18, y + 92);
-    });
-    let y = 200 + Math.ceil(lines.length / 3) * 150 + 20;
-    g.fillStyle = "#ee4d2d"; g.font = "bold 20px sans-serif"; g.fillText("PONTOS DE ATENÇÃO", 48, y); y += 36;
-    g.fillStyle = "#222"; g.font = "18px sans-serif"; points.forEach((p) => { g.fillText(`• ${p}`, 48, y); y += 34; });
-    g.fillStyle = "#999"; g.font = "13px sans-serif"; g.fillText(`Gerado em ${new Date().toLocaleString("pt-BR")} · somente dados reais registrados`, 48, H - 24);
-    void col;
-    const a = document.createElement("a"); a.download = `resumo-turno-${periodText.replace(/[^\d]+/g, "-")}.png`; a.href = c.toDataURL("image/png"); a.click();
+  const download = async () => {
+    setGenerating(true); setExportError("");
+    try {
+      const attention: ReportShift[] = DASH_SHIFTS.filter(shift => shifts.includes(shift)).map(shift => {
+        const rows = tr.filter(i => i.shift === shift && i.t);
+        return { shift, av: sumT(rows, "avarias_saved"), oh: sumT(rows, "on_hold_treated"), entries: rows.length,
+          notes: rows.flatMap(i => i.t?.notes?.trim() ? [{ date: i.t.operation_date, text: i.t.notes }] : []) };
+      });
+      const blob = await createShiftSummaryPng({ hub: HUB_NAME, period: periodText, shifts: shiftText, metrics: summary, attention, missorted: { ...missorted, target: target.data ?? null } });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.download = `resumo-turno-${periodText.replace(/[^\d]+/g, "-")}.png`; a.href = url;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch { setExportError("Não foi possível gerar o relatório. Tente novamente."); }
+    finally { setGenerating(false); }
   };
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-2xl">
     <DialogHeader><DialogTitle>Relatório do turno</DialogTitle></DialogHeader>
@@ -380,9 +381,11 @@ function ReportDialog({ open, onOpenChange, periodText, shiftText, summary, cur 
       <p className="font-display text-lg font-bold text-primary">{HUB_NAME}</p>
       <p className="text-sm text-muted-foreground">{periodText} · {shiftText}</p>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{lines.map(([l, v]) => <div key={l} className="rounded-md border p-2"><p className="text-[11px] uppercase text-muted-foreground">{l}</p><p className="font-semibold">{v}</p></div>)}</div>
+      <p className="mt-3 text-sm">MISSORTED: {missorted.percent === null ? "Sem dados" : formatMissorted(missorted.percent)} · Meta: {target.data === undefined ? "Sem informação" : formatMissorted(target.data)} · {missorted.percent === null ? "Sem dados" : missorted.above ? "Acima da meta" : "Dentro da meta"}</p>
       <p className="mt-3 text-xs font-semibold uppercase text-primary">Pontos de atenção</p>
       <ul className="text-sm">{points.map((p) => <li key={p}>• {p}</li>)}</ul>
     </div>
-    <Button onClick={download}><Download className="h-4 w-4" />Baixar como PNG</Button>
+    {(entries.isError || target.isError || exportError) && <p role="alert" className="text-sm text-destructive">{exportError || "Não foi possível consultar o MISSORTED e sua meta. Tente novamente."}</p>}
+    <Button onClick={download} disabled={generating || entries.isPending || target.isPending || entries.isError || target.isError}><Download className="h-4 w-4" />{generating ? "Gerando PNG…" : "Baixar como PNG"}</Button>
   </DialogContent></Dialog>;
 }

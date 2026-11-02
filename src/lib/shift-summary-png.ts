@@ -63,7 +63,7 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
   const initialWidth = (1920 - 96 - (columns - 1) * 24) / columns;
   const longestNotes = Math.max(0, ...input.attention.map(s => noteLines(s, initialWidth - 48).length));
   // Expand the 16:9 canvas only for unusually long real observations; never omit or clip them.
-  const H = Math.max(1080, 875 + longestNotes * 31);
+  const H = Math.max(1080, 1040 + longestNotes * 31);
   const W = Math.ceil(H * 16 / 9);
   canvas.width = W; canvas.height = H;
   g.fillStyle = color("background"); g.fillRect(0, 0, W, H);

@@ -1,4 +1,5 @@
 # Tasks
+- [x] Make only the operational PNG follow the resolved active site theme at click time, preserving dark design, layout and data; no automated tests or extra audits as requested.
 - [x] Reformulate only the shift-summary PNG as an isolated dark 16:9 report with existing filtered metrics, configured MISSORTED and treatment notes; no extra tests or audits, as requested.
 - [x] Refine only Conferência login-based distinct-route Top 5, independent productivity bars and six themed icon KPIs; preserve import, durations, shifts and detail table.
 - [x] Correct LH report shifts only at the view boundary for existing/new records, filters and PNG, preserving original storage and other modules.

@@ -13,17 +13,22 @@ type ReportInput = {
 
 /** Independent canvas composition; all values are supplied by existing dashboard readers. */
 export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
+  // Freeze the resolved provider theme at the click, before waiting for fonts.
+  // The provider's root class also reflects the resolved Automatic preference.
+  const css = getComputedStyle(document.documentElement);
+  const roles = ["background", "surface", "border", "text", "muted", "orange", "blue", "red", "amber", "purple", "green", "cyan", "on-accent", "empty-badge-text"];
+  const palette = new Map(roles.map(role => [role, css.getPropertyValue(`--report-${role}`).trim()]));
+  const color = (role: string) => palette.get(role) ?? palette.get("text") ?? "";
   await Promise.all([document.fonts.load('700 40px "Archivo"'), document.fonts.load('400 24px "IBM Plex Sans"')]);
   await document.fonts.ready;
   const canvas = document.createElement("canvas");
   const g = canvas.getContext("2d");
   if (!g) throw new Error("Não foi possível gerar a imagem.");
-  const css = getComputedStyle(document.documentElement);
-  const color = (role: string) => css.getPropertyValue(`--report-${role}`).trim();
   // Resolve any CSS color to rgba() so tints and glows work regardless of the source format.
   const probe = document.createElement("canvas");
   probe.width = probe.height = 1;
-  const pg = probe.getContext("2d")!;
+  const pg = probe.getContext("2d");
+  if (!pg) throw new Error("Não foi possível preparar as cores da imagem.");
   const rgba = (cssColor: string, alpha: number) => {
     pg.clearRect(0, 0, 1, 1); pg.fillStyle = cssColor; pg.fillRect(0, 0, 1, 1);
     const d = pg.getImageData(0, 0, 1, 1).data;
@@ -168,7 +173,7 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
 
   // ---- Cabeçalho ----
   g.beginPath(); g.roundRect(M, 30, 76, 76, 18); g.fillStyle = color("orange"); g.fill();
-  g.save(); g.fillStyle = "#ffffff"; g.font = font(44, true); g.fillText("S", M + 38 - g.measureText("S").width / 2, 82); g.restore();
+  g.save(); g.fillStyle = color("on-accent"); g.font = font(44, true); g.fillText("S", M + 38 - g.measureText("S").width / 2, 82); g.restore();
   const shopeeW = measure("Shopee", 34, true);
   text("Shopee", M + 100, 84, 34, "text", true);
   const divX = M + 100 + shopeeW + 26;
@@ -214,7 +219,7 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
       const badgeW = measure(status, 17, true) + 24;
       g.beginPath(); g.roundRect(x + cardW - 20 - badgeW, cy + 104, badgeW, 30, 15);
       g.fillStyle = rgba(color(m.tone), result.percent === null || result.target === null ? 0.25 : 0.9); g.fill();
-      g.save(); g.fillStyle = "#ffffff"; g.font = font(17, true); g.fillText(status, x + cardW - 20 - badgeW + 12, cy + 125); g.restore();
+      g.save(); g.fillStyle = color(result.percent === null || result.target === null ? "empty-badge-text" : "on-accent"); g.font = font(17, true); g.fillText(status, x + cardW - 20 - badgeW + 12, cy + 125); g.restore();
     } else {
       const value = m.value === null ? "Nenhum dado disponível" : fmt(m.value);
       let size = m.value === null ? 24 : 54;

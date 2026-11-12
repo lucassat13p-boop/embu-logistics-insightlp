@@ -120,6 +120,13 @@
       "when": 1793276321197,
       "tag": "0016_conferencia_module_atomic_import",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794493483910,
+      "tag": "0017_team_member_access_rls",
+      "breakpoints": true
     }
   ]
 }

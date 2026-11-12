@@ -2,7 +2,7 @@ import { normalizeHeader, type FieldKey } from "./modules";
 import { buildTable, cellText } from "./parsers";
 import type { RecordRow } from "./data";
 import { recordMonth, periodRange, type PeriodSelection } from "./period";
-import { operationalBlockWidth } from "./operational-import-layout";
+import { missingOperationalValue, operationalLayout } from "./operational-import-layout";
 
 export const ERROR_SHIFTS = ["AM1", "AM2", "PM1"] as const;
 export type ErrorShift = (typeof ERROR_SHIFTS)[number];
@@ -165,7 +165,7 @@ function readBlocks(sheet: Sheetish, defaultShift: ErrorShift | null, fields: Se
 
 const normSheet = (n: string) => normalizeHeader(n).replace(/\s+/g, "");
 
-/** TABELAS has three fixed blocks, each with four legacy or five dated columns. */
+/** Only operational TABELAS blocks are read; summaries do not define records. */
 export function buildOperationalImport(sheets: Sheetish[], format: string) {
   let sheetIdx = 0;
   if (format !== "csv") {
@@ -173,23 +173,36 @@ export function buildOperationalImport(sheets: Sheetish[], format: string) {
     if (sheetIdx < 0) throw new Error(`XLSX: aba "TABELAS" não encontrada. Abas disponíveis: ${sheets.map((s) => s.name).join(", ")}.`);
   }
   const rows = sheets[sheetIdx]?.rows ?? [];
-  const width = operationalBlockWidth(rows, sheets[sheetIdx]?.name ?? "TABELAS");
-  const blocks = ERROR_SHIFTS.map((shift, index) => ({ shift, start: index * width, letters: `${colName(index * width)}–${colName(index * width + width - 1)}` }));
+  const { headerIdx, blocks } = operationalLayout(rows, sheets[sheetIdx]?.name ?? "TABELAS");
+  const dated = blocks.some((block) => block.columns.record_date !== undefined);
+  let hasMissingLogin = false;
+  let hasConflict = false;
   const body: Body = [];
   for (const b of blocks) {
-    for (let i = 2; i < rows.length; i++) {
+    const brColumn = b.columns.order_id;
+    if (brColumn === undefined) continue;
+    const letters = `${colName(b.start)}–${colName(b.start + b.width - 1)}`;
+    for (let i = headerIdx + 1; i < rows.length; i++) {
       const r = rows[i] ?? [];
-      const brColumn = b.start + (width === 5 ? 1 : 0);
       const br = cellText(r[brColumn]);
-      if (!br) continue;
-      const original = r[b.start + width - 1] ?? null;
+      if (br && /^(total\b|soma\b|ranking\b|resumo\b|rotulos\b)/.test(normalizeHeader(br))) break;
+      if (missingOperationalValue(br) || /^(br|pedido|pedido\s*\/\s*br)$/i.test(br ?? "")) continue;
+      const original = b.columns.shift === undefined ? null : r[b.columns.shift] ?? null;
+      const login = b.columns.collaborator === undefined ? null : r[b.columns.collaborator] ?? null;
+      const missingLogin = missingOperationalValue(login);
+      const actualShift = errorShift(original);
+      const conflict = actualShift && actualShift !== b.shift ? `Turno original ${actualShift} difere do bloco ${b.shift}; mantida a responsabilidade do bloco.` : null;
+      hasMissingLogin ||= missingLogin && login !== null;
+      hasConflict ||= conflict !== null;
       body.push({ rowNumber: i + 1, empty: false, values: {
-        ...(width === 5 ? { Data: r[b.start] ?? null } : {}),
-        BR: r[brColumn] ?? null, Login: r[brColumn + 1] ?? null, "Erro/Motivo": r[brColumn + 2] ?? null,
-        "Turno responsável": b.shift, "Turno original": original, "Bloco de origem": `${b.shift} (${b.letters})`, "Linha de origem": i + 1,
+        ...(dated ? { Data: b.columns.record_date === undefined ? null : r[b.columns.record_date] ?? null } : {}),
+        BR: r[brColumn] ?? null, Login: missingLogin ? null : login, "Erro/Motivo": b.columns.reason === undefined ? null : r[b.columns.reason] ?? null,
+        "Turno responsável": b.shift, "Turno original": original, "Bloco de origem": `${b.shift} (${letters})`, "Linha de origem": i + 1,
+        ...(missingLogin && login !== null ? { "Login original": login } : {}),
+        ...(conflict ? { "Inconsistência de turno": conflict } : {}),
       } });
     }
   }
-  if (!body.length) throw new Error(`${format === "csv" ? "CSV" : "XLSX (aba TABELAS)"}: nenhuma ocorrência com BR preenchido nas colunas ${blocks.map((b) => colName(b.start + (width === 5 ? 1 : 0))).join(", ")} a partir da linha 3.`);
-  return { headers: [...(width === 5 ? ["Data"] : []), "BR", "Login", "Erro/Motivo", "Turno responsável", "Turno original", "Bloco de origem", "Linha de origem"], body, sheetIdx };
+  if (!body.length) throw new Error(`${format === "csv" ? "CSV" : "XLSX (aba TABELAS)"}: nenhuma ocorrência com BR preenchido nos blocos operacionais a partir da linha ${headerIdx + 2}.`);
+  return { headers: [...(dated ? ["Data"] : []), "BR", "Login", "Erro/Motivo", "Turno responsável", "Turno original", "Bloco de origem", "Linha de origem", ...(hasMissingLogin ? ["Login original"] : []), ...(hasConflict ? ["Inconsistência de turno"] : [])], body, sheetIdx, headerIdx };
 }

@@ -134,7 +134,7 @@ function ImportPage() {
       const idx = op ? op.sheetIdx : mod.key === "retidos_veiculos" && (p.format === "xlsx" || p.format === "xls") ? retidosMainSheetIndex(p.sheets) : mod.firstSheetOnly ? 0 : Math.max(0, p.sheets.findIndex((s) => s.rows.length));
       const active = p.sheets[idx];
       if (!active) throw new Error("Planilha não encontrada.");
-      const h = operational ? 1 : detectHeaderRow(active.rows);
+      const h = op ? op.headerIdx : detectHeaderRow(active.rows);
       const prepared = op ? op : buildTable(active.rows, h);
       setParsed(p);
       setSheetIdx(idx);

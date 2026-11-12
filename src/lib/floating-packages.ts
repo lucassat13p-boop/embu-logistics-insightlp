@@ -16,6 +16,18 @@ export const floatingShift = (value: string | null) => {
   const normalized = value?.trim().toUpperCase().replace(/\s+/g, "");
   return normalized && ["AM1", "AM2", "PM1"].includes(normalized) ? normalized : "Não identificado";
 };
+const FLOATING_ORIGINAL_SHIFTS: Record<string, string> = { AM: "PM1", PM1: "AM2", PM2: "AM1" };
+const shiftKey = (value: string | null) => value?.trim().toUpperCase().replace(/\s+/g, "") ?? "";
+/** Detects per snapshot whether Turno holds original (AM/PM2) or final (AM1/AM2) values; lone PM1 follows the sheet's original scheme. */
+export function floatingFinalShifts(rows: RecordRow[]): RecordRow[] {
+  const keys = new Set(rows.map((row) => shiftKey(row.shift)));
+  const alreadyFinal = (keys.has("AM1") || keys.has("AM2")) && !keys.has("AM") && !keys.has("PM2");
+  if (alreadyFinal) return rows;
+  return rows.map((row) => {
+    const mapped = FLOATING_ORIGINAL_SHIFTS[shiftKey(row.shift)];
+    return mapped ? { ...row, shift: mapped } : row;
+  });
+}
 export function floatingMapping(row: Pick<RecordRow, "extra">) {
   const value = row.extra && typeof row.extra === "object" && !Array.isArray(row.extra) ? row.extra.mapping : null;
   const normalized = typeof value === "string" ? normalizeHeader(value) : "";
@@ -117,6 +129,6 @@ export async function fetchFloatingActive() {
     rows.push(...(data ?? []));
     if (!data || data.length < 1000) break;
   }
-  return { batchId: pointer?.batch_id ?? null, updatedAt: pointer?.updated_at ?? null, rows };
+  return { batchId: pointer?.batch_id ?? null, updatedAt: pointer?.updated_at ?? null, rows: floatingFinalShifts(rows) };
 }
 export const floatingActiveQuery = () => queryOptions({ queryKey: ["records", "pacotes_flutuantes", "active"], queryFn: fetchFloatingActive, staleTime: 30_000 });

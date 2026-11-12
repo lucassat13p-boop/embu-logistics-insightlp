@@ -35,5 +35,5 @@
 - MISSORTED uses isolated date/shift-unique entries and singleton target with authenticated RLS and creator-only deletion; shared weighted calculation/cache powers its card and dialogs without touching treatment sources.
 - ON HOLD treated packages come only from the imported "Pacotes Tratados / Não MEXER" sheet stored per date+shift in `on_hold_treated_imports` (upsert replaces, never sums); manual Tratativas keep only Avarias Salvas, so official totals never mix sources.
 - LHs / Rotas: dedicated XLSX schedule from LTS PENDENTES A CHEGAR, SPX/LHs arrival evidence, trip-number dedupe and filtered canvas PNG. Stored shifts stay original; lhFromRecord maps once for views, filters and PNG, including existing rows without writes or effects on other modules.
-- LH table keeps local scrolling; origin ranking uses responsive HTML/CSS bars on existing originData to avoid sizing failures and horizontal overflow, preserving shared charts and PNG export.
-- Data access requires team membership via `public.is_team_member` (roles in `user_roles`); HUB data stays shared among members while new sign-ups get no access until authorized.
+- LH table scrolls locally; origin ranking uses responsive HTML/CSS bars on originData, avoiding overflow and preserving charts/PNG.
+- RLS gates data by `is_team_member` (user_roles): shared among members; new sign-ups need authorization.

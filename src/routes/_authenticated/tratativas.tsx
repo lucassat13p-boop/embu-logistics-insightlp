@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,8 +53,19 @@ function TratativasPage() {
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<TreatmentRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkIds, setBulkIds] = useState<string[] | null>(null);
+  const deletionLock = useRef(false);
 
   const rows = useMemo(() => filterTreatments(all, period, shifts), [all, period, shifts]);
+  const selectedIds = rows.filter((r) => selected.has(r.id)).map((r) => r.id);
+  useEffect(() => {
+    const visible = new Set(rows.map((r) => r.id));
+    setSelected((current) => {
+      const remaining = new Set([...current].filter((id) => visible.has(id)));
+      return remaining.size === current.size ? current : remaining;
+    });
+  }, [rows]);
   const totals = sumTreatments(rows);
   const importedTotals = sumTreatedImports(filterTreatedImports(imported, period, shifts));
   const months = useMemo(() => [...new Set(all.map((r) => r.operation_date.slice(0, 7)))].sort(), [all]);
@@ -85,8 +97,9 @@ function TratativasPage() {
   }
 
   async function deleteTreatment() {
-    if (!toDelete || deleting) return;
+    if (!toDelete || deleting || deletionLock.current) return;
     const id = toDelete.id;
+    deletionLock.current = true;
     setDeleting(true);
     try {
       const { data, error } = await supabase.from("operational_treatments")
@@ -102,6 +115,40 @@ function TratativasPage() {
     } catch {
       toast.error("Não foi possível excluir a tratativa. Verifique sua autorização e tente novamente.");
     } finally {
+      deletionLock.current = false;
+      setDeleting(false);
+    }
+  }
+
+  async function deleteSelectedTreatments() {
+    if (!bulkIds?.length || deleting || deletionLock.current) return;
+    const ids = [...bulkIds];
+    const removed = new Set<string>();
+    deletionLock.current = true;
+    setDeleting(true);
+    try {
+      for (const id of ids) {
+        try {
+          const { data, error } = await supabase.from("operational_treatments")
+            .delete().eq("id", id).select("id").single();
+          if (!error && data?.id === id) removed.add(id);
+        } catch {
+          // Unconfirmed IDs remain selected; continue with the rest.
+        }
+      }
+      if (removed.size) {
+        qc.setQueryData<TreatmentRow[]>(["operational_treatments"], (current) => current?.filter((r) => !removed.has(r.id)));
+        setSelected((current) => new Set([...current].filter((id) => !removed.has(id))));
+        if (view && removed.has(view.id)) setView(null);
+        void qc.invalidateQueries({ queryKey: ["operational_treatments"] });
+        void qc.invalidateQueries({ queryKey: ["official_treatments"] });
+      }
+      const failed = ids.length - removed.size;
+      if (failed) toast.error(`${removed.size} tratativa(s) excluída(s); ${failed} sem confirmação de exclusão. Os itens restantes continuam selecionados.`);
+      else toast.success(`${removed.size} tratativa(s) excluída(s) definitivamente.`);
+      setBulkIds(null);
+    } finally {
+      deletionLock.current = false;
       setDeleting(false);
     }
   }
@@ -123,13 +170,19 @@ function TratativasPage() {
         <Kpi label="Total de lançamentos" value={totals.entries} />
       </div>
       <Panel title="Histórico dos lançamentos" subtitle={`${rows.length} lançamentos`}>
+        {selectedIds.length > 0 && <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">{selectedIds.length} tratativa(s) selecionada(s)</span>
+          <Button variant="destructive" disabled={deleting} onClick={() => setBulkIds([...selectedIds])}><Trash2 className="h-4 w-4" />Excluir selecionados ({selectedIds.length})</Button>
+        </div>}
         {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : !rows.length ? <Empty text="Sem lançamento registrado para o período selecionado." /> : <>
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead><tr className="border-b text-left text-xs uppercase text-muted-foreground">
+              <th className="w-10 p-2"><Checkbox aria-label="Selecionar todos os registros filtrados" disabled={deleting} checked={selectedIds.length === rows.length && rows.length > 0 ? true : selectedIds.length > 0 ? "indeterminate" : false} onCheckedChange={(checked) => setSelected(checked === true ? new Set(rows.map((r) => r.id)) : new Set())} /></th>
               <th className="p-2">Data operacional</th><th className="p-2">Turno</th><th className="p-2 text-right">Avarias salvas</th><th className="p-2 text-right">ON HOLD tratados (manual, histórico)</th><th className="p-2">Responsável</th><th className="p-2">Observações</th><th className="p-2 text-right">Ações</th>
             </tr></thead>
             <tbody>{pageRows.map((r) => (
               <tr key={r.id} className="border-b last:border-0 hover:bg-muted/40">
+                <td className="p-2"><Checkbox aria-label={`Selecionar tratativa de ${fmt(r.operation_date)} ${r.shift}`} disabled={deleting} checked={selected.has(r.id)} onCheckedChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked === true) next.add(r.id); else next.delete(r.id); return next; })} /></td>
                 <td className="p-2 whitespace-nowrap">{fmt(r.operation_date)}</td><td className="p-2">{r.shift}</td>
                 <td className="p-2 text-right font-semibold tabular-nums">{r.avarias_saved}</td><td className="p-2 text-right font-semibold tabular-nums">{r.on_hold_treated}</td>
                 <td className="p-2 text-muted-foreground">{r.created_by_email ?? "—"}</td><td className="max-w-xs truncate p-2 text-muted-foreground">{r.notes ?? "—"}</td>
@@ -139,6 +192,19 @@ function TratativasPage() {
           {pages > 1 && <div className="mt-3 flex items-center justify-end gap-2 text-sm"><Button size="sm" variant="outline" disabled={visiblePage === 0} onClick={() => setPage(visiblePage - 1)}>Anterior</Button><span>{visiblePage + 1} / {pages}</span><Button size="sm" variant="outline" disabled={visiblePage + 1 >= pages} onClick={() => setPage(visiblePage + 1)}>Próxima</Button></div>}
         </>}
       </Panel>
+
+      <AlertDialog open={bulkIds !== null} onOpenChange={(open) => { if (!open && !deleting) setBulkIds(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tratativas selecionadas?</AlertDialogTitle>
+            <AlertDialogDescription>Você está prestes a excluir {bulkIds?.length ?? 0} tratativas operacionais. Esta ação é permanente e não poderá ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" disabled={deleting} onClick={deleteSelectedTreatments}>{deleting ? "Excluindo…" : `Excluir ${bulkIds?.length ?? 0} tratativas`}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!toDelete} onOpenChange={(open) => { if (!open && !deleting) setToDelete(null); }}>
         <AlertDialogContent>

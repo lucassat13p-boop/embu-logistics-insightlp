@@ -1,4 +1,5 @@
 # Tasks
+- [x] Add filtered cross-page treatment selection and confirmed bulk deletion using existing permissions; retain failed IDs and individual deletion; no tests or extra audits requested.
 - [x] Add confirmed individual team-authorized treatment deletion by ID, including old rows, with cache refresh; preserve other records and modules; no tests or extra audits requested.
 - [x] Expand only TABELAS parsing for legacy/dated/separated blocks, notices, auxiliary summaries and missing logins; preserve source values and historical imports.
 - [x] Make only the operational PNG follow the resolved active site theme at click time, preserving dark design, layout and data; no automated tests or extra audits as requested.

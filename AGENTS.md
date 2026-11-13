@@ -33,7 +33,7 @@
 - FULL uses base TOs + BR status lookup, preserving manual_status on reimport. Selection/copy use complete authorized reads and stable IDs; bulk edits use an atomic RLS-enforced invoker RPC, confirmed date/shift/BR scope (batch fallback if incomplete), and preserve entire manually classified groups unless overwrite is explicit.
 - Summary: FULL normId; others counts/sums. PNG snapshots root-theme tokens at click before awaits; same data, layout and dynamic 16:9, without site changes.
 - MISSORTED uses isolated date/shift-unique entries and singleton target with authenticated RLS and creator-only deletion; shared weighted calculation/cache powers its card and dialogs without touching treatment sources.
-- ON HOLD treated totals use only `on_hold_treated_imports` date/shift replacements. Manual Tratativas store Avarias Salvas; confirmed deletion uses exact ID with team RLS and updates shared caches only after returned-ID confirmation, preserving unrelated rows.
+- ON HOLD totals use `on_hold_treated_imports` date/shift replacements. Manual Tratativas use Avarias Salvas; team-RLS deletion confirms each ID before cache removal. Bulk selection spans filtered pages only, snapshots confirmation IDs and retains failures.
 - LHs / Rotas: dedicated XLSX schedule from LTS PENDENTES A CHEGAR, SPX/LHs arrival evidence, trip-number dedupe and filtered canvas PNG. Stored shifts stay original; lhFromRecord maps once for views, filters and PNG, including existing rows without writes or effects on other modules.
 - LH table scrolls locally; origin ranking uses responsive HTML/CSS bars on originData, avoiding overflow and preserving charts/PNG.
 - RLS gates data by `is_team_member` (user_roles): shared among members; new sign-ups need authorization.

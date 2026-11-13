@@ -53,9 +53,14 @@ function countIn(sheets: Sheet[]): { sheetName: string; analyzed: number; matche
 }
 
 export async function fetchTreatedImports(): Promise<TreatedImportRow[]> {
-  const { data, error } = await supabase.from("on_hold_treated_imports").select("*").order("operation_date", { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  const out: TreatedImportRow[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from("on_hold_treated_imports").select("*")
+      .order("operation_date", { ascending: false }).order("id", { ascending: true }).range(from, from + 999);
+    if (error) throw error;
+    out.push(...(data ?? []));
+    if (!data || data.length < 1000) return out;
+  }
 }
 export const treatedImportsQuery = () => queryOptions({ queryKey: ["on_hold_treated_imports"], queryFn: fetchTreatedImports, staleTime: 30_000 });
 

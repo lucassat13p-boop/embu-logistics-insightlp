@@ -1,0 +1,2 @@
+GRANT DELETE ON public.on_hold_treated_imports TO authenticated;
+CREATE POLICY "Team delete treated imports" ON public.on_hold_treated_imports FOR DELETE TO authenticated USING (public.is_team_member(auth.uid()));

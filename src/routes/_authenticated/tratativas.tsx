@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Eye, Pencil, Plus } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Empty, Kpi, PageHeader, Panel } from "@/components/ops/blocks";
@@ -49,13 +50,16 @@ function TratativasPage() {
   const [form, setForm] = useState<Form | null>(null);
   const [view, setView] = useState<TreatmentRow | null>(null);
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<TreatmentRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const rows = useMemo(() => filterTreatments(all, period, shifts), [all, period, shifts]);
   const totals = sumTreatments(rows);
   const importedTotals = sumTreatedImports(filterTreatedImports(imported, period, shifts));
   const months = useMemo(() => [...new Set(all.map((r) => r.operation_date.slice(0, 7)))].sort(), [all]);
-  const pageRows = rows.slice(page * PAGE, page * PAGE + PAGE);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  const visiblePage = Math.min(page, pages - 1);
+  const pageRows = rows.slice(visiblePage * PAGE, visiblePage * PAGE + PAGE);
 
   const openNew = () => setForm({ date: currentSystemDate(), shift: "", avarias: "", onHold: "0", notes: "" });
   const openEdit = (r: TreatmentRow) => setForm({ id: r.id, date: r.operation_date, shift: r.shift as TreatmentShift, avarias: String(r.avarias_saved), onHold: String(r.on_hold_treated), notes: r.notes ?? "" });
@@ -78,6 +82,28 @@ function TratativasPage() {
     setForm(null);
     qc.invalidateQueries({ queryKey: ["operational_treatments"] });
     qc.invalidateQueries({ queryKey: ["official_treatments"] });
+  }
+
+  async function deleteTreatment() {
+    if (!toDelete || deleting) return;
+    const id = toDelete.id;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.from("operational_treatments")
+        .delete().eq("id", id).select("id").single();
+      if (error || data?.id !== id) throw new Error("Exclusão não confirmada.");
+      qc.setQueryData<TreatmentRow[]>(["operational_treatments"], (current) => current?.filter((r) => r.id !== id));
+      setPage(Math.max(0, Math.min(visiblePage, Math.ceil((rows.length - 1) / PAGE) - 1)));
+      if (view?.id === id) setView(null);
+      setToDelete(null);
+      toast.success("Tratativa excluída definitivamente.");
+      void qc.invalidateQueries({ queryKey: ["operational_treatments"] });
+      void qc.invalidateQueries({ queryKey: ["official_treatments"] });
+    } catch {
+      toast.error("Não foi possível excluir a tratativa. Verifique sua autorização e tente novamente.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const allShifts = shifts.length === 0;
@@ -107,12 +133,26 @@ function TratativasPage() {
                 <td className="p-2 whitespace-nowrap">{fmt(r.operation_date)}</td><td className="p-2">{r.shift}</td>
                 <td className="p-2 text-right font-semibold tabular-nums">{r.avarias_saved}</td><td className="p-2 text-right font-semibold tabular-nums">{r.on_hold_treated}</td>
                 <td className="p-2 text-muted-foreground">{r.created_by_email ?? "—"}</td><td className="max-w-xs truncate p-2 text-muted-foreground">{r.notes ?? "—"}</td>
-                <td className="p-2 text-right whitespace-nowrap"><Button size="icon" variant="ghost" aria-label="Visualizar" onClick={() => setView(r)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label="Editar" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button></td>
+                <td className="p-2 text-right whitespace-nowrap"><Button size="icon" variant="ghost" aria-label="Visualizar" onClick={() => setView(r)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label="Editar" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" aria-label="Excluir tratativa" title="Excluir tratativa" disabled={deleting} onClick={() => setToDelete(r)}><Trash2 className="h-4 w-4" /></Button></td>
               </tr>))}</tbody>
           </table></div>
-          {pages > 1 && <div className="mt-3 flex items-center justify-end gap-2 text-sm"><Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>Anterior</Button><span>{page + 1} / {pages}</span><Button size="sm" variant="outline" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Próxima</Button></div>}
+          {pages > 1 && <div className="mt-3 flex items-center justify-end gap-2 text-sm"><Button size="sm" variant="outline" disabled={visiblePage === 0} onClick={() => setPage(visiblePage - 1)}>Anterior</Button><span>{visiblePage + 1} / {pages}</span><Button size="sm" variant="outline" disabled={visiblePage + 1 >= pages} onClick={() => setPage(visiblePage + 1)}>Próxima</Button></div>}
         </>}
       </Panel>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(open) => { if (!open && !deleting) setToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tratativa?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza de que deseja excluir esta tratativa operacional? Esta ação não poderá ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          {toDelete && <p className="text-sm text-muted-foreground">{fmt(toDelete.operation_date)} · {toDelete.shift}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" disabled={deleting} onClick={deleteTreatment}>{deleting ? "Excluindo…" : "Excluir definitivamente"}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!form} onOpenChange={(o) => !o && !saving && setForm(null)}>
         <DialogContent>

@@ -1,0 +1,2 @@
+GRANT DELETE ON public.operational_treatments TO authenticated;
+CREATE POLICY "team delete treatments" ON public.operational_treatments FOR DELETE TO authenticated USING (public.is_team_member(auth.uid()));

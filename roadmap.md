@@ -1,5 +1,5 @@
 # Tasks
-- [x] Add Geral/Por turno and a local official-shift selector only to AVARIA collaborator ranking; preserve global filters, privacy and limits; no extra tests/audits.
+- [x] Match AVARIA ranking controls to Floating; remove the dropdown and show three simultaneous shift Top 5 rankings; preserve general ranking, global filters and privacy; no extra tests/audits.
 - [x] Update all visible shift names and exports through a shared presentation formatter, preserving internal keys, histories, calculations and import compatibility; no automated tests or extra audits requested.
 - [x] Centralize official shift correspondence across imports/readers/analytics/history, preserve source evidence, stored operation keys and time/date rules; no historical writes or extra audits.
 - [x] Identify ON HOLD treated totals and add all-period source-record management with confirmed team-only deletion, real zero after removal and shared cache refresh; no existing data deleted or tests/extra audits run.

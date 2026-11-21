@@ -37,4 +37,4 @@
 - Shared shifts.ts preserves internal operation keys at import/read boundaries with original evidence in extra; shiftLabel translates only presentation (including exports). Keep time/date derivation, database uniqueness and stored FULL operation keys; no historical writes. LH uses schedule + arrival evidence, trip dedupe and filtered PNG.
 - LH table scrolls locally; origin ranking uses responsive HTML/CSS bars on originData, avoiding overflow and preserving charts/PNG.
 - RLS gates data by `is_team_member` (user_roles): shared among members; new sign-ups need authorization.
-- AVARIA ranking mode/shift stay local to its panel, using existing filtered rows and shared privacy to preserve other analysis.
+- AVARIA ranking mode stays local; per-shift view partitions filtered rows into three shared privacy-aware rankings, preserving other analysis.

@@ -4,6 +4,7 @@ import type { Json } from "@/integrations/supabase/types";
 import type { RecordRow } from "./data";
 import { normalizeHeader } from "./modules";
 import { buildTable, cellText, parseDate, type ParsedFile } from "./parsers";
+import { displayHubShift, interpretRecordShift, normalizeHubShift } from "./shifts";
 
 export const FLOATING_COLUMNS = [
   ["record_date", "Data"], ["order_id", "BR"], ["aging", "Aging"], ["route", "Cluster"],
@@ -13,20 +14,11 @@ export const FLOATING_COLUMNS = [
 ] as const;
 export const brKey = (value: string) => value.trim().toUpperCase();
 export const floatingShift = (value: string | null) => {
-  const normalized = value?.trim().toUpperCase().replace(/\s+/g, "");
-  return normalized && ["AM1", "AM2", "PM1"].includes(normalized) ? normalized : "Não identificado";
+  return normalizeHubShift(value) ?? "Não identificado";
 };
-const FLOATING_ORIGINAL_SHIFTS: Record<string, string> = { AM: "PM1", PM1: "AM2", PM2: "AM1" };
-const shiftKey = (value: string | null) => value?.trim().toUpperCase().replace(/\s+/g, "") ?? "";
-/** Detects per snapshot whether Turno holds original (AM/PM2) or final (AM1/AM2) values; lone PM1 follows the sheet's original scheme. */
+/** The global mapping is idempotent, including mixed official/original files. */
 export function floatingFinalShifts(rows: RecordRow[]): RecordRow[] {
-  const keys = new Set(rows.map((row) => shiftKey(row.shift)));
-  const alreadyFinal = (keys.has("AM1") || keys.has("AM2")) && !keys.has("AM") && !keys.has("PM2");
-  if (alreadyFinal) return rows;
-  return rows.map((row) => {
-    const mapped = FLOATING_ORIGINAL_SHIFTS[shiftKey(row.shift)];
-    return mapped ? { ...row, shift: mapped } : row;
-  });
+  return rows.map(interpretRecordShift);
 }
 export function floatingMapping(row: Pick<RecordRow, "extra">) {
   const value = row.extra && typeof row.extra === "object" && !Array.isArray(row.extra) ? row.extra.mapping : null;
@@ -64,7 +56,7 @@ export type FloatingImportRow = {
   row_number: number; record_date: string | null; record_date_raw: string | null; order_id: string;
   aging: string | null; route: string | null; driver_id: string | null; driver_name: string | null;
   carrier_3pl: string | null; to_number: string | null; product: string | null; collaborator: string | null;
-  quantity: number | null; shift: string | null; extra: { function: string | null; mapping: string | null }; raw: Record<string, Json>;
+  quantity: number | null; shift: string | null; extra: { function: string | null; mapping: string | null; hub_shift: { version: number; original: string | null } }; raw: Record<string, Json>;
 };
 export function prepareFloatingFile(parsed: ParsedFile) {
   if (parsed.format !== "xlsx") throw new Error("Pacotes Flutuantes utiliza Excel (.xlsx), com a aba Perdidos.");
@@ -100,8 +92,8 @@ export function prepareFloatingFile(parsed: ParsedFile) {
       driver_id: cellText(cell(row.values, "Driver ID")), driver_name: cellText(cell(row.values, "Motorista")),
       carrier_3pl: cellText(cell(row.values, "3PL")), to_number: cellText(cell(row.values, "AT")),
       product: cellText(cell(row.values, "Produto (DESCRIÇÃO)")), collaborator: cellText(cell(row.values, "Email - OPS")),
-      quantity: money, shift: cellText(cell(row.values, "Turno")),
-      extra: { function: cellText(cell(row.values, "Função")), mapping: cellText(cell(row.values, "Mapeamento")) }, raw,
+      quantity: money, shift: displayHubShift(cellText(cell(row.values, "Turno"))),
+      extra: { function: cellText(cell(row.values, "Função")), mapping: cellText(cell(row.values, "Mapeamento")), hub_shift: { version: 1, original: cellText(cell(row.values, "Turno")) } }, raw,
     };
     const signature = JSON.stringify({ ...next, row_number: undefined, order_id: brKey(br), raw: undefined });
     const existing = seen.get(brKey(br));

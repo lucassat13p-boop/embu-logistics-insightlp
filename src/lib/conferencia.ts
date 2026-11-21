@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { RecordRow } from "./data";
 import { buildTable, type Sheet } from "./parsers";
+import { displayHubShift } from "./shifts";
 
 export const AUDIT_HEADERS = ["AT/TO", "Corridor/Cage", "Total Initial Orders Inside AT/TO", "Total Final Orders Inside AT/TO", "Total Scanned Orders", "Missorted Orders", "Missing Orders", "Validation Start Time", "Validation End Time", "Validation Operator", "Revalidation Operator", "Revalidated Count", "AT/TO Validation Status", "Remark"];
 const text = (v: unknown) => v === null || v === undefined || String(v).trim() === "" ? null : String(v).trim();
@@ -67,7 +68,7 @@ export function auditFromRecord(row: RecordRow) {
   const raw = row.raw && typeof row.raw === "object" && !Array.isArray(row.raw) ? row.raw : {};
   const operator = auditOperator(raw["Validation Operator"]);
   const start = auditTime(row.create_time), end = auditTime(row.resolve_time);
-  return { id: row.id, route: row.route ?? "Sem informação", date: row.record_date, record_date: row.record_date, shift: row.shift ?? "Fora de turno", location: row.location ?? "Sem informação", operator, start: row.create_time, end: row.resolve_time, duration: start && end && end.ms >= start.ms ? (end.ms - start.ms) / 1000 : null, scanned: count(raw["Total Scanned Orders"]), missing: count(raw["Missing Orders"]), missorted: count(raw["Missorted Orders"]), status: row.status ?? "Sem informação" };
+  return { id: row.id, route: row.route ?? "Sem informação", date: row.record_date, record_date: row.record_date, shift: displayHubShift(row.shift) ?? "Fora de turno", location: row.location ?? "Sem informação", operator, start: row.create_time, end: row.resolve_time, duration: start && end && end.ms >= start.ms ? (end.ms - start.ms) / 1000 : null, scanned: count(raw["Total Scanned Orders"]), missing: count(raw["Missing Orders"]), missorted: count(raw["Missorted Orders"]), status: row.status ?? "Sem informação" };
 }
 export const auditQuery = () => queryOptions({ queryKey: ["records", "conferencia"], staleTime: 30_000, queryFn: async () => {
   const rows: RecordRow[] = [];

@@ -1,4 +1,5 @@
 # Tasks
+- [x] Centralize official shift correspondence across imports/readers/analytics/history, preserve source evidence, stored operation keys and time/date rules; no historical writes or extra audits.
 - [x] Identify ON HOLD treated totals and add all-period source-record management with confirmed team-only deletion, real zero after removal and shared cache refresh; no existing data deleted or tests/extra audits run.
 - [x] Add filtered cross-page treatment selection and confirmed bulk deletion using existing permissions; retain failed IDs and individual deletion; no tests or extra audits requested.
 - [x] Add confirmed individual team-authorized treatment deletion by ID, including old rows, with cache refresh; preserve other records and modules; no tests or extra audits requested.

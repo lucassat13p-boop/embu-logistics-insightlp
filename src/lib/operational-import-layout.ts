@@ -1,6 +1,7 @@
 import { normalizeHeader } from "./modules";
 import { cellText, parseDate } from "./parsers";
 import { recordMonth } from "./period";
+import { hubShiftMarkers, normalizeHubShift } from "./shifts";
 
 type OperationalField = "record_date" | "order_id" | "collaborator" | "reason" | "shift";
 type OperationalShift = "AM1" | "AM2" | "PM1";
@@ -14,12 +15,11 @@ const fieldAliases: Record<OperationalField, string[]> = {
   shift: ["turno", "turno original", "shift"],
 };
 function headerField(value: unknown): OperationalField | undefined {
-  const text = normalizeHeader(cellText(value) ?? "").replace(/\s*\(\d+\)$/, "").replace(/\b(am\s*[12]|pm\s*1)\b/g, "").replace(/[():|]/g, " ").replace(/\s+/g, " ").trim();
+  const text = normalizeHeader(cellText(value) ?? "").replace(/\s*\(\d+\)$/, "").replace(/\b(am\s*[12]|pm\s*[12]|am)\b/g, "").replace(/[():|]/g, " ").replace(/\s+/g, " ").trim();
   return (Object.keys(fieldAliases) as OperationalField[]).find((field) => fieldAliases[field].includes(text));
 }
 function titleShifts(value: unknown): OperationalShift[] {
-  const text = normalizeHeader(cellText(value) ?? "");
-  return [...new Set([...text.matchAll(/\b(am\s*[12]|pm\s*1)\b/g)].map((match) => match[0].replace(/\s/g, "").toUpperCase() as OperationalShift))];
+  return hubShiftMarkers(value);
 }
 export function missingOperationalValue(value: unknown): boolean {
   const text = normalizeHeader(cellText(value) ?? "");
@@ -55,7 +55,7 @@ export function operationalLayout(rows: unknown[][], sheetName: string): { heade
           for (let column = start; column < start + width; column++) titleShifts(rows[above]?.[column]).forEach((shift) => markers.add(shift));
           if (!markers.size) continue;
           // General notices naming several shifts are not block titles.
-          if (markers.size > 1 && !rows[above]?.some((value) => shifts.includes((cellText(value) ?? "").replace(/\s/g, "").toUpperCase() as OperationalShift))) continue;
+          if (markers.size > 1 && !rows[above]?.some((value) => normalizeHubShift(value) !== null)) continue;
           markers.forEach((shift) => found.add(shift));
           break;
         }
@@ -101,11 +101,11 @@ export function operationalBlockWidth(rows: unknown[][], sheetName: string): 4 |
       reason: ["erro", "motivo", "erro/motivo", "erro / motivo", "tipo de erro"],
       shift: ["turno", "turno original", "shift"],
     };
-    ["AM1", "AM2", "PM1"].forEach((shift, block) => {
+    shifts.forEach((shift, block) => {
       const start = block * width;
       const title = cellText(titles[start]);
       if (title) {
-        const markers = [...normalizeHeader(title).matchAll(/\b(am\s*[12]|pm\s*1)\b/g)].map((m) => m[0].replace(/\s/g, "").toUpperCase());
+        const markers = titleShifts(title);
         if (markers.includes(shift)) titlesMatched++;
       }
       expected.forEach((field, offset) => {

@@ -6,6 +6,7 @@ import { parseRetidosTime, retidosShift, summarizedRetidosReason } from "./retid
 import { errorShift, errorCategory, isBacklog } from "./operational-errors";
 import { fullFinalStatus } from "./full-import";
 import { currentSystemDate, weekRange } from "./period";
+import { interpretRecordShift, normalizeHubShift } from "./shifts";
 
 export const DASH_SHIFTS = ["AM1", "AM2", "PM1"] as const;
 export type DashShift = (typeof DASH_SHIFTS)[number];
@@ -42,7 +43,7 @@ export function previousRange(r: Range): Range {
 export type Item = { date: string | null; shift: DashShift | null; row?: RecordRow; t?: TreatmentRow };
 export type SourceKey = "on_hold" | "avaria" | "retidos_veiculos" | "erros_operacionais" | "auto_add" | "full" | "tratativas";
 /** Whether the source has a reliable shift association at all. */
-export const SHIFT_SUPPORT: Record<SourceKey, boolean> = { on_hold: true, avaria: true, retidos_veiculos: true, erros_operacionais: true, auto_add: false, full: true, tratativas: true };
+export const SHIFT_SUPPORT: Record<SourceKey, boolean> = { on_hold: true, avaria: true, retidos_veiculos: true, erros_operacionais: true, auto_add: true, full: true, tratativas: true };
 
 const asShift = (v: unknown): DashShift | null => (DASH_SHIFTS as readonly string[]).includes(String(v)) ? (v as DashShift) : null;
 function onHoldShift(row: RecordRow) {
@@ -54,14 +55,15 @@ function onHoldShift(row: RecordRow) {
 }
 
 export function toItems(source: SourceKey, rows: RecordRow[], treatments: TreatmentRow[] = []): Item[] {
+  rows = rows.map(interpretRecordShift);
   switch (source) {
     case "avaria": return rows.map((row) => ({ row, date: row.record_date, shift: asShift(normalizedShift(row.shift)) }));
     case "on_hold": return rows.map((row) => ({ row, date: row.record_date, shift: asShift(onHoldShift(row)) }));
     case "retidos_veiculos": return rows.map((row) => ({ row, date: parseRetidosTime(row.create_time).date ?? row.record_date, shift: retidosShift(row) }));
     case "erros_operacionais": return rows.filter((row) => !isBacklog(row)).map((row) => ({ row, date: row.record_date, shift: errorShift(row.shift) }));
-    case "auto_add": return rows.map((row) => ({ row, date: row.record_date, shift: null }));
+    case "auto_add": return rows.map((row) => ({ row, date: row.record_date, shift: normalizeHubShift(row.shift) }));
     case "full": return rows.map((row) => ({ row, date: row.record_date, shift: asShift(normalizedShift(row.shift)) }));
-    case "tratativas": return treatments.map((t) => ({ t, date: t.operation_date, shift: asShift(t.shift) }));
+    case "tratativas": return treatments.map((t) => ({ t, date: t.operation_date, shift: normalizeHubShift(t.shift) }));
   }
 }
 

@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { displayHubShift } from "./shifts";
 
 export type MissortedEntry = Tables<"missorted_entries">;
 export const INITIAL_MISSORTED_TARGET = 0.68;
@@ -12,7 +13,7 @@ export const missortedQuery = () => queryOptions({
       const { data, error } = await supabase.from("missorted_entries").select("*")
         .order("operation_date", { ascending: false }).order("shift").range(from, from + 999);
       if (error) throw error;
-      rows.push(...(data ?? []));
+      rows.push(...(data ?? []).map((r) => ({ ...r, shift: displayHubShift(r.shift) ?? r.shift })));
       if (!data || data.length < 1000) return rows;
     }
   },

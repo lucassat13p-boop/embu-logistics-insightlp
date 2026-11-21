@@ -7,6 +7,7 @@ import { RecordsTable } from "@/components/ops/RecordsTable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MODULES } from "@/lib/modules";
 import { fetchFloatingActive } from "@/lib/floating-packages";
+import { interpretRecordShift } from "@/lib/shifts";
 
 export const Route = createFileRoute("/_authenticated/busca")({
   validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : "" }),
@@ -43,9 +44,9 @@ function Page() {
       if (moduleFilter === "all") {
         const active = await fetchFloatingActive();
         const matched = active.rows.filter((row) => [row.order_id, row.driver_name, row.route, row.to_number, row.product, row.collaborator].some((value) => value?.toLocaleLowerCase("pt-BR").includes(s.toLocaleLowerCase("pt-BR"))));
-        return [...(data ?? []), ...matched];
+        return [...(data ?? []).map(interpretRecordShift), ...matched];
       }
-      return data ?? [];
+      return (data ?? []).map(interpretRecordShift);
     },
   });
   return (

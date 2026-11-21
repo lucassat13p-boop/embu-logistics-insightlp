@@ -5,6 +5,7 @@ import { cellText, parseDate } from "./parsers";
 import { parseRetidosTime } from "./retidos-analysis";
 import { recordMonth } from "./period";
 import { parseOperationalDate } from "./operational-import-layout";
+import { displayHubShift } from "./shifts";
 
 export type Mapping = Record<string, FieldKey | "">;
 export type RowIssue = { rowNumber: number; column: string | null; message: string; kind: "erro" | "ignorado" | "duplicado"; raw?: Record<string, unknown> };
@@ -61,11 +62,17 @@ export function validate(mod: ModuleDef, body: { rowNumber: number; values: Reco
     if (rowError) { errorCount++; continue; }
     const extra: Record<string, unknown> = {};
     Object.entries(mapping).forEach(([col, f]) => { if (!f) extra[col] = row.values[col]; });
+    const originalShift = cellText(fields.shift);
+    if (originalShift !== null) {
+      extra.hub_shift = { version: 1, original: originalShift };
+      fields.shift = displayHubShift(originalShift);
+    }
     if (mod.key === "retidos_veiculos") {
       dateRaw = cellText(fields.create_time);
       fields.record_date = parseRetidosTime(fields.create_time).date;
     }
-    const keyParts = mod.dedupe.map((f) => String(fields[f] ?? ""));
+    // Keep original shift in dedupe identities so the same source is not duplicated after a name update.
+    const keyParts = mod.dedupe.map((f) => String(f === "shift" ? originalShift ?? "" : fields[f] ?? ""));
     // Retidos: stable per-source-row key — a reimport of the same file is ignored, while
     // legitimate repeated occurrences (different rows/moments) are always kept.
     const dedupe_key = mod.appendOnly

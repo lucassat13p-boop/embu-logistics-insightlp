@@ -1,15 +1,12 @@
 import type { RecordRow } from "./data";
+import { hubShiftMarkers } from "./shifts";
 
 export type OnHoldField = "reason" | "neighborhood" | "treatment" | "delivery_attempts" | "driver_name";
 export type OnHoldShift = "all" | "AM1" | "AM2" | "PM1";
 
 export function normalizeOnHoldShift(value: unknown) {
-  const text = String(value ?? "").toUpperCase();
-  const found = new Set<Exclude<OnHoldShift, "all">>();
-  if (/(^|[^A-Z0-9])AM\s*1(?=$|[^A-Z0-9])/.test(text)) found.add("AM1");
-  if (/(^|[^A-Z0-9])AM\s*2(?=$|[^A-Z0-9])/.test(text)) found.add("AM2");
-  if (/(^|[^A-Z0-9])PM\s*1(?=$|[^A-Z0-9])/.test(text)) found.add("PM1");
-  return found.size === 1 ? [...found][0] : null;
+  const found = hubShiftMarkers(value);
+  return found.length === 1 ? found[0] ?? null : null;
 }
 
 function sourceShift(row: RecordRow) {

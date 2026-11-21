@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { filterByPeriod, type PeriodSelection } from "./period";
+import { displayHubShift } from "./shifts";
 
 export type TreatmentRow = Tables<"operational_treatments">;
 export const TREATMENT_SHIFTS = ["AM1", "AM2", "PM1"] as const;
@@ -13,7 +14,7 @@ export async function fetchTreatments(): Promise<TreatmentRow[]> {
     const { data, error } = await supabase.from("operational_treatments").select("*")
       .order("operation_date", { ascending: false }).order("created_at", { ascending: false }).range(from, from + 999);
     if (error) throw error;
-    out.push(...(data ?? []));
+    out.push(...(data ?? []).map((r) => ({ ...r, shift: displayHubShift(r.shift) ?? r.shift })));
     if (!data || data.length < 1000) break;
   }
   return out;

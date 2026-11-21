@@ -5,7 +5,9 @@ export function fullOperationKey(r: RecordRow) {
   const br = normId(r.order_id);
   if (!br) return JSON.stringify(["row", r.id]);
   // Incomplete operational identity never links unrelated import batches.
-  return JSON.stringify([r.record_date, r.shift, br, r.record_date && r.shift?.trim() ? null : r.batch_id]);
+  const extra = r.extra && typeof r.extra === "object" && !Array.isArray(r.extra) ? r.extra : {};
+  const storedShift = typeof extra.hub_shift_stored === "string" ? extra.hub_shift_stored : r.shift;
+  return JSON.stringify([r.record_date, storedShift, br, r.record_date && storedShift?.trim() ? null : r.batch_id]);
 }
 
 export function fullSelectionScope(allRows: RecordRow[], selected: Set<string>, overwrite: boolean) {

@@ -1,5 +1,6 @@
 import type { Sheet } from "./parsers";
 import type { RecordRow } from "./data";
+import { displayHubShift, interpretRecordShift } from "./shifts";
 
 /** Normalize header / sheet names only for comparison. */
 const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -32,7 +33,7 @@ function headerIndex(rows: unknown[][], wanted: string[]) {
   return null;
 }
 
-export type LhRow = { lh: string; origin: string | null; driver: string | null; plate: string | null; shift: string | null; scheduledAt: string | null; arrivedAt: string | null; arrived: boolean; orders: number | null };
+export type LhRow = { lh: string; origin: string | null; driver: string | null; plate: string | null; shift: string | null; originalShift?: string | null; scheduledAt: string | null; arrivedAt: string | null; arrived: boolean; orders: number | null };
 export type LhPrepared = { rows: LhRow[]; sheetNames: string[]; duplicates: number; arrivalSource: string[]; headers: string[] };
 
 const isHub = (station: string | null) => !!station && norm(station).includes("embu");
@@ -79,7 +80,7 @@ export function prepareLhFile(sheets: Sheet[]): LhPrepared {
     const arrivedAt = arrivals.get(lh) ?? null;
     seen.set(lh, {
       lh, origin: clean(get(r, "Station Name")), driver: clean(get(r, "Nome Motorista")), plate: clean(get(r, "Placa Veiculo")),
-      shift: clean(get(r, "Turno")), scheduledAt: toWallClock(get(r, "Data/Hora")), arrivedAt,
+      shift: displayHubShift(clean(get(r, "Turno"))), originalShift: clean(get(r, "Turno")), scheduledAt: toWallClock(get(r, "Data/Hora")), arrivedAt,
       arrived: !!arrivedAt || arrivedStatus.has(lh), orders: orders.get(lh) ?? null,
     });
   }
@@ -90,16 +91,10 @@ export function prepareLhFile(sheets: Sheet[]): LhPrepared {
 export type LhView = LhRow & { id: string };
 /** Receives only the untouched report shift, never an already converted view value. */
 export function lhDisplayShift(original: string | null): string | null {
-  const value = original?.trim();
-  if (!value) return null;
-  switch (value.toUpperCase()) {
-    case "AM": return "AM1";
-    case "PM1": return "AM2";
-    case "PM2": return "PM1";
-    default: return value;
-  }
+  return displayHubShift(original);
 }
 export function lhFromRecord(r: RecordRow): LhView {
+  r = interpretRecordShift(r);
   const e = (r.extra ?? {}) as Record<string, unknown>;
   const s = (k: string) => (typeof e[k] === "string" ? (e[k] as string) : null);
   return { id: r.id, lh: r.lh ?? "", origin: r.route, driver: r.driver_name, plate: s("plate"), shift: lhDisplayShift(r.shift), scheduledAt: s("scheduled_at"), arrivedAt: s("arrived_at"), arrived: r.status === "Chegou", orders: typeof e.orders === "number" ? e.orders : null };

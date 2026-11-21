@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { cellText } from "./parsers";
 import { normalizeHeader } from "./modules";
+import { displayHubShift } from "./shifts";
 
 export type FullBaseField = "to_number" | "order_id" | "sender_name";
 export type FullStatusField = "match_br" | "br_status";
@@ -149,22 +150,24 @@ export async function commitFullImport(o: {
   const t0 = performance.now();
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error("Sessão expirada. Entre novamente.");
+  const user = u.user;
+  const shift = displayHubShift(o.shift);
   const keys = o.build.rows.map((r) => fullDedupeKey(o.date, o.shift, r.key));
   const existing = await countFullExisting(keys);
   const { data: batch, error: bErr } = await supabase.from("import_batches").insert({
     module: "full", file_name: o.fileName, file_type: o.format, sheet_name: o.sheetName, user_id: u.user.id, user_email: u.user.email ?? null,
     total_rows: o.build.total, valid_rows: o.build.rows.length, error_rows: o.build.missingBr, ignored_rows: 0, duplicate_rows: o.build.dupInFile + existing,
     status: "Processando", duplicate_strategy: o.strategy, mapping: o.mapping as never, headers: o.headers,
-    selected_shifts: o.shift ? [o.shift] : null,
+    selected_shifts: shift ? [shift] : null,
   }).select().single();
   if (bErr || !batch) throw new Error(bErr?.message ?? "Falha ao criar lote");
   let failed: string | null = null;
   try {
     // manual_status is never sent, so re-imports keep manual classifications.
     const rows = o.build.rows.map((r) => ({
-      module: "full", batch_id: batch.id, row_number: r.rowNumber, created_by: u.user!.id,
-      record_date: o.date, record_date_raw: o.date, shift: o.shift, order_id: r.order_id, to_number: r.to_number, sender_name: r.sender_name,
-      status: r.br_status, br_status: r.br_status, status_issue: r.status_issue, lh: r.lh, raw: r.raw as never, extra: {} as never,
+      module: "full", batch_id: batch.id, row_number: r.rowNumber, created_by: user.id,
+      record_date: o.date, record_date_raw: o.date, shift, order_id: r.order_id, to_number: r.to_number, sender_name: r.sender_name,
+      status: r.br_status, br_status: r.br_status, status_issue: r.status_issue, lh: r.lh, raw: r.raw as never, extra: { hub_shift: { version: 1, original: o.shift } } as never,
       dedupe_key: fullDedupeKey(o.date, o.shift, r.key), updated_at: new Date().toISOString(),
     }));
     for (let i = 0; i < rows.length; i += 500) {

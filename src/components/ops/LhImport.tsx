@@ -35,6 +35,7 @@ export function LhImport() {
     try {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Sessão expirada. Entre novamente.");
+      const user = u.user;
       const { data: batch, error: bErr } = await supabase.from("import_batches").insert({
         module: "rotas", file_name: fileName, file_type: "xlsx", sheet_name: "LTS PENDENTES A CHEGAR", user_id: u.user.id, user_email: u.user.email ?? null,
         total_rows: prep.rows.length + prep.duplicates, valid_rows: prep.rows.length, duplicate_rows: prep.duplicates, status: "Processando", duplicate_strategy: "update", headers: prep.headers,
@@ -42,9 +43,9 @@ export function LhImport() {
       if (bErr || !batch) throw new Error(bErr?.message ?? "Falha ao criar a importação.");
       const now = new Date().toISOString();
       const rows = prep.rows.map((r, i) => ({
-        module: "rotas", batch_id: batch.id, row_number: i + 2, created_by: u.user!.id, lh: r.lh, route: r.origin, driver_name: r.driver, shift: r.shift,
+        module: "rotas", batch_id: batch.id, row_number: i + 2, created_by: user.id, lh: r.lh, route: r.origin, driver_name: r.driver, shift: r.shift,
         record_date: r.scheduledAt?.slice(0, 10) ?? null, record_date_raw: r.scheduledAt, create_time: r.scheduledAt, status: r.arrived ? "Chegou" : "Pendente",
-        extra: { plate: r.plate, scheduled_at: r.scheduledAt, arrived_at: r.arrivedAt, orders: r.orders } as never, raw: r as never, dedupe_key: `lh:${r.lh}`, updated_at: now,
+        extra: { plate: r.plate, scheduled_at: r.scheduledAt, arrived_at: r.arrivedAt, orders: r.orders, hub_shift: { version: 1, original: r.originalShift ?? r.shift } } as never, raw: { ...r, shift: r.originalShift ?? r.shift } as never, dedupe_key: `lh:${r.lh}`, updated_at: now,
       }));
       let failed: string | null = null;
       for (let i = 0; i < rows.length && !failed; i += 500) {

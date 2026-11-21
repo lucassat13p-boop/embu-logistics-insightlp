@@ -1,4 +1,5 @@
 import type { RecordRow } from "./data";
+import { normalizeHubShift } from "./shifts";
 
 export const OFFICIAL_AVARIA_TYPES = ["Líquido", "Sólido", "Vidro", "Item vazio", "SOC"] as const;
 export const OFFICIAL_SHIFTS = ["AM1", "AM2", "PM1"] as const;
@@ -8,8 +9,7 @@ const clean = (value: unknown) => String(value ?? "").trim().replace(/\s+/g, " "
 const folded = (value: unknown) => clean(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleUpperCase("pt-BR");
 
 export function normalizedShift(value: unknown): string | null {
-  const compact = folded(value).replace(/\s+/g, "");
-  return OFFICIAL_SHIFTS.includes(compact as (typeof OFFICIAL_SHIFTS)[number]) ? compact : null;
+  return normalizeHubShift(value);
 }
 
 export function filterAvariaByShift(rows: RecordRow[], shifts: AvariaShift[]) {

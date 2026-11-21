@@ -3,12 +3,12 @@ import { buildTable, cellText } from "./parsers";
 import type { RecordRow } from "./data";
 import { recordMonth, periodRange, type PeriodSelection } from "./period";
 import { missingOperationalValue, operationalLayout } from "./operational-import-layout";
+import { hubShiftMarkers, normalizeHubShift } from "./shifts";
 
 export const ERROR_SHIFTS = ["AM1", "AM2", "PM1"] as const;
 export type ErrorShift = (typeof ERROR_SHIFTS)[number];
 export function errorShift(value: unknown): ErrorShift | null {
-  const text = cellText(value)?.toUpperCase().replace(/\s+/g, "");
-  return ERROR_SHIFTS.find((shift) => shift === text) ?? null;
+  return normalizeHubShift(value);
 }
 const aliases: Partial<Record<FieldKey, string[]>> = {
   reason: ["erro", "motivo", "erro/motivo", "erro / motivo", "tipo de erro", "erros", "error", "reason"],
@@ -19,9 +19,8 @@ const aliases: Partial<Record<FieldKey, string[]>> = {
 };
 function identify(header: string) {
   const normalized = normalizeHeader(header).replace(/\s*\(\d+\)$/, "");
-  const markers = [...normalized.matchAll(/\b(am\s*[12]|pm\s*1)\b/g)].map((match) => errorShift(match[0]));
-  const shifts = [...new Set(markers.filter((shift): shift is ErrorShift => shift !== null))];
-  const base = normalized.replace(/\b(am\s*[12]|pm\s*1)\b/g, "").replace(/[():|]/g, " ").replace(/\s+/g, " ").trim();
+  const shifts = hubShiftMarkers(normalized);
+  const base = normalized.replace(/\b(am\s*[12]|pm\s*[12]|am)\b/g, "").replace(/[():|]/g, " ").replace(/\s+/g, " ").trim();
   const field = (Object.entries(aliases) as [FieldKey, string[]][]).find(([, names]) => names.includes(base))?.[0];
   return { header, field, shift: shifts.length === 1 ? shifts[0] : null, ambiguous: shifts.length > 1 };
 }
@@ -95,12 +94,12 @@ type Sheetish = { name: string; rows: unknown[][] };
 type Body = ReturnType<typeof buildTable>["body"];
 const OP_LABELS: Partial<Record<FieldKey, string>> = { order_id: "BR", collaborator: "Login", reason: "Erro/Motivo", shift: "Turno", record_date: "Data", classification: "Classificação" };
 function sheetShift(name: string): ErrorShift | null {
-  const found = [...new Set([...normalizeHeader(name).matchAll(/\b(am\s*[12]|pm\s*1)\b/g)].map((m) => errorShift(m[0])).filter(Boolean))];
+  const found = hubShiftMarkers(name);
   return found.length === 1 ? (found[0] as ErrorShift) : null;
 }
 function markersIn(value: unknown): ErrorShift[] {
   const text = cellText(value); if (!text) return [];
-  return [...new Set([...normalizeHeader(text).matchAll(/\b(am\s*[12]|pm\s*1)\b/g)].map((m) => errorShift(m[0])).filter((s): s is ErrorShift => !!s))];
+  return hubShiftMarkers(text);
 }
 const colName = (i: number) => { let s = ""; for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
 
@@ -153,7 +152,7 @@ function readBlocks(sheet: Sheetish, defaultShift: ErrorShift | null, fields: Se
       for (const c of cells) values[OP_LABELS[c.field] ?? c.field] = c.v;
       if (blockShift) {
         const actual = cellText(values.Turno);
-        if (actual && errorShift(actual) !== blockShift) throw new Error(`Aba "${sheet.name}", coluna ${colName(cols.find((c) => c.field === "shift")!.j)}, linha ${i + 1}: turno "${actual}" conflita com o turno ${blockShift} do bloco.`);
+        if (actual && errorShift(actual) !== blockShift) throw new Error(`Aba "${sheet.name}", coluna ${colName(cols.find((c) => c.field === "shift")?.j ?? b.start)}, linha ${i + 1}: turno "${actual}" conflita com o turno ${blockShift} do bloco.`);
         if (!actual) values.Turno = blockShift;
       }
       body.push({ rowNumber: i + 1, values, empty: false });

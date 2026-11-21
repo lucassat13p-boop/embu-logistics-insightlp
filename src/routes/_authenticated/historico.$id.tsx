@@ -6,6 +6,7 @@ import { errorsQuery } from "@/lib/data";
 import { FIELD_LABELS, moduleByKey, type FieldKey } from "@/lib/modules";
 import { Empty, Kpi, PageHeader, Panel, StatusBadge } from "@/components/ops/blocks";
 import { DeleteImportButton } from "@/components/ops/DeleteImportButton";
+import { displayHubShift } from "@/lib/shifts";
 
 export const Route = createFileRoute("/_authenticated/historico/$id")({
   head: () => ({
@@ -25,7 +26,10 @@ function Page() {
   const { id } = Route.useParams();
   const navigate = Route.useNavigate();
   const [all, setAll] = useState(false);
-  const { data: b } = useQuery({ queryKey: ["batch", id], queryFn: async () => (await supabase.from("import_batches").select("*").eq("id", id).single()).data });
+  const { data: b } = useQuery({ queryKey: ["batch", id], queryFn: async () => {
+    const { data } = await supabase.from("import_batches").select("*").eq("id", id).single();
+    return data ? { ...data, selected_shifts: data.selected_shifts?.map((shift) => displayHubShift(shift) ?? shift) ?? null } : null;
+  } });
   const { data: errs = [] } = useQuery(errorsQuery(id));
   if (!b) return <Empty text="Carregando..." />;
   const mapping = (b.mapping ?? {}) as Record<string, string>;

@@ -4,6 +4,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { fetchTreatments, type TreatmentRow } from "./treatments";
 import { filterByPeriod, type PeriodSelection } from "./period";
 import type { Sheet } from "./parsers";
+import { displayHubShift } from "./shifts";
 
 export const TREATED_SHEET = "Pacotes Tratados Não MEXER";
 export type TreatedImportRow = Tables<"on_hold_treated_imports">;
@@ -58,7 +59,7 @@ export async function fetchTreatedImports(): Promise<TreatedImportRow[]> {
     const { data, error } = await supabase.from("on_hold_treated_imports").select("*")
       .order("operation_date", { ascending: false }).order("id", { ascending: true }).range(from, from + 999);
     if (error) throw error;
-    out.push(...(data ?? []));
+    out.push(...(data ?? []).map((r) => ({ ...r, shift: displayHubShift(r.shift) ?? r.shift })));
     if (!data || data.length < 1000) return out;
   }
 }
@@ -67,7 +68,7 @@ export const treatedImportsQuery = () => queryOptions({ queryKey: ["on_hold_trea
 /** Replaces the result of the same date + shift (controlled re-import, never summed twice). */
 export async function saveTreatedImport(p: { date: string; shift: string; preview: { sheetName: string; analyzed: number; matched: number }; fileName: string; batchId: string | null }) {
   const { error } = await supabase.from("on_hold_treated_imports").upsert({
-    operation_date: p.date, shift: p.shift, quantity: p.preview.matched, rows_analyzed: p.preview.analyzed, sheet_name: p.preview.sheetName,
+    operation_date: p.date, shift: displayHubShift(p.shift) ?? p.shift, quantity: p.preview.matched, rows_analyzed: p.preview.analyzed, sheet_name: p.preview.sheetName,
     file_name: p.fileName, batch_id: p.batchId, processed_at: new Date().toISOString(),
   }, { onConflict: "operation_date,shift" });
   if (error) throw error;

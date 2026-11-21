@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import type { FieldKey, ModuleKey } from "./modules";
 import { fetchFloatingActive } from "./floating-packages";
+import { displayHubShift, interpretRecordShift } from "./shifts";
 
 export type RecordRow = Tables<"records">;
 export type BatchRow = Tables<"import_batches">;
@@ -19,7 +20,7 @@ export async function fetchRecords(module?: ModuleKey) {
     if (module === "retidos_veiculos" || module === "full") q = q.order("id", { ascending: true });
     const { data, error } = await q;
     if (error) throw error;
-    out.push(...(data ?? []));
+    out.push(...(data ?? []).map(interpretRecordShift));
     if (!data || data.length < 1000) break;
   }
   return out;
@@ -34,7 +35,7 @@ export const batchesQuery = () =>
     queryFn: async () => {
       const { data, error } = await supabase.from("import_batches").select("*").order("created_at", { ascending: false }).limit(1000);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((batch) => ({ ...batch, selected_shifts: batch.selected_shifts?.map((shift) => displayHubShift(shift) ?? shift) ?? null }));
     },
   });
 

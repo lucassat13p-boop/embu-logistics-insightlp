@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { useState, type ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Inbox } from "lucide-react";
@@ -11,8 +12,8 @@ export function Panel({ title, subtitle, action, children, className, bodyClassN
     <section className={cn("min-w-0 rounded-lg border bg-card shadow-card", className)}>
       <header className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-4 sm:px-5">
         <div className="min-w-0">
-          <h3 className="break-words text-base font-semibold">{title}</h3>
-          {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+          <h3 className="break-words text-base font-semibold">{shiftLabel(title)}</h3>
+          {subtitle && <p className="mt-1 text-sm text-muted-foreground">{shiftLabel(subtitle)}</p>}
         </div>
         {action}
       </header>
@@ -35,7 +36,7 @@ export function Kpi({ label, value, hint, accent }: { label: string; value: numb
   const has = value !== null && value !== undefined;
   return (
     <div className={cn("min-w-0 rounded-lg border bg-card p-4 shadow-card sm:p-5", accent && "border-primary/30")}>
-      <p className="break-words text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="break-words text-sm font-medium text-muted-foreground">{shiftLabel(label)}</p>
       {has ? (
         <p className={cn("mt-2 break-words font-display text-4xl font-bold tabular-nums", accent && "text-primary")}>{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p>
       ) : (
@@ -59,7 +60,7 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
   const d = data.slice(0, limit);
   const chartHeight = height ?? (horizontal ? Math.max(320, d.length * Math.max(50, rowHeight) + 64) : Math.max(340, Math.min(480, d.length * 18 + 240)));
   const categoryWidth = Math.min(Math.max(120, yAxisWidth), Math.max(85, Math.floor(width * 0.36)));
-  const formatCategory = (name: string) => shortName(tickFormatter ? tickFormatter(name) : name, horizontal ? Math.max(9, Math.floor(categoryWidth / 7)) : width < 420 ? 10 : 16);
+  const formatCategory = (name: string) => shortName(shiftLabel(tickFormatter ? tickFormatter(name) : name), horizontal ? Math.max(9, Math.floor(categoryWidth / 7)) : width < 420 ? 10 : 16);
   return (
     <div className="min-w-0 w-full" style={{ height: fillHeight ? "100%" : chartHeight }}>
       <ResponsiveContainer onResize={(nextWidth) => setWidth(nextWidth)}>
@@ -67,10 +68,10 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
           <BarChart data={d} layout="vertical" margin={{ top: 8, bottom: 8, left: 0, right: 48 }} barCategoryGap="24%">
             <CartesianGrid horizontal={false} stroke="var(--border)" />
             <XAxis type="number" tick={axisTick} allowDecimals={false} axisLine={false} tickLine={false} minTickGap={24} />
-            <YAxis type="category" dataKey="name" width={categoryWidth} tick={categoryTitles ? ({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => <g transform={`translate(${x},${y})`}><foreignObject x={-categoryWidth + 8} y={-10} width={categoryWidth - 16} height={20}><div className="truncate text-right text-[13px] leading-5 text-muted-foreground" title={payload.value}>{payload.value}</div></foreignObject></g> : axisTick} tickFormatter={formatCategory} interval={0} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" width={categoryWidth} tick={categoryTitles ? ({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => <g transform={`translate(${x},${y})`}><foreignObject x={-categoryWidth + 8} y={-10} width={categoryWidth - 16} height={20}><div className="truncate text-right text-[13px] leading-5 text-muted-foreground" title={shiftLabel(payload.value)}>{shiftLabel(payload.value)}</div></foreignObject></g> : axisTick} tickFormatter={formatCategory} interval={0} axisLine={false} tickLine={false} />
             <Tooltip
               {...tip}
-              labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${String(label)}` : String(label)}
+              labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${shiftLabel(label)}` : shiftLabel(label)}
               formatter={(value) => [Number(value).toLocaleString("pt-BR"), valueName]}
             />
             <Bar dataKey="value" name={valueName} fill="var(--chart-1)" radius={[0, 4, 4, 0]} maxBarSize={maxBarSize} isAnimationActive={false}>
@@ -82,7 +83,7 @@ export function BarBlock({ data, emptyText = "Nenhum dado disponível para este 
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="name" tick={axisTick} interval={0} tickFormatter={formatCategory} angle={d.length > 4 ? -35 : 0} textAnchor={d.length > 4 ? "end" : "middle"} height={d.length > 4 ? 90 : 52} axisLine={false} tickLine={false} />
             <YAxis tick={axisTick} allowDecimals={false} width={48} axisLine={false} tickLine={false} />
-            <Tooltip {...tip} labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${String(label)}` : String(label)} formatter={(value) => [Number(value).toLocaleString("pt-BR"), valueName]} />
+            <Tooltip {...tip} labelFormatter={(label) => tooltipLabel ? `${tooltipLabel}: ${shiftLabel(label)}` : shiftLabel(label)} formatter={(value) => [Number(value).toLocaleString("pt-BR"), valueName]} />
             <Bar dataKey="value" name={valueName} fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={48} isAnimationActive={false}>
               <LabelList dataKey="value" position="top" {...valueLabel} formatter={(value: unknown) => Number(value).toLocaleString("pt-BR")} />
             </Bar>
@@ -120,7 +121,7 @@ export function Ranking({ data, limit = 8, personKind, showPrivacyToggle = true 
         <li key={d.name} className="flex items-start gap-3 text-base">
           <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded text-sm font-semibold", i === 0 ? "bg-primary-soft text-primary" : "bg-muted text-muted-foreground")}>{i + 1}</span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3"><span className="min-w-0 break-words [overflow-wrap:anywhere]" title={personKind ? personName(d.name, personKind) : d.name}>{personKind ? personName(d.name, personKind) : d.name}</span><span className="shrink-0 text-lg font-semibold tabular-nums">{d.value.toLocaleString("pt-BR")}</span></div>
+            <div className="flex items-start justify-between gap-3"><span className="min-w-0 break-words [overflow-wrap:anywhere]" title={shiftLabel(personKind ? personName(d.name, personKind) : d.name)}>{shiftLabel(personKind ? personName(d.name, personKind) : d.name)}</span><span className="shrink-0 text-lg font-semibold tabular-nums">{d.value.toLocaleString("pt-BR")}</span></div>
             <div className="mt-2 h-2 rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${(d.value / max) * 100}%` }} /></div>
           </div>
         </li>
@@ -141,8 +142,8 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        <h1 className="text-2xl font-bold">{shiftLabel(title)}</h1>
+        {subtitle && <p className="text-sm text-muted-foreground">{shiftLabel(subtitle)}</p>}
       </div>
       {action}
     </div>

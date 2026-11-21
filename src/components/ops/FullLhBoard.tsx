@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ export function FullLhBoard({ rows, onView }: { rows: RecordRow[]; onView: (key:
               <tr key={g.key} className="border-t">
                 <td className="py-1.5 pr-3 font-medium">{g.lh ?? <span className="text-muted-foreground">Sem LH vinculada</span>}</td>
                 <td className="py-1.5 pr-3">{g.dates.length === 1 ? formatDateBR(g.dates[0]) : g.dates.length ? "Múltiplas" : "—"}</td>
-                <td className="py-1.5 pr-3">{g.shifts.length === 1 ? g.shifts[0] : g.shifts.length ? "Múltiplos" : "—"}</td>
+                <td className="py-1.5 pr-3">{g.shifts.length === 1 ? shiftLabel(g.shifts[0]) : g.shifts.length ? "Múltiplos" : "—"}</td>
                 <td className="max-w-56 py-1.5 pr-3" title={g.origins.length > 1 ? g.origins.join(", ") : undefined}>
                   <span className="break-words">{g.origins.length > 1 ? "Múltiplas origens" : g.origins[0] ?? "Sem informação"}</span>
                 </td>

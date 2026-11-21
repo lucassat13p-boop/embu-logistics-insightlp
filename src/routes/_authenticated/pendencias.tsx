@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { shiftLabel } from "@/lib/shifts";
 import { useQuery } from "@tanstack/react-query";
 import { batchesQuery, errorsQuery, recordsQuery } from "@/lib/data";
 import { moduleByKey } from "@/lib/modules";
@@ -48,7 +49,7 @@ function Page() {
         <Panel title="Erros de validação / mapeamento">
           {errOnly.length ? (
             <ul className="max-h-96 space-y-1 overflow-y-auto text-xs">{errOnly.slice(0, 300).map((e) => (
-              <li key={e.id}><span className="font-semibold text-primary">{moduleByKey(e.module)?.label}</span> · <Link to="/historico/$id" params={{ id: e.batch_id }} className="underline">{bName.get(e.batch_id)}</Link> · linha {e.row_number} — {e.message}</li>
+              <li key={e.id}><span className="font-semibold text-primary">{moduleByKey(e.module)?.label}</span> · <Link to="/historico/$id" params={{ id: e.batch_id }} className="underline">{shiftLabel(bName.get(e.batch_id))}</Link> · linha {e.row_number} — {shiftLabel(e.message)}</li>
             ))}</ul>
           ) : <Empty />}
         </Panel>

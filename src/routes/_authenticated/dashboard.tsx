@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -111,7 +112,7 @@ function Dashboard() {
   const before = useMemo(() => Object.fromEntries(SOURCES.map((s) => [s, filterItems(all[s], prev, shifts)])) as Record<SourceKey, Item[]>, [all, prev?.start, prev?.end, shifts]); // eslint-disable-line react-hooks/exhaustive-deps
   const shiftFiltered = shifts.length > 0 && shifts.length < DASH_SHIFTS.length;
   const periodText = range ? (range.start === range.end ? fmtDate(range.start) : `${fmtDate(range.start)} – ${fmtDate(range.end)}`) : "Período incompleto";
-  const shiftText = shiftFiltered ? shifts.join(" + ") : "Todos os turnos";
+  const shiftText = shiftFiltered ? shifts.map(shiftLabel).join(" + ") : "Todos os turnos";
 
   const summary = buildSummary(cur, all, shiftFiltered, range);
   const priorSummary = prev ? buildSummary(before, all, shiftFiltered, prev) : [];
@@ -140,7 +141,7 @@ function Dashboard() {
           <div className="space-y-1"><Label>Turnos</Label>
             <div className="flex gap-1">
               <Button size="sm" variant={!shiftFiltered ? "default" : "outline"} onClick={() => setShifts([])}>Todos</Button>
-              {DASH_SHIFTS.map((s) => <Button key={s} size="sm" variant={shiftFiltered && shifts.includes(s) ? "default" : "outline"} onClick={() => toggleShift(s)}>{s}</Button>)}
+              {DASH_SHIFTS.map((s) => <Button key={s} size="sm" variant={shiftFiltered && shifts.includes(s) ? "default" : "outline"} onClick={() => toggleShift(s)}>{shiftLabel(s)}</Button>)}
             </div>
           </div>
         </div>
@@ -257,10 +258,10 @@ function AttentionPoints({ items, shifts }: { items: Item[]; shifts: DashShift[]
     const tone = shift === "AM1" ? "orange" : shift === "AM2" ? "blue" : "purple";
     return <li key={shift} className={`shift-attention-card summary-tone-${tone}`}>
       <div className="shift-attention-results">
-        <div className="shift-attention-name"><span className="shift-attention-icon"><ShiftIcon shift={shift} className="h-6 w-6" /></span><h3 className="font-display text-lg font-bold">{shift}</h3></div>
+        <div className="shift-attention-name"><span className="shift-attention-icon"><ShiftIcon shift={shift} className="h-6 w-6" /></span><h3 className="font-display text-lg font-bold">{shiftLabel(shift)}</h3></div>
         {c ? <><div className="shift-attention-total"><p className="font-display text-xl font-bold tabular-nums">{fmt(c.av)}</p><p className="mt-1 text-xs text-muted-foreground">Avarias salvas</p></div><div className="shift-attention-total"><p className="font-display text-xl font-bold tabular-nums">{fmt(c.oh)}</p><p className="mt-1 text-xs text-muted-foreground">ON HOLD tratados</p></div></> : <p className="col-span-2 border-l pl-4 text-xs text-muted-foreground">Sem lançamento no período</p>}
       </div>
-      {c && c.notes.length > 0 && <details className="mt-3 border-t pt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">Observações · {c.notes.length}</summary><ul className="mt-2 space-y-2">{c.notes.map((note) => <li key={note.id} className="flex items-start gap-2 leading-5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /><div className="min-w-0"><span className="text-muted-foreground">{fmtDate(note.date)}</span><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{note.text}</p></div></li>)}</ul></details>}
+      {c && c.notes.length > 0 && <details className="mt-3 border-t pt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">Observações · {c.notes.length}</summary><ul className="mt-2 space-y-2">{c.notes.map((note) => <li key={note.id} className="flex items-start gap-2 leading-5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /><div className="min-w-0"><span className="text-muted-foreground">{fmtDate(note.date)}</span><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{shiftLabel(note.text)}</p></div></li>)}</ul></details>}
     </li>;
   })}</ul>;
 }
@@ -322,13 +323,13 @@ function Radar({ cur, prev, shiftFiltered }: { cur: Record<SourceKey, Item[]>; p
 
 function ShiftCompare({ all, range }: { all: Record<SourceKey, Item[]>; range: Range | null }) {
   const srcs = SOURCES.filter((s) => SHIFT_SUPPORT[s]);
-  return <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="py-2">Indicador</th>{DASH_SHIFTS.map((s) => <th key={s} className="text-right">{s}</th>)}<th className="text-right">Sem turno</th></tr></thead>
+  return <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="py-2">Indicador</th>{DASH_SHIFTS.map((s) => <th key={s} className="text-right">{shiftLabel(s)}</th>)}<th className="text-right">Sem turno</th></tr></thead>
     <tbody>{srcs.flatMap((s) => {
       const items = filterItems(all[s], range, []);
       const val = (sh: DashShift | null, k?: "avarias_saved" | "on_hold_treated") => { const f = items.filter((i) => i.shift === sh); return k ? sumT(f, k) : f.length; };
       const lines: [string, (k: DashShift | null) => number][] = s === "tratativas" ? [["Avarias salvas", (k) => val(k, "avarias_saved")], ["ON HOLD tratados", (k) => val(k, "on_hold_treated")]] : [[`${SOURCE_LABEL[s]} · ocorrências`, (k) => val(k)]];
       return lines.map(([label, f]) => <tr key={label} className="border-b last:border-0"><td className="py-2">{label}</td>{DASH_SHIFTS.map((sh) => <td key={sh} className="text-right tabular-nums">{fmt(f(sh))}</td>)}<td className="text-right tabular-nums text-muted-foreground">{fmt(f(null))}</td></tr>);
-    })}</tbody></table><p className="mt-2 text-[11px] text-muted-foreground">Registros sem turno identificado aparecem separados e nunca são distribuídos entre AM1, AM2 e PM1. AUTO ADD não possui turno.</p></div>;
+    })}</tbody></table><p className="mt-2 text-[11px] text-muted-foreground">Registros sem turno identificado aparecem separados e nunca são distribuídos entre PM2, AM e PM1. AUTO ADD não possui turno.</p></div>;
 }
 
 function CustomizeDialog({ open, onOpenChange, layout, onSave }: { open: boolean; onOpenChange: (o: boolean) => void; layout: { id: string; visible: boolean }[]; onSave: (l: { id: string; visible: boolean }[]) => void }) {

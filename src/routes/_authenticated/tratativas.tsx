@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -161,7 +162,7 @@ function TratativasPage() {
       <div><Label>Turnos</Label><div className="mt-2 flex flex-wrap items-center gap-2">
         <Button size="sm" variant={allShifts ? "default" : "outline"} onClick={() => { setShifts([]); setPage(0); }}>Todos</Button>
         <ToggleGroup type="multiple" variant="outline" size="sm" value={shifts} onValueChange={(v) => { setShifts(v.filter((s): s is TreatmentShift => (TREATMENT_SHIFTS as readonly string[]).includes(s))); setPage(0); }}>
-          {TREATMENT_SHIFTS.map((s) => <ToggleGroupItem key={s} value={s}>{s}</ToggleGroupItem>)}
+          {TREATMENT_SHIFTS.map((s) => <ToggleGroupItem key={s} value={s}>{shiftLabel(s)}</ToggleGroupItem>)}
         </ToggleGroup>
       </div></div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -182,10 +183,10 @@ function TratativasPage() {
             </tr></thead>
             <tbody>{pageRows.map((r) => (
               <tr key={r.id} className="border-b last:border-0 hover:bg-muted/40">
-                <td className="p-2"><Checkbox aria-label={`Selecionar tratativa de ${fmt(r.operation_date)} ${r.shift}`} disabled={deleting} checked={selected.has(r.id)} onCheckedChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked === true) next.add(r.id); else next.delete(r.id); return next; })} /></td>
-                <td className="p-2 whitespace-nowrap">{fmt(r.operation_date)}</td><td className="p-2">{r.shift}</td>
+                <td className="p-2"><Checkbox aria-label={`Selecionar tratativa de ${fmt(r.operation_date)} ${shiftLabel(r.shift)}`} disabled={deleting} checked={selected.has(r.id)} onCheckedChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked === true) next.add(r.id); else next.delete(r.id); return next; })} /></td>
+                <td className="p-2 whitespace-nowrap">{fmt(r.operation_date)}</td><td className="p-2">{shiftLabel(r.shift)}</td>
                 <td className="p-2 text-right font-semibold tabular-nums">{r.avarias_saved}</td><td className="p-2 text-right font-semibold tabular-nums">{r.on_hold_treated}</td>
-                <td className="p-2 text-muted-foreground">{r.created_by_email ?? "—"}</td><td className="max-w-xs truncate p-2 text-muted-foreground">{r.notes ?? "—"}</td>
+                <td className="p-2 text-muted-foreground">{r.created_by_email ?? "—"}</td><td className="max-w-xs truncate p-2 text-muted-foreground">{shiftLabel(r.notes ?? "—")}</td>
                 <td className="p-2 text-right whitespace-nowrap"><Button size="icon" variant="ghost" aria-label="Visualizar" onClick={() => setView(r)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label="Editar" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" aria-label="Excluir tratativa" title="Excluir tratativa" disabled={deleting} onClick={() => setToDelete(r)}><Trash2 className="h-4 w-4" /></Button></td>
               </tr>))}</tbody>
           </table></div>
@@ -212,7 +213,7 @@ function TratativasPage() {
             <AlertDialogTitle>Excluir tratativa?</AlertDialogTitle>
             <AlertDialogDescription>Tem certeza de que deseja excluir esta tratativa operacional? Esta ação não poderá ser desfeita.</AlertDialogDescription>
           </AlertDialogHeader>
-          {toDelete && <p className="text-sm text-muted-foreground">{fmt(toDelete.operation_date)} · {toDelete.shift}</p>}
+          {toDelete && <p className="text-sm text-muted-foreground">{fmt(toDelete.operation_date)} · {shiftLabel(toDelete.shift)}</p>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
             <Button variant="destructive" disabled={deleting} onClick={deleteTreatment}>{deleting ? "Excluindo…" : "Excluir definitivamente"}</Button>
@@ -226,7 +227,7 @@ function TratativasPage() {
           {form && <div className="grid gap-3">
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Data da operação</Label><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
-              <div><Label>Turno</Label><Select value={form.shift} onValueChange={(v) => setForm({ ...form, shift: v as TreatmentShift })}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{TREATMENT_SHIFTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Turno</Label><Select value={form.shift} onValueChange={(v) => setForm({ ...form, shift: v as TreatmentShift })}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{TREATMENT_SHIFTS.map((s) => <SelectItem key={s} value={s}>{shiftLabel(s)}</SelectItem>)}</SelectContent></Select></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Avarias salvas</Label><Input type="number" min={0} step={1} inputMode="numeric" value={form.avarias} onChange={(e) => setForm({ ...form, avarias: e.target.value })} /></div>
@@ -243,13 +244,13 @@ function TratativasPage() {
           <DialogHeader><DialogTitle>Lançamento</DialogTitle></DialogHeader>
           {view && <dl className="grid grid-cols-2 gap-2 text-sm">
             <dt className="text-muted-foreground">Data operacional</dt><dd>{fmt(view.operation_date)}</dd>
-            <dt className="text-muted-foreground">Turno</dt><dd>{view.shift}</dd>
+            <dt className="text-muted-foreground">Turno</dt><dd>{shiftLabel(view.shift)}</dd>
             <dt className="text-muted-foreground">Avarias salvas</dt><dd>{view.avarias_saved}</dd>
             <dt className="text-muted-foreground">ON HOLD tratados</dt><dd>{view.on_hold_treated}</dd>
             <dt className="text-muted-foreground">Responsável</dt><dd>{view.created_by_email ?? "—"}</dd>
             <dt className="text-muted-foreground">Criado em</dt><dd>{new Date(view.created_at).toLocaleString("pt-BR")}</dd>
             <dt className="text-muted-foreground">Atualizado em</dt><dd>{new Date(view.updated_at).toLocaleString("pt-BR")}</dd>
-            <dt className="text-muted-foreground">Observações</dt><dd className="whitespace-pre-wrap">{view.notes ?? "—"}</dd>
+            <dt className="text-muted-foreground">Observações</dt><dd className="whitespace-pre-wrap">{shiftLabel(view.notes ?? "—")}</dd>
           </dl>}
         </DialogContent>
       </Dialog>

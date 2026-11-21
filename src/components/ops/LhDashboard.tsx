@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Download, Search, Upload } from "lucide-react";
@@ -45,7 +46,7 @@ function exportPng(rows: LhView[], subtitle: string) {
     y += rowH;
     g.fillStyle = i % 2 ? "#f6f6f6" : "#ffffff"; g.fillRect(20, y, W - 40, rowH);
     g.strokeStyle = "#e3e3e3"; g.strokeRect(20, y, W - 40, rowH);
-    const vals = [r.lh, r.origin ?? "-", driverName(r.driver) ?? "-", r.plate ?? "-", r.shift ?? "-", fmtWall(r.scheduledAt), r.arrived ? "Chegou" : "Pendente"];
+    const vals = [r.lh, r.origin ?? "-", shiftLabel(driverName(r.driver) ?? "-"), r.plate ?? "-", shiftLabel(r.shift ?? "-"), fmtWall(r.scheduledAt), r.arrived ? "Chegou" : "Pendente"];
     x = 20;
     vals.forEach((v, j) => { g.fillStyle = j === 6 ? (r.arrived ? "#15803d" : orange) : "#222222"; g.font = j === 6 ? "bold 13px Arial" : "13px Arial"; g.fillText(clip(v, cols[j][1]), x + 8, y + 20); x += cols[j][1]; });
   });
@@ -86,8 +87,8 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
     <PageHeader title="LHs / Rotas" subtitle={`${HUB_NAME} · Programação e chegadas das LHs`} action={importBtn} />
     <PeriodFilter months={months} period={period} onChange={(p) => { setPeriod(p); setPage(0); }} mode="single" onModeChange={() => undefined} comparison={{ ...EMPTY_PERIOD }} onComparisonChange={() => undefined} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setShift(ALL); setOrigin(ALL); setPage(0); }} />
     <div className="flex flex-wrap gap-3">
-      <div className="w-44"><Select value={shift} onValueChange={(v) => { setShift(v); setPage(0); }}><SelectTrigger aria-label="Turno"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={ALL}>Turno: todos</SelectItem>{shifts.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-      <div className="w-64"><Select value={origin} onValueChange={(v) => { setOrigin(v); setPage(0); }}><SelectTrigger aria-label="Origem"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={ALL}>Origem: todas</SelectItem>{origins.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+      <div className="w-44"><Select value={shift} onValueChange={(v) => { setShift(v); setPage(0); }}><SelectTrigger aria-label="Turno"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={ALL}>Turno: todos</SelectItem>{shifts.map((s) => <SelectItem key={s} value={s}>{shiftLabel(s)}</SelectItem>)}</SelectContent></Select></div>
+      <div className="w-64"><Select value={origin} onValueChange={(v) => { setOrigin(v); setPage(0); }}><SelectTrigger aria-label="Origem"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={ALL}>Origem: todas</SelectItem>{origins.map((s) => <SelectItem key={s} value={s}>{shiftLabel(s)}</SelectItem>)}</SelectContent></Select></div>
     </div>
     {!rows.length ? <div className="rounded-lg border border-dashed bg-card p-6"><Empty text={allRows.length ? PERIOD_EMPTY : undefined} hint={allRows.length ? undefined : "Importe a programação de LHs para visualizar."} /></div> :
     <div className="grid gap-4 xl:grid-cols-[minmax(0,55fr)_minmax(0,45fr)]">
@@ -95,7 +96,7 @@ export function LhDashboard({ allRows }: { allRows: RecordRow[] }) {
         <div className="relative mb-3"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" placeholder="Pesquisar LH, motorista, placa ou origem" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} /></div>
         <div className="max-w-full overflow-x-auto rounded-md border"><table className="w-full min-w-[880px] table-fixed whitespace-nowrap text-sm"><colgroup><col className="w-[16%]" /><col className="w-[21%]" /><col className="w-[22%]" /><col className="w-[11%]" /><col className="w-[7%]" /><col className="w-[12%]" /><col className="w-[11%]" /></colgroup><thead className="bg-muted text-left text-xs uppercase"><tr>{["LH", "Origem / Unidade", "Motorista", "Placa", "Turno", "Previsto", "Status"].map((h) => <th key={h} className="px-2 py-2">{h}</th>)}</tr></thead>
           <tbody>{searched.slice(cur * PAGE, cur * PAGE + PAGE).map((r) => <tr key={r.id} className="h-9 border-t">
-            <td className="px-2 py-1.5 font-medium"><span className="block truncate" title={r.lh}>{r.lh}</span></td><td className="px-2 py-1.5"><span className="block truncate" title={r.origin ?? "Sem informação"}>{r.origin ?? "Sem informação"}</span></td><td className="px-2 py-1.5"><span className="block truncate" title={driverName(r.driver) ?? "Sem informação"}>{driverName(r.driver) ?? "Sem informação"}</span></td><td className="px-2 py-1.5"><span className="block truncate" title={r.plate ?? "Sem informação"}>{r.plate ?? "Sem informação"}</span></td><td className="px-2 py-1.5">{r.shift ?? "-"}</td><td className="px-2 py-1.5 tabular-nums">{fmtWall(r.scheduledAt)}</td>
+            <td className="px-2 py-1.5 font-medium"><span className="block truncate" title={r.lh}>{r.lh}</span></td><td className="px-2 py-1.5"><span className="block truncate" title={r.origin ?? "Sem informação"}>{r.origin ?? "Sem informação"}</span></td><td className="px-2 py-1.5"><span className="block truncate" title={shiftLabel(driverName(r.driver) ?? "Sem informação")}>{shiftLabel(driverName(r.driver) ?? "Sem informação")}</span></td><td className="px-2 py-1.5"><span className="block truncate" title={r.plate ?? "Sem informação"}>{r.plate ?? "Sem informação"}</span></td><td className="px-2 py-1.5">{shiftLabel(r.shift ?? "-")}</td><td className="px-2 py-1.5 tabular-nums">{fmtWall(r.scheduledAt)}</td>
             <td className="px-2 py-1.5"><span className={r.arrived ? "inline-block whitespace-nowrap rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success" : "inline-block whitespace-nowrap rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary"}>{r.arrived ? "Chegou" : "Pendente"}</span></td>
           </tr>)}</tbody></table></div>
         {!searched.length && <p className="mt-3 text-sm text-muted-foreground">Nenhuma LH encontrada para a pesquisa.</p>}

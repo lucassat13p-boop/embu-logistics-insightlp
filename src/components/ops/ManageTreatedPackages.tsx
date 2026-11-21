@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Settings2, Trash2 } from "lucide-react";
@@ -76,8 +77,8 @@ export function ManageTreatedPackages() {
                 <th className="p-2">Data</th><th className="p-2">Turno</th><th className="p-2 text-right">Pacotes tratados</th><th className="p-2">Arquivo de origem</th>
               </tr></thead>
               <tbody>{rows.map((r) => <tr key={r.id} className="border-b">
-                <td className="p-2"><Checkbox aria-label={`Selecionar total de ${r.operation_date} ${r.shift}`} disabled={deleting} checked={selected.has(r.id)} onCheckedChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked === true) next.add(r.id); else next.delete(r.id); return next; })} /></td>
-                <td className="whitespace-nowrap p-2">{r.operation_date.split("-").reverse().join("/")}</td><td className="p-2">{r.shift}</td><td className="p-2 text-right tabular-nums">{r.quantity.toLocaleString("pt-BR")}</td><td className="p-2">{r.file_name ?? "Sem informação"}</td>
+                <td className="p-2"><Checkbox aria-label={`Selecionar total de ${r.operation_date} ${shiftLabel(r.shift)}`} disabled={deleting} checked={selected.has(r.id)} onCheckedChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked === true) next.add(r.id); else next.delete(r.id); return next; })} /></td>
+                <td className="whitespace-nowrap p-2">{r.operation_date.split("-").reverse().join("/")}</td><td className="p-2">{shiftLabel(r.shift)}</td><td className="p-2 text-right tabular-nums">{r.quantity.toLocaleString("pt-BR")}</td><td className="p-2">{r.file_name ?? "Sem informação"}</td>
               </tr>)}</tbody>
             </table>
           </div>}

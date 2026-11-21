@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { formatMissorted } from "@/lib/missorted";
 import { durationLabel } from "@/lib/conferencia";
 
@@ -36,19 +37,19 @@ export async function createShiftSummaryPng(input: ReportInput): Promise<Blob> {
   };
   const font = (size: number, bold = false) => `${bold ? 700 : 400} ${size}px "${bold ? "Archivo" : "IBM Plex Sans"}", sans-serif`;
   const text = (value: string, x: number, y: number, size: number, role = "text", bold = false) => {
-    g.font = font(size, bold); g.fillStyle = color(role); g.fillText(value, x, y);
+    g.font = font(size, bold); g.fillStyle = color(role); g.fillText(shiftLabel(value), x, y);
   };
   const textR = (value: string, x: number, y: number, size: number, role = "text", bold = false) => {
-    g.font = font(size, bold); g.fillStyle = color(role); g.fillText(value, x - g.measureText(value).width, y);
+    g.font = font(size, bold); g.fillStyle = color(role); g.fillText(shiftLabel(value), x - g.measureText(shiftLabel(value)).width, y);
   };
   const textC = (value: string, x: number, y: number, size: number, role = "text", bold = false) => {
-    g.font = font(size, bold); g.fillStyle = color(role); g.fillText(value, x - g.measureText(value).width / 2, y);
+    g.font = font(size, bold); g.fillStyle = color(role); g.fillText(shiftLabel(value), x - g.measureText(shiftLabel(value)).width / 2, y);
   };
-  const measure = (value: string, size: number, bold = false) => { g.font = font(size, bold); return g.measureText(value).width; };
+  const measure = (value: string, size: number, bold = false) => { g.font = font(size, bold); return g.measureText(shiftLabel(value)).width; };
   const wrap = (value: string, width: number, size: number, bold = false) => {
     g.font = font(size, bold);
     const lines: string[] = [];
-    for (const paragraph of value.split(/\r?\n/)) {
+    for (const paragraph of shiftLabel(value).split(/\r?\n/)) {
       let line = "";
       for (const word of paragraph.split(/\s+/).filter(Boolean)) {
         const candidate = line ? `${line} ${word}` : word;

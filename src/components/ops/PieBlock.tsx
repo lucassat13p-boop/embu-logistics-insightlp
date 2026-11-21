@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Empty } from "./blocks";
 
@@ -32,7 +33,7 @@ export function PieBlock({ data, total, categories, label, includeMissing = true
           </Pie>
           <Tooltip content={({ active, payload }) => {
             const item = payload?.[0]?.payload as { name: string; value: number } | undefined;
-            return active && item ? <div className="max-w-64 rounded-md border bg-popover px-4 py-3 text-base text-popover-foreground shadow-card"><p className="break-words font-semibold">{item.name}</p><p>{item.value.toLocaleString("pt-BR")} · {percent(item.value, representedTotal)}</p></div> : null;
+            return active && item ? <div className="max-w-64 rounded-md border bg-popover px-4 py-3 text-base text-popover-foreground shadow-card"><p className="break-words font-semibold">{shiftLabel(item.name)}</p><p>{item.value.toLocaleString("pt-BR")} · {percent(item.value, representedTotal)}</p></div> : null;
           }} />
         </PieChart>
       </ResponsiveContainer>
@@ -40,7 +41,7 @@ export function PieBlock({ data, total, categories, label, includeMissing = true
     <ul className="min-w-0 space-y-3 text-base" aria-label={`Legenda — ${label}`}>
       {slices.map((item) => <li key={item.name} className="grid grid-cols-[14px_minmax(0,1fr)_auto] items-start gap-x-3 border-b border-border/60 pb-3 last:border-0 last:pb-0">
         <svg width="14" height="14" viewBox="0 0 12 12" className="mt-1 shrink-0" aria-hidden="true"><rect width="12" height="12" rx="2" fill={color(item.name)} /></svg>
-        <span className="min-w-0 break-words [overflow-wrap:anywhere]">{item.name}</span>
+        <span className="min-w-0 break-words [overflow-wrap:anywhere]">{shiftLabel(item.name)}</span>
         <span className="text-right"><span className="block font-semibold tabular-nums">{item.value.toLocaleString("pt-BR")}</span><span className="block text-sm tabular-nums text-muted-foreground">{percent(item.value, representedTotal)}</span></span>
       </li>)}
     </ul>

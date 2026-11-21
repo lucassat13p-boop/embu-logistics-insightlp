@@ -1,4 +1,4 @@
-/** Idempotent name correspondence only; never changes operational times or dates. */
+/** Stable internal operation keys; public names are rendered by shiftLabel. */
 export const HUB_SHIFTS = ["AM1", "AM2", "PM1"] as const;
 export type HubShift = (typeof HUB_SHIFTS)[number];
 const names: Record<string, HubShift> = { PM2: "AM1", AM: "AM2", PM1: "PM1", AM1: "AM1", AM2: "AM2" };
@@ -7,6 +7,10 @@ export function normalizeHubShift(value: unknown): HubShift | null {
 }
 export function displayHubShift(value: string | null): string | null {
   return normalizeHubShift(value) ?? (value?.trim() || null);
+}
+/** Presentation only: retain stored keys, identities, source text and calculations. */
+export function shiftLabel(value: unknown): string {
+  return String(value ?? "").replace(/\bAM\s*1\b/gi, "PM2").replace(/\bAM\s*2\b/gi, "AM");
 }
 /** Standalone names in source text; conflicts stay unidentified. */
 export function hubShiftMarkers(value: unknown): HubShift[] {

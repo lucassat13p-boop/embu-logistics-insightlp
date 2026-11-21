@@ -34,6 +34,6 @@
 - Summary: FULL normId; others counts/sums. PNG snapshots root-theme tokens at click before awaits; same data, layout and dynamic 16:9, without site changes.
 - MISSORTED uses isolated date/shift-unique entries and singleton target with authenticated RLS and creator-only deletion; shared weighted calculation/cache powers its card and dialogs without touching treatment sources.
 - ON HOLD totals use date/shift imports, with isolated team-RLS deletion by confirmed ID and shared cache refresh. Manual Tratativas use Avarias Salvas; bulk deletion snapshots filtered IDs and retains failures. Neither deletion affects other sources.
-- Shared shifts.ts normalizes names at import/read boundaries with original evidence in extra; no chained conversion or historical writes. Keep time/date derivation and stored FULL operation keys. LH uses schedule + arrival evidence, trip dedupe and filtered PNG.
+- Shared shifts.ts preserves internal operation keys at import/read boundaries with original evidence in extra; shiftLabel translates only presentation (including exports). Keep time/date derivation, database uniqueness and stored FULL operation keys; no historical writes. LH uses schedule + arrival evidence, trip dedupe and filtered PNG.
 - LH table scrolls locally; origin ranking uses responsive HTML/CSS bars on originData, avoiding overflow and preserving charts/PNG.
 - RLS gates data by `is_team_member` (user_roles): shared among members; new sign-ups need authorization.

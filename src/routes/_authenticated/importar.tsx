@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -257,7 +258,7 @@ function ImportPage() {
           </div>}
         </div>
         {busy && <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{busy}</p>}
-        {preparedTable.error && <p className="mt-3 text-sm text-destructive">{preparedTable.error}</p>}
+        {preparedTable.error && <p className="mt-3 text-sm text-destructive">{shiftLabel(preparedTable.error)}</p>}
       </Panel>
 
       {mod?.key === "full" && <FullImport />}
@@ -272,7 +273,7 @@ function ImportPage() {
               <Label>{parsed.format === "pdf" ? "Página" : "Planilha"}</Label>
               <Select value={String(sheetIdx)} onValueChange={(v) => changeSheet(Number(v))} disabled={mod.firstSheetOnly || mod.key === "erros_operacionais"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name} ({s.rows.length} linhas)</SelectItem>)}</SelectContent>
+                <SelectContent>{parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{shiftLabel(s.name)} ({s.rows.length} linhas)</SelectItem>)}</SelectContent>
               </Select>
               {mod.firstSheetOnly && <p className="text-xs text-primary">{mod.label}: somente a primeira planilha é utilizada. Outras abas são ignoradas.</p>}
             </div>
@@ -290,8 +291,8 @@ function ImportPage() {
                   const f = mapping[h];
                   return (
                     <tr key={h} className="border-t">
-                      <td className="px-3 py-2 font-medium">{h}</td>
-                      <td className="max-w-[220px] truncate px-3 py-2 text-muted-foreground">{sample === undefined || sample === null ? "—" : f === "record_date" ? `${String(sample)} → ${parseDate(sample).iso ?? "inválida"}` : String(sample)}</td>
+                      <td className="px-3 py-2 font-medium">{shiftLabel(h)}</td>
+                      <td className="max-w-[220px] truncate px-3 py-2 text-muted-foreground">{sample === undefined || sample === null ? "—" : f === "record_date" ? `${String(sample)} → ${parseDate(sample).iso ?? "inválida"}` : shiftLabel(sample)}</td>
                       <td className="px-3 py-2">
                         <Select value={f || "__none"} onValueChange={(v) => { setMapping((m) => ({ ...m, [h]: v === "__none" ? "" : (v as FieldKey) })); setResult(null); }}>
                           <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
@@ -310,8 +311,8 @@ function ImportPage() {
           <p className="mt-3 text-xs font-semibold uppercase text-muted-foreground">Prévia ({preview.length} primeiras linhas)</p>
           <div className="mt-1 overflow-x-auto rounded-md border">
             <table className="w-full text-xs">
-              <thead className="bg-muted/60"><tr><th className="px-2 py-1 text-left">#</th>{table.headers.map((h) => <th key={h} className="whitespace-nowrap px-2 py-1 text-left">{h}</th>)}</tr></thead>
-              <tbody>{preview.map((p) => <tr key={p.rowNumber} className="border-t"><td className="px-2 py-1 text-muted-foreground">{p.rowNumber}</td>{table.headers.map((h) => <td key={h} className="whitespace-nowrap px-2 py-1">{p.values[h] === null ? "" : String(p.values[h])}</td>)}</tr>)}</tbody>
+              <thead className="bg-muted/60"><tr><th className="px-2 py-1 text-left">#</th>{table.headers.map((h) => <th key={h} className="whitespace-nowrap px-2 py-1 text-left">{shiftLabel(h)}</th>)}</tr></thead>
+              <tbody>{preview.map((p) => <tr key={p.rowNumber} className="border-t"><td className="px-2 py-1 text-muted-foreground">{p.rowNumber}</td>{table.headers.map((h) => <td key={h} className="whitespace-nowrap px-2 py-1">{p.values[h] === null ? "" : shiftLabel(p.values[h])}</td>)}</tr>)}</tbody>
             </table>
           </div>
           <div className="mt-4 flex justify-end"><Button onClick={runValidation} disabled={!!busy}>Validar registros</Button></div>
@@ -321,7 +322,7 @@ function ImportPage() {
       {result && mod?.key === "avaria" && avariaPreview && (
         <Panel title="Filtros da importação AVARIA" subtitle="Aplicados antes de salvar no banco">
           <div className="grid gap-5 lg:grid-cols-2">
-            <div className="space-y-3"><p className="text-sm font-semibold">Turnos a importar</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><Checkbox checked={allShifts} onCheckedChange={(checked) => { setAllShifts(checked === true); if (checked) setSelectedShifts([...OFFICIAL_SHIFTS]); }} />Todos</label>{OFFICIAL_SHIFTS.map((shift) => <label key={shift} className="flex items-center gap-2 text-sm"><Checkbox checked={!allShifts && selectedShifts.includes(shift)} onCheckedChange={(checked) => { setAllShifts(false); setSelectedShifts(checked ? [...selectedShifts.filter((item) => item !== shift), shift] : selectedShifts.filter((item) => item !== shift)); }} />{shift}</label>)}</div></div>
+            <div className="space-y-3"><p className="text-sm font-semibold">Turnos a importar</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><Checkbox checked={allShifts} onCheckedChange={(checked) => { setAllShifts(checked === true); if (checked) setSelectedShifts([...OFFICIAL_SHIFTS]); }} />Todos</label>{OFFICIAL_SHIFTS.map((shift) => <label key={shift} className="flex items-center gap-2 text-sm"><Checkbox checked={!allShifts && selectedShifts.includes(shift)} onCheckedChange={(checked) => { setAllShifts(false); setSelectedShifts(checked ? [...selectedShifts.filter((item) => item !== shift), shift] : selectedShifts.filter((item) => item !== shift)); }} />{shiftLabel(shift)}</label>)}</div></div>
             <div className="space-y-3"><p className="text-sm font-semibold">SOC</p><RadioGroup value={includeSoc ? "include" : "exclude"} onValueChange={(value) => setIncludeSoc(value === "include")} className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><RadioGroupItem value="include" />Incluir SOC</label><label className="flex items-center gap-2 text-sm"><RadioGroupItem value="exclude" />Não incluir SOC</label></RadioGroup></div>
           </div>
         </Panel>
@@ -362,8 +363,8 @@ function ImportPage() {
             )}
           </div>}
 
-          {avariaPreview && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[["AM1", avariaPreview.found.AM1], ["AM2", avariaPreview.found.AM2], ["PM1", avariaPreview.found.PM1], ["Sem informação", avariaPreview.found.missing], ["SOC encontrados", avariaPreview.found.soc], ["Serão importados", avariaPreview.kept.length], ["Ignorados pelos filtros", avariaPreview.excluded], ["SOC", includeSoc ? "Incluído" : "Não incluído"]].map(([label, value]) => <div key={label as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{label}</p><p className="font-semibold tabular-nums">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p></div>)}</div>}
-          {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {allShifts ? "Todos" : selectedShifts.length ? selectedShifts.join(", ") : "Nenhum"}.</p>}
+          {avariaPreview && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{[["AM1", avariaPreview.found.AM1], ["AM2", avariaPreview.found.AM2], ["PM1", avariaPreview.found.PM1], ["Sem informação", avariaPreview.found.missing], ["SOC encontrados", avariaPreview.found.soc], ["Serão importados", avariaPreview.kept.length], ["Ignorados pelos filtros", avariaPreview.excluded], ["SOC", includeSoc ? "Incluído" : "Não incluído"]].map(([label, value]) => <div key={label as string} className="rounded-md border p-3"><p className="text-[11px] uppercase text-muted-foreground">{shiftLabel(label)}</p><p className="font-semibold tabular-nums">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</p></div>)}</div>}
+          {avariaPreview && <p className="mt-2 text-xs text-muted-foreground">Turnos selecionados: {allShifts ? "Todos" : selectedShifts.length ? selectedShifts.map(shiftLabel).join(", ") : "Nenhum"}.</p>}
 
           {mod.key === "on_hold" && treatedPreview && <div className="mt-4 rounded-md border p-3 text-sm">
             <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pacotes tratados do ON HOLD</p>
@@ -372,9 +373,9 @@ function ImportPage() {
               <p className="text-xs text-muted-foreground">Aba: {treatedPreview.sheetName} · {treatedPreview.analyzed.toLocaleString("pt-BR")} linhas analisadas · {treatedPreview.matched.toLocaleString("pt-BR")} atendem aos três critérios</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2 md:max-w-md">
                 <div><Label htmlFor="treated-date">Data da operação *</Label><Input id="treated-date" type="date" value={treatedDate} onChange={(e) => setTreatedDate(e.target.value)} /></div>
-                <div><Label>Turno *</Label><Select value={treatedShift} onValueChange={setTreatedShift}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{["AM1", "AM2", "PM1"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
+                <div><Label>Turno *</Label><Select value={treatedShift} onValueChange={setTreatedShift}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{["AM1", "AM2", "PM1"].map((x) => <SelectItem key={x} value={x}>{shiftLabel(x)}</SelectItem>)}</SelectContent></Select></div>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Data selecionada: {treatedDate ? treatedDate.split("-").reverse().join("/") : "não informada"} · Turno: {treatedShift || "não informado"}.{treatedPrevious ? ` Já existe resultado (${treatedPrevious.quantity}) para esta data e turno; ele será substituído.` : ""}</p>
+              <p className="mt-2 text-xs text-muted-foreground">Data selecionada: {treatedDate ? treatedDate.split("-").reverse().join("/") : "não informada"} · Turno: {shiftLabel(treatedShift || "não informado")}.{treatedPrevious ? ` Já existe resultado (${treatedPrevious.quantity}) para esta data e turno; ele será substituído.` : ""}</p>
             </>}
             <p className="mt-2 text-[11px] text-muted-foreground">Abas detectadas no arquivo ({treatedPreview.sheetNames.length}): {treatedPreview.sheetNames.length ? treatedPreview.sheetNames.map((n) => `"${n}"`).join(", ") : "nenhuma"}</p>
           </div>}
@@ -383,7 +384,7 @@ function ImportPage() {
             <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 p-3">
               <p className="mb-2 text-sm font-semibold text-destructive">Problemas encontrados ({errors.length})</p>
               <ul className="space-y-1 text-xs">
-                {(showAll ? errors : errors.slice(0, 5)).map((e, i) => <li key={i}><span className="font-mono">Linha {e.rowNumber}</span>{e.column && <> · coluna <b>{e.column}</b></>} — {e.message}</li>)}
+                {(showAll ? errors : errors.slice(0, 5)).map((e, i) => <li key={i}><span className="font-mono">Linha {e.rowNumber}</span>{e.column && <> · coluna <b>{e.column}</b></>} — {shiftLabel(e.message)}</li>)}
               </ul>
               {errors.length > 5 && <button className="mt-2 text-xs font-semibold text-primary" onClick={() => setShowAll(!showAll)}>{showAll ? "Mostrar menos" : `Ver todos os ${errors.length} erros`}</button>}
             </div>

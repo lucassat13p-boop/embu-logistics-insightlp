@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -201,17 +202,17 @@ export function FullImport() {
               <div className="space-y-1.5"><Label>Aba base</Label>
                 <Select value={String(baseSheet)} onValueChange={(v) => { setBaseSheet(Number(v)); applyBase(base.parsed, Number(v)); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{shiftLabel(s.name)}</SelectItem>)}</SelectContent>
                 </Select></div>
               <div className="space-y-1.5"><Label>Aba de status</Label>
                 <Select value={statusSheet >= 0 ? String(statusSheet) : undefined} onValueChange={(v) => { setStatusSheet(Number(v)); applyStatus(base.parsed, Number(v)); }}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{shiftLabel(s.name)}</SelectItem>)}</SelectContent>
                 </Select></div>
               <div className="space-y-1.5"><Label>Aba de LHs (opcional)</Label>
                 <Select value={String(lhSheet)} onValueChange={(v) => setLhSheet(Number(v))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="-1">Nenhuma — importar sem LH</SelectItem>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent><SelectItem value="-1">Nenhuma — importar sem LH</SelectItem>{base.parsed.sheets.map((s, i) => <SelectItem key={i} value={String(i)}>{shiftLabel(s.name)}</SelectItem>)}</SelectContent>
                 </Select></div>
             </div>
           )}
@@ -252,7 +253,7 @@ export function FullImport() {
             <div className="space-y-1.5"><Label>Turno (opcional)</Label>
               <Select value={shift || "__none"} onValueChange={(v) => { setShift(v === "__none" ? "" : v); setExisting(null); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="__none">Sem turno</SelectItem>{["AM1", "AM2", "PM1"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <SelectContent><SelectItem value="__none">Sem turno</SelectItem>{["AM1", "AM2", "PM1"].map((s) => <SelectItem key={s} value={s}>{shiftLabel(s)}</SelectItem>)}</SelectContent>
               </Select></div>
             <div className="space-y-1.5"><Label>Registros já existentes (mesma data/turno/BR/TO)</Label>
               <RadioGroup value={strategy} onValueChange={(v) => setStrategy(v as "ignore" | "update")} className="flex gap-4 pt-2">

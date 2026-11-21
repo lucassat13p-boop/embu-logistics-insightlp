@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { shiftLabel } from "@/lib/shifts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,7 +39,7 @@ function Page() {
           <ul className="divide-y text-sm">{maps.map((m) => (
             <li key={m.id} className="flex items-center gap-3 py-2">
               <span className="w-24 text-xs font-semibold text-primary">{moduleByKey(m.module)?.label}</span>
-              <span className="flex-1 truncate">{m.name}</span>
+              <span className="flex-1 truncate">{shiftLabel(m.name)}</span>
               <Button size="icon" variant="ghost" onClick={() => del(m.id)} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
             </li>
           ))}</ul>

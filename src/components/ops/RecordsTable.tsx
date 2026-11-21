@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Eye, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -55,7 +56,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule, col
       if (to && (!r.record_date || r.record_date > to)) return false;
       for (const [f, v] of Object.entries(filters)) if (v && value(r, f) !== v) return false;
       if (!s) return true;
-      return cols.some((c) => String(value(r, c) ?? "").toLowerCase().includes(s));
+      return cols.some((c) => shiftLabel(value(r, c)).toLowerCase().includes(s) || String(value(r, c) ?? "").toLowerCase().includes(s));
     });
     out = [...out].sort((a, b) => {
       const av = String(value(a, sort.f) ?? ""), bv = String(value(b, sort.f) ?? "");
@@ -69,7 +70,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule, col
   const fmt = (r: RecordRow, c: string) => {
     const v = value(r, c);
     if (v === null || v === undefined || v === "") return <span className="text-muted-foreground/70 italic">{MISSING}</span>;
-    return c === "record_date" ? formatDateBR(v as string) : String(v);
+    return c === "record_date" ? formatDateBR(v as string) : shiftLabel(v);
   };
 
   return (
@@ -90,7 +91,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule, col
             <SelectTrigger className="w-[150px]"><SelectValue placeholder={label(f)} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all">{label(f)}: todos</SelectItem>
-              {options[f]?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              {options[f]?.map((o) => <SelectItem key={o} value={o}>{shiftLabel(o)}</SelectItem>)}
             </SelectContent>
           </Select>
         ))}
@@ -115,7 +116,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule, col
             {pageRows.map((r) => (
               <tr key={r.id} className="border-t hover:bg-accent/40">
                 {showModule && <td className="px-3 py-2 text-xs font-semibold text-primary">{moduleByKey(r.module)?.label}</td>}
-                {cols.map((c) => <td key={c} className={wrapColumns.includes(c as FieldKey) ? "min-w-[240px] max-w-[360px] whitespace-normal break-words px-3 py-2" : "max-w-[260px] truncate px-3 py-2"} title={String(value(r, c) ?? "")}>{fmt(r, c)}</td>)}
+                {cols.map((c) => <td key={c} className={wrapColumns.includes(c as FieldKey) ? "min-w-[240px] max-w-[360px] whitespace-normal break-words px-3 py-2" : "max-w-[260px] truncate px-3 py-2"} title={shiftLabel(value(r, c))}>{fmt(r, c)}</td>)}
                 <td className="px-2"><Button size="icon" variant="ghost" onClick={() => setDetail(r)} aria-label="Detalhes"><Eye className="h-4 w-4" /></Button></td>
               </tr>
             ))}
@@ -146,7 +147,7 @@ export function RecordsTable({ rows, columns, forceColumns = [], showModule, col
               </dl>
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Linha original do relatório</p>
-                <pre className="overflow-x-auto rounded bg-muted p-3 text-xs">{JSON.stringify(detail.raw, null, 2)}</pre>
+                <pre className="overflow-x-auto rounded bg-muted p-3 text-xs">{shiftLabel(JSON.stringify(detail.raw, null, 2))}</pre>
               </div>
             </div>
           )}

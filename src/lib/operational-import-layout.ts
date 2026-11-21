@@ -118,7 +118,7 @@ export function operationalBlockWidth(rows: unknown[][], sheetName: string): 4 |
     return { width, safe: titlesMatched >= 2 || (headersMatched >= 3 && conflicts === 0) };
   });
   const safe = candidates.filter((candidate) => candidate.safe);
-  if (safe.length !== 1) throw new Error(`Aba "${sheetName}", linhas 1–2, colunas A–O: não foi possível distinguir com segurança os blocos de 4 ou 5 colunas. Confira os títulos AM1/AM2/PM1 e os cabeçalhos.`);
+  if (safe.length !== 1) throw new Error(`Aba "${sheetName}", linhas 1–2, colunas A–O: não foi possível distinguir com segurança os blocos de 4 ou 5 colunas. Confira os títulos PM2/AM/PM1 e os cabeçalhos.`);
   return safe[0].width;
 }
 

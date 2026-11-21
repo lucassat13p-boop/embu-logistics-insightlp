@@ -1,3 +1,4 @@
+import { shiftLabel } from "@/lib/shifts";
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -57,7 +58,7 @@ export function BatchList() {
             {rows.map((b) => (
               <tr key={b.id} className="border-t hover:bg-accent/40">
                 <td className="px-3 py-2"><Checkbox checked={selected.has(b.id)} disabled={!canSelect(b)} onCheckedChange={(v) => toggle(b.id, v === true)} aria-label={`Selecionar ${b.file_name}`} /></td>
-                <td className="max-w-[240px] truncate px-3 py-2 font-medium">{b.file_name}</td>
+                <td className="max-w-[240px] truncate px-3 py-2 font-medium">{shiftLabel(b.file_name)}</td>
                 <td className="px-3 py-2 text-xs font-semibold text-primary">{moduleByKey(b.module)?.label ?? b.module}</td>
                 <td className="px-3 py-2">{new Date(b.created_at).toLocaleString("pt-BR")}</td>
                 <td className="max-w-[180px] truncate px-3 py-2">{b.user_email ?? "Sem informação"}</td>
@@ -65,7 +66,7 @@ export function BatchList() {
                 <td className="px-3 py-2 tabular-nums">{b.valid_rows}</td>
                 <td className="px-3 py-2 tabular-nums">{b.inserted_rows}</td>
                 <td className="px-3 py-2 tabular-nums">{b.ignored_rows}</td>
-                <td className="max-w-[220px] px-3 py-2 text-xs">{b.module === "avaria" ? `${b.selected_shifts?.join(", ") || "Nenhum"} · SOC ${b.include_soc === null ? "—" : b.include_soc ? "incluído" : "não incluído"}` : "—"}</td>
+                <td className="max-w-[220px] px-3 py-2 text-xs">{b.module === "avaria" ? `${b.selected_shifts?.map(shiftLabel).join(", ") || "Nenhum"} · SOC ${b.include_soc === null ? "—" : b.include_soc ? "incluído" : "não incluído"}` : "—"}</td>
                 <td className="px-3 py-2 tabular-nums">{b.error_rows}</td>
                 <td className="px-3 py-2"><StatusBadge status={b.status} /></td>
                 <td className="px-3 py-2 tabular-nums">{b.duration_ms != null ? `${(b.duration_ms / 1000).toFixed(1)}s` : "—"}</td>

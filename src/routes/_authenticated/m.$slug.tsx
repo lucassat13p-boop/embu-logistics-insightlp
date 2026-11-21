@@ -17,6 +17,9 @@ import { formatDateBR } from "@/lib/parsers";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RankingPrivacyToggle } from "@/components/ops/RankingPrivacy";
+import { shiftLabel } from "@/lib/shifts";
 import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, filterAvariaByShift, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS, type AvariaShift } from "@/lib/avaria-analysis";
 import { OnHoldDashboard } from "@/components/ops/OnHoldDashboard";
 import { RetidosDashboard } from "@/components/ops/RetidosDashboard";
@@ -69,6 +72,8 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const [mode, setMode] = useState<"single" | "compare">("single");
   const [showMissingShifts, setShowMissingShifts] = useState(true);
   const [avariaShifts, setAvariaShifts] = useState<AvariaShift[]>(["all"]);
+  const [avariaRankingMode, setAvariaRankingMode] = useState<"general" | "shift">("general");
+  const [avariaRankingShift, setAvariaRankingShift] = useState<Exclude<AvariaShift, "all">>("AM1");
   const isAvaria = mod.key === "avaria";
   const isOnHold = mod.key === "on_hold";
   const months = useMemo(() => availableMonths(allRows), [allRows]);
@@ -96,6 +101,9 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const missingShiftCount = isAvaria ? rows.filter((row) => !normalizedShift(row.shift)).length : 0;
   const shiftPieData = showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }] : shiftData;
   const collaboratorData = isAvaria ? countAvariaCollaborators(rows) : countBy(rows, "collaborator");
+  const avariaRankingData = isAvaria && avariaRankingMode === "shift"
+    ? countAvariaCollaborators(filterAvariaByShift(rows, [avariaRankingShift]))
+    : collaboratorData;
   const familyData = isAvaria ? countProductFamilies(rows) : [];
 
   return (
@@ -133,7 +141,17 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
           <Panel title="Avarias por tipo"><PieBlock label="Avarias por tipo" data={classCounts} total={rows.length} categories={[...OFFICIAL_AVARIA_TYPES]} /></Panel>
           <Panel title="Avarias por turno" action={<label className="flex items-center gap-2 text-xs"><Switch checked={showMissingShifts} onCheckedChange={setShowMissingShifts} /><Label>Exibir “Sem informação”</Label></label>}><PieBlock label="Avarias por turno" data={shiftPieData} total={showMissingShifts ? rows.length : shiftData.reduce((sum, item) => sum + item.value, 0)} categories={[...OFFICIAL_SHIFTS]} includeMissing={false} /></Panel>
         </div>
-        <Panel title="Colaboradores com mais avarias"><Ranking personKind="Colaborador" data={collaboratorData} /></Panel>
+        <Panel title="Colaboradores com mais avarias" action={<div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-md border bg-muted p-1" role="group" aria-label="Modo do ranking de avarias">
+            <Button size="sm" variant={avariaRankingMode === "general" ? "default" : "ghost"} aria-pressed={avariaRankingMode === "general"} onClick={() => setAvariaRankingMode("general")}>Geral</Button>
+            <Button size="sm" variant={avariaRankingMode === "shift" ? "default" : "ghost"} aria-pressed={avariaRankingMode === "shift"} onClick={() => setAvariaRankingMode("shift")}>Por turno</Button>
+          </div>
+          {avariaRankingMode === "shift" && <Select value={avariaRankingShift} onValueChange={(value) => {
+            const selected = OFFICIAL_SHIFTS.find((shift) => shift === value);
+            if (selected) setAvariaRankingShift(selected);
+          }}><SelectTrigger className="w-32" aria-label="Turno do ranking de avarias"><SelectValue /></SelectTrigger><SelectContent>{OFFICIAL_SHIFTS.map((shift) => <SelectItem key={shift} value={shift}>{shiftLabel(shift)}</SelectItem>)}</SelectContent></Select>}
+          <RankingPrivacyToggle />
+        </div>}><Ranking personKind="Colaborador" data={avariaRankingData} showPrivacyToggle={false} /></Panel>
         <Panel title="Evolução das avarias" subtitle="Registros por data"><LineBlock data={byDate(rows)} /></Panel>
         <Panel title="Produtos com mais ocorrências" subtitle="Famílias de produtos"><Ranking data={familyData} /></Panel>
       </>}

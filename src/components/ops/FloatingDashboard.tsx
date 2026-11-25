@@ -2,7 +2,7 @@ import { shiftLabel } from "@/lib/shifts";
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Banknote, ChevronLeft, ChevronRight, Package, Search, Upload, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Banknote, ChevronLeft, ChevronRight, Download, Package, Search, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarBlock, Empty, PageHeader, Panel, Ranking } from "./blocks";
 import { PieBlock } from "./PieBlock";
 import { ShiftIcon } from "./ShiftIcon";
-import { RankingPrivacyToggle } from "./RankingPrivacy";
+import { RankingPrivacyToggle, useRankingPrivacy } from "./RankingPrivacy";
 import { useInitialTodayPeriod } from "@/hooks/use-initial-today-period";
-import { EMPTY_PERIOD, filterByPeriod } from "@/lib/period";
+import { EMPTY_PERIOD, filterByPeriod, periodLabel } from "@/lib/period";
+import { createModuleReportPng, downloadModuleReport } from "@/lib/module-report-png";
 import { byDate } from "@/lib/data";
 import { floatingRankings } from "@/lib/floating-ranking";
 import { FLOATING_COLUMNS, floatingActiveQuery, floatingMapping, floatingShift, floatingValue } from "@/lib/floating-packages";
+import { HUB_NAME } from "@/lib/modules";
 
 const currency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 export function FloatingDashboard() {
@@ -27,6 +29,9 @@ export function FloatingDashboard() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState({ key: "record_date", ascending: false });
+  const [generating, setGenerating] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const { personName, hidden } = useRankingPrivacy();
   const rows = useMemo(() => filterByPeriod(active.rows, period).filter((row) => (shift === "all" || floatingShift(row.shift) === shift) && (mapping === "all" || floatingMapping(row) === mapping)), [active.rows, period, shift, mapping]);
   const tableRows = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("pt-BR");
@@ -50,7 +55,39 @@ export function FloatingDashboard() {
   const clear = () => { setPeriod({ ...EMPTY_PERIOD }); setShift("all"); setMapping("all"); setSearch(""); setPage(0); };
   const kpis = [{ label: "Total de pacotes", value: rows.length, icon: <Package className="h-5 w-5" />, color: "text-primary" }, { label: "Valor total (GMV)", value: gmv, icon: <Banknote className="h-5 w-5" />, color: "text-success" }, ...["AM1", "PM1", "AM2"].map((s) => ({ label: shiftLabel(s), value: rows.filter((r) => floatingShift(r.shift) === s).length, icon: <ShiftIcon shift={s} className="h-5 w-5" />, color: "text-primary" }))];
   const changePeriod = (next: typeof period) => { setPeriod(next); setPage(0); };
-  return <div className="space-y-4"><PageHeader title="Pacotes Flutuantes" subtitle="Monitoramento dos pacotes que permanecem na base de possíveis perdas." action={<Button asChild><Link to="/importar" search={{ modulo: "pacotes_flutuantes" }}><Upload className="h-4 w-4" />Importar relatório</Link></Button>} />
+  const generateReport = async () => {
+    setGenerating(true); setReportError("");
+    try {
+      const selectedPeriod = periodLabel(period);
+      const selectedShift = shift === "all" ? "Todos os turnos" : shiftLabel(shift);
+      const groups = rankings.map((ranking) => ({
+        title: rankingMode === "general" ? "Ranking geral" : `${shiftLabel(ranking.shift)} — TOP 5`,
+        data: ranking.data.map((item) => ({ ...item, name: personName(item.name) })),
+      }));
+      const blob = await createModuleReportPng({
+        kind: "floating", hub: HUB_NAME, title: "Relatório de Possíveis Perdas — Pacotes Flutuantes",
+        period: selectedPeriod, shifts: selectedShift,
+        details: [`Mapeamento: ${mapping === "all" ? "Todos" : mapping}`, `Ranking: ${rankingMode === "general" ? "Geral" : "Por turno"}`, `Nomes: ${hidden ? "Ocultos" : "Visíveis"}`],
+        metrics: [
+          { label: "Total de pacotes", value: active.batchId ? rows.length : null, tone: "orange" },
+          { label: "Valor total (GMV)", value: active.batchId ? gmv : null, tone: "green" },
+          ...["AM1", "AM2", "PM1"].map((item) => ({ label: `Pacotes ${shiftLabel(item)}`, value: active.batchId ? rows.filter((row) => floatingShift(row.shift) === item).length : null, tone: "blue" as const })),
+        ],
+        donuts: [
+          { title: "Distribuição por turno", data: breakdown((row) => floatingShift(row.shift)), total: rows.length, categories: ["AM1", "AM2", "PM1", "Não identificado"], includeMissing: false },
+          { title: "Mapeamento", data: breakdown(floatingMapping), total: rows.length, categories: ["Expedição", "Recebimento", "Não identificado"], includeMissing: false },
+        ],
+        evolution: { title: "Evolução de Pacotes Flutuantes", data: byDate(rows) },
+        rankings: [],
+        collaborators: { title: rankingMode === "general" ? "Top 10 colaboradores com mais pacotes" : "Top 5 colaboradores por turno", mode: rankingMode as "general" | "shift", groups },
+      });
+      const slug = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      downloadModuleReport(blob, `relatorio-possiveis-perdas-${slug(selectedPeriod)}-${slug(selectedShift)}.png`);
+    } catch { setReportError("Não foi possível gerar o relatório. Tente novamente."); }
+    finally { setGenerating(false); }
+  };
+  return <div className="space-y-4"><PageHeader title="Pacotes Flutuantes" subtitle="Monitoramento dos pacotes que permanecem na base de possíveis perdas." action={<div className="flex flex-wrap gap-2"><Button onClick={generateReport} disabled={generating}><Download className="h-4 w-4" />{generating ? "Gerando PNG…" : "Gerar relatório"}</Button><Button asChild><Link to="/importar" search={{ modulo: "pacotes_flutuantes" }}><Upload className="h-4 w-4" />Importar relatório</Link></Button></div>} />
+    {reportError && <p role="alert" className="text-sm text-destructive">{reportError}</p>}
     <div className="flex flex-wrap items-end gap-3">
       <div className="space-y-1"><Label>Período</Label><Select value={period.kind} onValueChange={(kind) => changePeriod({ ...period, kind: kind as typeof period.kind })}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="day">Dia</SelectItem><SelectItem value="week">Semana</SelectItem><SelectItem value="month">Mês</SelectItem><SelectItem value="custom">Personalizado</SelectItem></SelectContent></Select></div>
       {period.kind === "day" && <Input type="date" className="w-auto" aria-label="Data" value={period.date} onChange={(e) => changePeriod({ ...period, date: e.target.value })} />}

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarBlock, Empty, Kpi, LineBlock, PageHeader, Panel, Ranking } from "@/components/ops/blocks";
@@ -10,7 +10,8 @@ import { PeriodFilter } from "@/components/ops/PeriodFilter";
 import { MonthComparison } from "@/components/ops/MonthComparison";
 import { PieBlock } from "@/components/ops/PieBlock";
 import { countProductFamilies } from "@/lib/product-families";
-import { availableMonths, EMPTY_PERIOD, filterByPeriod, PERIOD_EMPTY, type PeriodSelection } from "@/lib/period";
+import { availableMonths, EMPTY_PERIOD, filterByPeriod, PERIOD_EMPTY, periodLabel, type PeriodSelection } from "@/lib/period";
+import { createModuleReportPng, downloadModuleReport } from "@/lib/module-report-png";
 import { byDate, countBy, hasField, recordsQuery } from "@/lib/data";
 import { HUB_NAME, moduleBySlug, type FieldKey, type ModuleDef } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
@@ -18,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ShiftIcon } from "@/components/ops/ShiftIcon";
-import { RankingPrivacyToggle } from "@/components/ops/RankingPrivacy";
+import { RankingPrivacyToggle, useRankingPrivacy } from "@/components/ops/RankingPrivacy";
 import { shiftLabel } from "@/lib/shifts";
 import { countAvariaCollaborators, countAvariaShifts, countAvariaTypes, filterAvariaByShift, normalizedShift, OFFICIAL_AVARIA_TYPES, OFFICIAL_SHIFTS, type AvariaShift } from "@/lib/avaria-analysis";
 import { OnHoldDashboard } from "@/components/ops/OnHoldDashboard";
@@ -73,6 +74,9 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const [showMissingShifts, setShowMissingShifts] = useState(true);
   const [avariaShifts, setAvariaShifts] = useState<AvariaShift[]>(["all"]);
   const [avariaRankingMode, setAvariaRankingMode] = useState<"general" | "shift">("general");
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const { personName, hidden } = useRankingPrivacy();
   const isAvaria = mod.key === "avaria";
   const isOnHold = mod.key === "on_hold";
   const months = useMemo(() => availableMonths(allRows), [allRows]);
@@ -101,10 +105,42 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
   const shiftPieData = showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }] : shiftData;
   const collaboratorData = isAvaria ? countAvariaCollaborators(rows) : countBy(rows, "collaborator");
   const familyData = isAvaria ? countProductFamilies(rows) : [];
+  const offenderData = showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "pt-BR")) : shiftData;
+  const generateAvariaReport = async () => {
+    setGeneratingReport(true); setReportError("");
+    try {
+      const selectedPeriod = periodLabel(period);
+      const selectedShift = avariaShifts.includes("all") ? "Todos os turnos" : avariaShifts.map(shiftLabel).join(" + ");
+      const selectedRankingShifts = avariaShifts.includes("all") ? [...OFFICIAL_SHIFTS] : OFFICIAL_SHIFTS.filter((shift) => avariaShifts.includes(shift));
+      const groups = avariaRankingMode === "general"
+        ? [{ title: "Ranking geral", data: collaboratorData.map((item) => ({ ...item, name: personName(item.name) })) }]
+        : selectedRankingShifts.map((shift) => ({ title: `${shiftLabel(shift)} — TOP 5`, data: countAvariaCollaborators(filterAvariaByShift(rows, [shift])).map((item) => ({ ...item, name: personName(item.name) })) }));
+      const blob = await createModuleReportPng({
+        kind: "avaria", hub: HUB_NAME, title: "Relatório de Avarias", period: selectedPeriod, shifts: selectedShift,
+        details: [`Ranking: ${avariaRankingMode === "general" ? "Geral" : "Por turno"}`, `Nomes: ${hidden ? "Ocultos" : "Visíveis"}`, `Turnos sem informação: ${showMissingShifts ? "Exibidos" : "Ocultos"}`],
+        metrics: [
+          { label: "Total de avarias", value: rows.length ? rows.length : null, tone: "orange" },
+          ...OFFICIAL_AVARIA_TYPES.map((type, index) => ({ label: type, value: rows.length ? classCounts.find((item) => item.name === type)?.value ?? 0 : null, tone: (["blue", "green", "purple", "amber", "red"] as const)[index] ?? "muted" })),
+        ],
+        donuts: [
+          { title: "Avarias por tipo", data: classCounts, total: rows.length, categories: [...OFFICIAL_AVARIA_TYPES] },
+          { title: "Avarias por turno", data: shiftPieData, total: showMissingShifts ? rows.length : shiftData.reduce((sum, item) => sum + item.value, 0), categories: [...OFFICIAL_SHIFTS], includeMissing: false },
+        ],
+        evolution: { title: "Evolução das avarias", data: byDate(rows) },
+        bars: { title: "Status das avarias", data: countBy(rows, "status") },
+        rankings: [{ title: "Produtos com mais ocorrências", data: familyData }, { title: "Turnos mais ofensores", data: offenderData }],
+        collaborators: { title: avariaRankingMode === "general" ? "Colaboradores com mais avarias — Ranking geral" : "Top 5 colaboradores por turno", mode: avariaRankingMode, groups },
+      });
+      const slug = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      downloadModuleReport(blob, `relatorio-avarias-${slug(selectedPeriod)}-${slug(selectedShift)}.png`);
+    } catch { setReportError("Não foi possível gerar o relatório. Tente novamente."); }
+    finally { setGeneratingReport(false); }
+  };
 
   return (
     <div className="space-y-5">
-      <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={importBtn} />
+      <PageHeader title={mod.label} subtitle={`${HUB_NAME} · ${mod.description}`} action={isAvaria ? <div className="flex flex-wrap gap-2"><Button onClick={generateAvariaReport} disabled={generatingReport}><Download className="h-4 w-4" />{generatingReport ? "Gerando PNG…" : "Gerar relatório"}</Button>{importBtn}</div> : importBtn} />
+      {isAvaria && reportError && <p role="alert" className="text-sm text-destructive">{reportError}</p>}
       {isAvaria && <PeriodFilter months={months} period={period} onChange={setPeriod} mode={mode} onModeChange={setMode} comparison={comparison} onComparisonChange={setComparison} onClear={() => { setPeriod({ ...EMPTY_PERIOD }); setComparison({ ...EMPTY_PERIOD }); setMode("single"); setAvariaShifts(["all"]); }} />}
       {isAvaria && <div><Label>Turno</Label><ToggleGroup type="multiple" variant="outline" size="sm" className="mt-2 justify-start" value={avariaShifts} onValueChange={(value: string[]) => { setAvariaShifts((prev) => { const next = value as AvariaShift[]; if (next.includes("all")) { return prev.includes("all") && next.length > 1 ? next.filter((item) => item !== "all") as AvariaShift[] : ["all"]; } return next.length ? next : ["all"]; }); }}><ToggleGroupItem value="all">Todos</ToggleGroupItem><ToggleGroupItem value="AM1">PM2</ToggleGroupItem><ToggleGroupItem value="AM2">AM</ToggleGroupItem><ToggleGroupItem value="PM1">PM1</ToggleGroupItem></ToggleGroup></div>}
 
@@ -169,7 +205,7 @@ function ModuleContent({ mod }: { mod: ModuleDef }) {
       <div className="grid gap-4 xl:grid-cols-2">
         {!isAvaria && has("collaborator") && <Panel title="Colaboradores com mais ocorrências"><Ranking personKind="Colaborador" data={countBy(rows, "collaborator")} /></Panel>}
         {isAvaria && <Panel title="Status das avarias"><BarBlock data={countBy(rows, "status")} horizontal /></Panel>}
-        {isAvaria && <Panel title="Turnos mais ofensores"><Ranking data={showMissingShifts && missingShiftCount ? [...shiftData, { name: "Sem informação", value: missingShiftCount }].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "pt-BR")) : shiftData} /></Panel>}
+        {isAvaria && <Panel title="Turnos mais ofensores"><Ranking data={offenderData} /></Panel>}
         {has("reason") && <Panel title="Motivos mais frequentes"><Ranking data={countBy(rows, "reason")} /></Panel>}
         {has("route") && <Panel title="Rotas com mais ocorrências"><Ranking data={countBy(rows, "route")} /></Panel>}
         {!isAvaria && has("product") && <Panel title="Produtos mais envolvidos"><Ranking data={countBy(rows, "product")} /></Panel>}

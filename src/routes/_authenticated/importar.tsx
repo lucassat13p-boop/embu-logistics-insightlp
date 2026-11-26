@@ -370,7 +370,7 @@ function ImportPage() {
             <p className="text-[11px] font-semibold uppercase text-muted-foreground">Pacotes tratados do ON HOLD</p>
             {"error" in treatedPreview ? <p className="mt-1 text-destructive">{treatedPreview.error} Esta informação não será gravada; a importação principal continua normalmente.</p> : <>
               <p className="font-display text-3xl font-bold tabular-nums text-primary">{treatedPreview.matched.toLocaleString("pt-BR")}</p>
-              <p className="text-xs text-muted-foreground">Aba: {treatedPreview.sheetName} · {treatedPreview.analyzed.toLocaleString("pt-BR")} linhas analisadas · {treatedPreview.matched.toLocaleString("pt-BR")} atendem aos três critérios</p>
+              <p className="text-xs text-muted-foreground">Aba: {treatedPreview.sheetName} · {treatedPreview.analyzed.toLocaleString("pt-BR")} linhas analisadas · {treatedPreview.matched.toLocaleString("pt-BR")} pacotes tratados válidos.</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2 md:max-w-md">
                 <div><Label htmlFor="treated-date">Data da operação *</Label><Input id="treated-date" type="date" value={treatedDate} onChange={(e) => setTreatedDate(e.target.value)} /></div>
                 <div><Label>Turno *</Label><Select value={treatedShift} onValueChange={setTreatedShift}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{["AM1", "AM2", "PM1"].map((x) => <SelectItem key={x} value={x}>{shiftLabel(x)}</SelectItem>)}</SelectContent></Select></div>

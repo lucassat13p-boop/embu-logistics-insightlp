@@ -1,4 +1,5 @@
 # Tasks
+- [x] Correct only ON HOLD treated-package counting to use unique valid column-B SLS tracking numbers, independent of secondary fields, and update preview wording; preserve storage, dates, shifts and history.
 - [x] Add independent themed AVARIA and PACOTES FLUTUANTES PNG reports using active filtered data, selected ranking mode and privacy; build OK, with no automated tests or extra audits requested.
 - [x] Match AVARIA ranking controls to Floating; remove the dropdown and show three simultaneous shift Top 5 rankings; preserve general ranking, global filters and privacy; no extra tests/audits.
 - [x] Update all visible shift names and exports through a shared presentation formatter, preserving internal keys, histories, calculations and import compatibility; no automated tests or extra audits requested.

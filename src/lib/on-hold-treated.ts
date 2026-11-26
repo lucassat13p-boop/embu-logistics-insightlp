@@ -23,7 +23,7 @@ function findTreatedSheet(sheets: Sheet[]) {
     ?? sheets.find((s) => nameKey(s.name).includes("pacotestratados"));
 }
 
-/** Counts rows where OnHoldReason, Status and Calculation Status match exactly; no BR dedupe. */
+/** Counts unique valid SLS tracking numbers in column B, independently of secondary fields. */
 export function countTreatedSheet(sheets: Sheet[]): TreatedPreview {
   const sheetNames = sheets.map((s) => s.name);
   const res = countIn(sheets);
@@ -33,24 +33,21 @@ export function countTreatedSheet(sheets: Sheet[]): TreatedPreview {
 function countIn(sheets: Sheet[]): { sheetName: string; analyzed: number; matched: number } | { error: string } {
   const sheet = findTreatedSheet(sheets);
   if (!sheet) return { error: `Aba "${TREATED_SHEET}" não encontrada no arquivo.` };
-  const need = ["OnHoldReason", "Status", "Calculation Status"];
-  let hIdx = -1, cols: number[] = [];
-  for (let i = 0; i < Math.min(sheet.rows.length, 20); i++) {
-    const r = (sheet.rows[i] ?? []).map((c) => nameKey(norm(c)));
-    const idx = need.map((n) => r.indexOf(nameKey(n)));
-    if (idx.every((x) => x >= 0)) { hIdx = i; cols = idx; break; }
+  if (nameKey(norm(sheet.rows[0]?.[1])) !== nameKey("SLS Tracking Number")) {
+    return { error: `Cabeçalho obrigatório ausente na coluna B da aba "${sheet.name}": SLS Tracking Number.` };
   }
-  if (hIdx < 0) return { error: `Cabeçalhos obrigatórios ausentes na aba "${sheet.name}": ${need.join(", ")}.` };
-  let analyzed = 0, matched = 0;
-  for (const row of sheet.rows.slice(hIdx + 1)) {
+  let analyzed = 0;
+  const trackingNumbers = new Set<string>();
+  for (const row of sheet.rows.slice(1)) {
     const r = row ?? [];
     if (r.every((c) => norm(c) === "")) continue;
     analyzed++;
-    const calc = r[cols[2]];
-    const calcZero = calc === 0 || norm(calc) === "0";
-    if (norm(r[cols[0]]) === "Cannot find address" && norm(r[cols[1]]) === "LMHub_Received" && calcZero) matched++;
+    const tracking = norm(r[1]).toUpperCase();
+    if (/^[A-Z0-9]+(?:[-_][A-Z0-9]+)*$/.test(tracking) && /\d/.test(tracking) && !/^0+$/.test(tracking)) {
+      trackingNumbers.add(tracking);
+    }
   }
-  return { sheetName: sheet.name, analyzed, matched };
+  return { sheetName: sheet.name, analyzed, matched: trackingNumbers.size };
 }
 
 export async function fetchTreatedImports(): Promise<TreatedImportRow[]> {

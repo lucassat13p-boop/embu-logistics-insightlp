@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { HUB_NAME } from "@/lib/modules";
 import { formatDateBR } from "@/lib/parsers";
 import type { RecordRow } from "@/lib/data";
-import { FULL_LMHUB, FULL_LMHUB_MSG, FULL_PENDING, fullFinalStatus, normId } from "@/lib/full-import";
+import { FULL_LMHUB, FULL_LMHUB_MSG, FULL_PENDING, fullFinalStatus, normId, resolveFullLh } from "@/lib/full-import";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,7 +61,7 @@ export function FullDashboard({ allRows }: { allRows: RecordRow[] }) {
 
   const rows = useMemo(() => allRows.filter((r) =>
     (!dateF || r.record_date === dateF) && (shiftF === "__all" || r.shift === shiftF) &&
-    (lhF === "__all" || (lhF === LH_NONE ? !r.lh?.trim() : r.lh === lhF)) &&
+    (lhF === "__all" || (() => { const lh = resolveFullLh(r); return lhF === LH_NONE ? !lh : lh !== null && normId(lh) === normId(lhF); })()) &&
     (statusF === "__all" || fullFinalStatus(r) === statusF) &&
     (classF === "__all" || classOf(r) === classF) &&
     (!q || [r.order_id, r.to_number, r.sender_name].some((v) => v?.toLowerCase().includes(q.toLowerCase())))

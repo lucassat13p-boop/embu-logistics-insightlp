@@ -152,7 +152,7 @@ export function FullImport() {
     try {
       const lhName = isXlsx ? (lhSheet >= 0 ? base.parsed.sheets[lhSheet]?.name : null) : lhSrc?.file.name ?? null;
       const sheetName = [isXlsx ? `${base.parsed.sheets[baseSheet]?.name} + ${base.parsed.sheets[statusSheet]?.name}` : `${base.file.name} + ${statusSrc?.file.name}`, lhName].filter(Boolean).join(" + ");
-      const res = await commitFullImport({ build, date: date || null, shift: shift || null, strategy, fileName: [isXlsx ? base.file.name : `${base.file.name} + ${statusSrc?.file.name}`, !isXlsx && lhSrc ? lhSrc.file.name : null].filter(Boolean).join(" + "), format: base.parsed.format, sheetName, headers: baseTable.headers, mapping: { base: baseMap, status: statusMap, lh: lhParse ? { sheet: lhName, code: lhParse.lh, tos: lhParse.tos.length } : null } });
+      const res = await commitFullImport({ build, date: date || null, shift: shift || null, strategy, fileName: [isXlsx ? base.file.name : `${base.file.name} + ${statusSrc?.file.name}`, !isXlsx && lhSrc ? lhSrc.file.name : null].filter(Boolean).join(" + "), format: base.parsed.format, sheetName, headers: baseTable.headers, mapping: { base: baseMap, status: statusMap, lh: lhParse ? { sheet: lhName, code: lhParse.lh, codes: lhParse.lhs, tos: lhParse.tos.length, linkedTos: lhIndex.map.size } : null } });
       setDone(res); await invalidateImportQueries(qc, { module: "full", batchId: res.batchId });
       toast.success(`Importação FULL concluída: ${res.inserted} novos registros.`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar"); } finally { setBusy(null); }
@@ -240,9 +240,9 @@ export function FullImport() {
           </div>
           {lhParse ? (
             <div className="mt-3 space-y-1 rounded-md border p-3 text-sm">
-              {!lhParse.lh
-                ? <p className="text-destructive">Aba de LHs selecionada, mas a célula A2 está vazia: nenhuma LH será vinculada. Verifique o arquivo.</p>
-                : <p>LH <span className="font-semibold">{lhParse.lh}</span> · {lhParse.tos.length.toLocaleString("pt-BR")} TOs na aba · {build.withoutLh.toLocaleString("pt-BR")} {build.withoutLh === 1 ? "pacote sem LH vinculada" : "pacotes sem LH vinculada"} (TO ausente na aba 1).</p>}
+              {!lhParse.lhs.length
+                ? <p className="text-destructive">Aba de LHs selecionada, mas nenhuma LH foi identificada na coluna A: nenhuma LH será vinculada. Verifique o arquivo.</p>
+                : <p>{lhParse.lhs.length === 1 ? "LH" : `${lhParse.lhs.length} LHs`}{" "}<span className="font-semibold">{lhParse.lhs.join(", ")}</span> · {lhIndex.map.size.toLocaleString("pt-BR")} de {lhParse.tos.length.toLocaleString("pt-BR")} TOs com vínculo explícito na aba · {build.withoutLh.toLocaleString("pt-BR")} {build.withoutLh === 1 ? "pacote sem LH vinculada" : "pacotes sem LH vinculada"}.</p>}
               {lhIndex.conflicts > 0 && <p className="text-destructive">{lhIndex.conflicts} TO(s) com conflito de associação entre LHs; a primeira LH foi mantida.</p>}
             </div>
           ) : (

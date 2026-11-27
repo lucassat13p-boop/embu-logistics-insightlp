@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Empty, Panel } from "./blocks";
 import type { RecordRow } from "@/lib/data";
-import { FULL_PENDING, fullFinalStatus, normId } from "@/lib/full-import";
+import { FULL_PENDING, fullFinalStatus, normId, resolveFullLh } from "@/lib/full-import";
 import { formatDateBR } from "@/lib/parsers";
 
 export const LH_NONE = "__none";
 const PAGE = 10;
+const normText = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 type Group = {
   key: string; lh: string | null; dates: string[]; shifts: string[]; origins: string[];
@@ -25,8 +26,8 @@ export function FullLhBoard({ rows, onView }: { rows: RecordRow[]; onView: (key:
   const groups = useMemo<Group[]>(() => {
     const m = new Map<string, { lh: string | null; dates: Set<string>; shifts: Set<string>; origins: Set<string>; tos: Set<string>; brs: Map<string, RecordRow> }>();
     for (const r of rows) {
-      const lh = r.lh?.trim() || null;
-      const k = lh ?? LH_NONE;
+      const lh = resolveFullLh(r);
+      const k = lh ? normId(lh) : LH_NONE;
       if (!m.has(k)) m.set(k, { lh, dates: new Set(), shifts: new Set(), origins: new Set(), tos: new Set(), brs: new Map() });
       const g = m.get(k)!;
       if (r.record_date) g.dates.add(r.record_date);
@@ -38,7 +39,7 @@ export function FullLhBoard({ rows, onView }: { rows: RecordRow[]; onView: (key:
       if (br && !g.brs.has(br)) g.brs.set(br, r);
     }
     return [...m.entries()].map(([key, g]) => ({
-      key, lh: g.lh, dates: [...g.dates].sort(), shifts: [...g.shifts].sort(), origins: [...g.origins].sort((a, b) => a.localeCompare(b, "pt-BR")),
+      key: g.lh ?? key, lh: g.lh, dates: [...g.dates].sort(), shifts: [...g.shifts].sort(), origins: [...g.origins].sort((a, b) => a.localeCompare(b, "pt-BR")),
       tos: g.tos.size, packages: g.brs.size,
       pending: [...g.brs.values()].filter((r) => fullFinalStatus(r) === FULL_PENDING).length,
       toList: [...g.tos],
@@ -46,11 +47,11 @@ export function FullLhBoard({ rows, onView }: { rows: RecordRow[]; onView: (key:
   }, [rows]);
 
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = normText(q.trim());
     const list = !needle ? groups : groups.filter((g) =>
-      (g.lh ?? "sem lh vinculada").toLowerCase().includes(needle) ||
-      g.origins.some((o) => o.toLowerCase().includes(needle)) ||
-      g.toList.some((t) => t.toLowerCase().includes(needle)));
+      normText(g.lh ?? "sem lh vinculada").includes(needle) ||
+      g.origins.some((o) => normText(o).includes(needle)) ||
+      g.toList.some((t) => normText(t).includes(needle)));
     const value = (g: Group): string | number => {
       switch (sort.key) {
         case "lh": return g.lh ?? "￿";

@@ -23,6 +23,39 @@ const STATUS_ALIASES: Record<string, FullStatusField> = { "order id": "match_br"
 
 export const normId = (v: unknown) => (cellText(v) ?? "").replace(/\s+/g, "").toUpperCase();
 const normStatus = (v: string) => v.trim().replace(/\s+/g, "_").toLowerCase();
+const cleanSheetText = (v: unknown) => {
+  const s = cellText(v)?.replace(/^\uFEFF+/, "").trim();
+  return s ? s : null;
+};
+const LH_HEADERS = new Set(["lh", "lhs", "lh s", "lh number", "lh trip", "lh trip number", "codigo lh", "codigo da lh", "linehaul", "line haul"]);
+const TO_HEADERS = new Set(["to", "tos", "to s", "to's", "to number", "codigo to", "codigo da to", "codigo do to"]);
+const isPlaceholder = (s: string) => s === "-" || s === "—" || s === "–";
+const isLhHeader = (s: string) => isPlaceholder(s) || LH_HEADERS.has(normalizeHeader(s));
+const isToHeader = (s: string) => isPlaceholder(s) || TO_HEADERS.has(normalizeHeader(s));
+
+const asRecord = (v: unknown): Record<string, unknown> | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
+
+/** Resolve real LH from a FULL record (lh column first, then real LH fields in extra/raw if present). Never fabricates links. */
+export function resolveFullLh(r: { lh?: string | null; extra?: unknown; raw?: unknown }): string | null {
+  const direct = cleanSheetText(r.lh);
+  if (direct && !isLhHeader(direct)) return direct;
+  const extra = asRecord(r.extra);
+  if (extra) {
+    for (const key of ["lh", "lh_code", "lh_number", "linehaul"]) {
+      const val = cleanSheetText(extra[key]);
+      if (val && !isLhHeader(val)) return val;
+    }
+  }
+  const raw = asRecord(r.raw);
+  if (raw) {
+    for (const [k, v] of Object.entries(raw)) {
+      if (!LH_HEADERS.has(normalizeHeader(k))) continue;
+      const val = cleanSheetText(v);
+      if (val && !isLhHeader(val)) return val;
+    }
+  }
+  return null;
+}
 
 export function suggestFullBase(headers: string[]): FullBaseMapping {
   const used = new Set<string>();
@@ -62,29 +95,44 @@ export type FullRow = {
 };
 export type FullBuild = { rows: FullRow[]; total: number; missingBr: number; dupInFile: number; pending: number; conflicts: number; uniqueBr: number; withoutLh: number };
 
-export type LhParse = { lh: string | null; tos: string[] };
-/** Aba "1 - TO's": A1 = título "LH", A2 = código da LH, coluna C (desde C1) = TOs. Não há linha de cabeçalho; a cópia de TO em B1 é ignorada. */
+export type LhLink = { lh: string; to: string };
+export type LhParse = { lh: string | null; lhs: string[]; tos: string[]; links: LhLink[] };
+/** Aba "1 - TOs": coluna A = LH, coluna C = TOs. Vincula somente linhas que trazem LH e TO reais na mesma linha, sem preencher células vazias. */
 export function parseLhSheet(rows: unknown[][]): LhParse {
-  const lh = cellText(rows[1]?.[0]);
-  const seen = new Set<string>(); const tos: string[] = [];
+  const seenLhs = new Set<string>();
+  const seenTos = new Set<string>();
+  const lhs: string[] = [];
+  const tos: string[] = [];
+  const links: LhLink[] = [];
   for (const r of rows) {
-    const to = cellText(r?.[2]);
-    if (!to) continue;
-    const k = normId(to);
-    if (!k || seen.has(k)) continue;
-    seen.add(k); tos.push(to);
+    const rawA = cleanSheetText(r?.[0]);
+    const rawC = cleanSheetText(r?.[2]);
+    const to = rawC && !isToHeader(rawC) ? rawC : null;
+    const lhCandidate = rawA && !isLhHeader(rawA) ? rawA : null;
+    const lh = lhCandidate && (!to || normId(lhCandidate) !== normId(to)) ? lhCandidate : null;
+    if (lh) {
+      const lk = normId(lh);
+      if (lk && !seenLhs.has(lk)) { seenLhs.add(lk); lhs.push(lh); }
+    }
+    if (to) {
+      const tk = normId(to);
+      if (tk && !seenTos.has(tk)) { seenTos.add(tk); tos.push(to); }
+    }
+    if (lh && to) links.push({ lh, to });
   }
-  return { lh, tos };
+  return { lh: lhs[0] ?? null, lhs, tos, links };
 }
 
 /** Índice TO normalizada → LH. Conflito (mesma TO em LHs diferentes) mantém a primeira e é reportado. */
 export function buildLhIndex(parse: LhParse | null): { map: Map<string, string>; conflicts: number } {
   const map = new Map<string, string>(); let conflicts = 0;
-  if (!parse?.lh) return { map, conflicts };
-  for (const to of parse.tos) {
+  if (!parse?.links.length) return { map, conflicts };
+  for (const { lh, to } of parse.links) {
     const k = normId(to);
-    if (map.has(k) && map.get(k) !== parse.lh) { conflicts++; continue; }
-    map.set(k, parse.lh);
+    if (!k) continue;
+    const existing = map.get(k);
+    if (existing && normId(existing) !== normId(lh)) { conflicts++; continue; }
+    if (!existing) map.set(k, lh);
   }
   return { map, conflicts };
 }
